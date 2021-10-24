@@ -1,0 +1,3 @@
+{
+	"javaOptions": ["-Xmx8G", "-XX:+UseG1GC", "--add-modules", "jdk.incubator.foreign"]
+}
