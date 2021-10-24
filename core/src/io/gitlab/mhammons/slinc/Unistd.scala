@@ -34,6 +34,12 @@ object Time extends CLib:
   val time = downcall[MemoryAddress, Long]("time")
   val localTime = downcall[MemoryAddress, MemoryAddress]("localtime")
 
+trait div_t {
+  val quot: Int
+  val rem: Int
+  val a: Int
+}
+
 @main def fn =
   println(Unistd.getPid.map(_()))
   //Unistd._exit.foreach(_(1))
@@ -68,6 +74,7 @@ object Time extends CLib:
       .varHandle(classOf[Int], MemoryLayout.PathElement.groupElement("quot"))
   )
 
+  deriveLayout[div_t]
   println(divTVH.get(l))
   Unistd._exit.foreach(_(5))
   println("hello")
