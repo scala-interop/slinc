@@ -1,4 +1,4 @@
-FROM openjdk:17-jdk-slim
+FROM docker.io/library/openjdk:17-jdk-slim
 
 RUN apt-get update && apt-get -y install curl git
 ADD https://git.io/coursier-cli-linux /usr/local/bin/cs

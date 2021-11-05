@@ -9,72 +9,87 @@ import jdk.incubator.foreign.ResourceScope
 import scala.util.chaining.*
 import javax.swing.GroupLayout
 import io.gitlab.mhammons.polymorphics.*
+import cats.implicits.*
+import cats.catsInstancesForId
 
 object Unistd extends CLib:
-  val getPid = downcall[Long]("getpid")
-  val _exit = downcall[Long, Unit]("_exit")
+   val getPid = downcall[Long]("getpid")
+   val _exit = downcall[Long, Unit]("_exit")
 
 object Stdlib extends io.gitlab.mhammons.slinc.CLib:
-  val abort = downcall[Unit]("abort")
-  val free = downcall[MemoryAddress, Unit]("free")
-
-  type div_t = ("quot" --> Int) ~% ("rem" --> Int)
-  val div = downcallS[Int, Int, div_t]("div")
+   val abort = downcall[Unit]("abort")
+   val free = downcall[MemoryAddress, Unit]("free")
 
 object Time extends CLib:
-  type tm = ("tm_sec" --> Int) ~%
-    ("tm_min" --> Int) ~%
-    ("tm_hour" --> Int) ~%
-    ("tm_mday" --> Int) ~%
-    ("tm_mon" --> Int) ~%
-    ("tm_year" --> Int) ~%
-    ("tm_wday" --> Int) ~%
-    ("tm_yday" --> Int) ~%
-    ("tm_isdst" --> Int)
-  val time = downcall[MemoryAddress, Long]("time")
-  val localTime = downcall[MemoryAddress, MemoryAddress]("localtime")
+   val time = downcall[MemoryAddress, Long]("time")
+   val localTime = downcall[MemoryAddress, MemoryAddress]("localtime")
 
-trait div_t {
-  val quot: Int
-  val rem: Int
-  val a: Int
+trait div_t extends Struct[div_t]:
+   import Fd.*
+   val quot: int = Fd(null, VarHandleHandler(null))
+   val rem: int = Fd(null, VarHandleHandler(null))
+   val a: int = Fd(null, VarHandleHandler(null))
+
+import Fd.*
+case class div_u(quot: int, rem: int) derives Structish
+
+//case class div_x(quot: Int, rem: Int) derives Structish
+
+import Fd.int
+type divor = StructBacking {
+   val quot: int
+   val jo: int
 }
 
+class divo:
+   val quot: Int = 5
+
+class Stuk extends Selectable:
+   def selectDynamic(str: String) = 5
+   def applyDynamic(str: String) = 5
+
 @main def fn =
-  println(Unistd.getPid.map(_()))
-  //Unistd._exit.foreach(_(1))
-  val t = Time.time.map(_(MemoryAddress.NULL)).get.asInstanceOf[Long]
-  val scope = ResourceScope.newConfinedScope
-  implicit val segAlloc = SegmentAllocator.arenaAllocator(scope)
-  val seg = MemorySegment.allocateNative(C_LONG, scope)
-  MemoryAccess.setLong(seg, t)
-  println(MemoryAccess.getLong(seg))
+   println(Unistd.getPid.map(_()))
+   // Unistd._exit.foreach(_(1))
+   val t = Time.time.map(_(MemoryAddress.NULL)).get.asInstanceOf[Long]
+   val scope = ResourceScope.newConfinedScope
+   implicit val segAlloc = SegmentAllocator.arenaAllocator(scope)
+   val seg = MemorySegment.allocateNative(C_LONG, scope)
+   MemoryAccess.setLong(seg, t)
+   println(MemoryAccess.getLong(seg))
 
-  val tmLayout = scala2MemoryLayout[Time.tm]
+   // val l = Stdlib.div.map(_(5, 2)).get
 
-  val tmVH = VarHandleHandler(
-    scala2MemoryLayout[Time.tm].varHandle(
-      classOf[Int],
-      MemoryLayout.PathElement.groupElement("tm_sec")
-    )
-  )
+   val l = deriveLayout[divor]
+   val allocatedMem = segAlloc.allocate(l)
+   val s = structFromMemorySegment[divor](allocatedMem)
+   println(s.quot.get)
+   s.quot.set(5)
+   println(s.quot.get)
+   println(s.$mem == allocatedMem)
 
-  println(tmVH)
+   val d = summon[Structish[div_u]].allocate(segAlloc)
 
-  val tmPtr = Time.localTime
-    .map(_(seg.address))
-    .map(_.asSegment(tmLayout.byteSize, scope))
+   println(d.quot.get)
+   d.quot.set(4)
+   println(d.quot.get)
 
-  val handle = tmPtr.map(_.pipe(tmVH.get)).foreach(println)
+   println(summon[Structish[div_u]].layout)
+   println(summon[Structish[div_u]].layout)
 
-  val l = Stdlib.div.map(_(5, 2)).get
+   //def allocie[A <: StructBacking] = NativeIO.allocate[A]
 
-  val divTVH = VarHandleHandler(
-    scala2MemoryLayout[Stdlib.div_t]
-      .varHandle(classOf[Int], MemoryLayout.PathElement.groupElement("quot"))
-  )
+   val x = NativeIO.scope(for
+      // a <- NativeIO.allocate[divor]
+      // b <- NativeIO.allocate[divor]
+      l <- NativeIO.layout[divor]
+      // _ = println(a.quot.get)
+      // _ = b.quot.set(3)
+      // _ = println(a.quot.get)
+      // _ = println(b.quot.get)
+   yield println(l))
 
-  deriveLayout[div_t]
-  println(divTVH.get(l))
-  Unistd._exit.foreach(_(5))
-  println("hello")
+   x.foldMap(NativeIO.impureCompiler)
+
+   Unistd._exit.foreach(_(5))
+   println("hello")
