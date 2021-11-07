@@ -74,6 +74,8 @@ object NativePieces:
               s"Couldn't find given for ${TypeRepr.of[A].show(using Printer.TypeReprCode)}"
             )
 
+   val paramNames = LazyList.iterate(1)(_ + 1).map("p" + _.toString)
+
    def functionImpl[A: Type](name: Expr[String])(using Quotes) =
       import quotes.reflect.{MethodType => MT, *}
 
@@ -97,22 +99,10 @@ object NativePieces:
               }
             )
 
-            val paramNames = LazyList.iterate("p")(_ + "p")
             val methodT = methodType(
               resultType,
               Expr.ofSeq(subtypes.init.map(_.asType.pipe(type2MethodTypeArg)))
             )
-
-            val newRes = t.asType
-               .pipe { case '[t] =>
-                  Applied(
-                    TypeTree.of[t],
-                    paramTypes.map { case '[t] => TypeTree.of[t] } :+ resultType
-                       .pipe { case '[t] => TypeTree.of[NativeIO[t]] }
-                  )
-               }
-               .tpe
-               .asType
 
             val methodHandle: Expr[NativeIO[MethodHandle]] = '{
                Free.liftF[NativeOp, MethodHandle](
@@ -128,75 +118,48 @@ object NativePieces:
                case _                => false
 
             val needsSegmentAllocator =
-               resultNeedsSegmentAllocator || (resultType match
+               resultNeedsSegmentAllocator || paramTypes.exists {
                   case '[String] => true
                   case _         => false
-               )
-
-            def paramMods(maybeSegAlloc: Expr[Option[SegmentAllocator]]) =
-               paramTypes.map {
-                  case '[String] =>
-                     '{ (a: Any) =>
-                        CLinker
-                           .toCString(
-                             a.asInstanceOf[String],
-                             ${ maybeSegAlloc }.get
-                           )
-                           .address
-                     }
-                  case _ => '{ (a: Any) => a }
                }
 
-            newRes.pipe { case '[l] =>
-               Lambda(
-                 Symbol.spliceOwner,
-                 MT(
-                   paramNames.take(paramTypes.size).toList
-                 )(
-                   _ => paramTypeReprs,
-                   _ =>
-                      resultType.pipe { case '[t] =>
-                         TypeRepr.of[NativeIO[t]]
-                      }
-                 ),
-                 (_, params) =>
-                    resultType match
-                       case '[t] =>
-                          (if needsSegmentAllocator then
-                              '{ (seg: SegmentAllocator) ?=>
-                                 $methodHandle.map(
-                                   _.invokeWithArguments(
-                                     ${
-                                        Varargs(
-                                          (if resultNeedsSegmentAllocator then
-                                              List('seg)
-                                           else Nil) ++ params
-                                             .map(_.asExpr)
-                                             .zip(paramMods('{ Some(seg) }))
-                                             .map((v, fn) => '{ $fn($v) })
-                                        )
-                                     }*
-                                   ).asInstanceOf[t]
-                                 )
-                              }
-                           else
-                              '{
-                                 $methodHandle.map(
-                                   _.invokeWithArguments(
-                                     ${
-                                        Varargs(
-                                          params
-                                             .map(_.asExpr)
-                                             .zip(paramMods('None))
-                                             .map((v, fn) => '{ $fn($v) })
-                                        )
-                                     }*
-                                   ).asInstanceOf[t]
-                                 )
-                              }
-                          ).asTerm
-               ).tap(t => report.info(t.show(using Printer.TreeCode)))
-                  .asExprOf[l]
+            val newRes = t.asType
+               .pipe {
+                  case '[t] if needsSegmentAllocator =>
+                     Applied(
+                       TypeTree.of[t],
+                       paramTypes.map { case '[t] =>
+                          TypeTree.of[t]
+                       } :+ resultType.pipe { case '[t] =>
+                          Applied(
+                            TypeTree.of[ContextFunction1],
+                            List(
+                              TypeTree.of[SegmentAllocator],
+                              TypeTree.of[NativeIO[t]]
+                            )
+                          )
+                       }
+                     )
+                  case '[t] =>
+                     Applied(
+                       TypeTree.of[t],
+                       paramTypes.map { case '[t] =>
+                          TypeTree.of[t]
+                       } :+ resultType
+                          .pipe { case '[t] => TypeTree.of[NativeIO[t]] }
+                     )
+               }
+               .tpe
+               .asType
+
+            (newRes, resultType).pipe { case ('[l], '[r]) =>
+               genLambda[r](
+                 needsSegmentAllocator,
+                 resultNeedsSegmentAllocator,
+                 methodHandle,
+                 paramTypes,
+                 resultType
+               ).asExprOf[l]
             }
          case f =>
             report.errorAndAbort(
@@ -204,6 +167,96 @@ object NativePieces:
                  .show(using Printer.TypeReprStructure)
             )
    end functionImpl
+
+   def paramModifiers(
+       segAlloc: Option[Expr[SegmentAllocator]]
+   )(param: Type[?])(using Quotes) =
+      param match
+         case '[String] =>
+            val impl = segAlloc.get
+            (a: Expr[Any]) =>
+               '{
+                  CLinker.toCString(${ a.asExprOf[String] }, $impl).address
+               }
+         case '[StructBacking] =>
+            (a: Expr[Any]) =>
+               '{
+                  ${ a.asExprOf[StructBacking] }.$mem
+               }
+         case _ => (a: Expr[Any]) => a
+
+   def resultModifiers[r: Type](expr: Expr[Any])(using
+       Quotes
+   ) =
+      Type.of[r] match
+         case '[StructBacking] => '{ $expr.asInstanceOf[r] }
+         case '[String] =>
+            '{ CLinker.toJavaString($expr.asInstanceOf[MemoryAddress]) }
+               .asExprOf[r]
+         case _ => '{ $expr.asInstanceOf[r] }
+
+   def mhCall[A: Type](using
+       q: Quotes
+   )(
+       segAlloc: Option[Expr[SegmentAllocator]],
+       ps: List[Expr[Any]],
+       pTyps: List[Type[?]]
+   ): Expr[MethodHandle => A] = '{ mh =>
+      ${
+         resultModifiers[A]('{
+            mh.invokeWithArguments(${ Varargs(trueArgs(segAlloc, ps, pTyps)) }*)
+         })
+      }
+   }
+
+   def trueArgs(using
+       q: Quotes
+   )(
+       segAlloc: Option[Expr[SegmentAllocator]],
+       args: List[Expr[Any]],
+       typs: List[Type[?]]
+   ): List[Expr[Any]] = args
+      .zip(typs.map(paramModifiers(segAlloc)))
+      .map((v, mod) => mod(v))
+
+   def genLambda[r: Type](
+       needsSegmentAllocator: Boolean,
+       resultTypeAllocates: Boolean,
+       meth: Expr[NativeIO[MethodHandle]],
+       params: List[Type[?]],
+       result: Type[?]
+   )(using Quotes) =
+      import quotes.reflect.{MethodType => MT, *}
+
+      val paramReprs = params.map { case '[t] => TypeRepr.of[t] }
+      val resultRepr =
+         if needsSegmentAllocator then
+            result.pipe { case '[t] =>
+               TypeRepr.of[SegmentAllocator ?=> NativeIO[t]]
+            }
+         else result.pipe { case '[t] => TypeRepr.of[NativeIO[t]] }
+      val args = (ps: List[Expr[Any]]) =>
+         if resultTypeAllocates then
+            Expr.ofSeq(Expr.summon[SegmentAllocator].get :: ps)
+         else Expr.ofSeq(ps)
+      val lmb = (s: Symbol, ps: List[Tree]) =>
+         if needsSegmentAllocator then
+            '{ (seg: SegmentAllocator) ?=>
+               $meth.map(${ mhCall[r](Some('seg), ps.map(_.asExpr), params) })
+            }.asTerm.changeOwner(s)
+         else
+            '{
+               $meth.map(${ mhCall[r](None, ps.map(_.asExpr), params) })
+            }.asTerm.changeOwner(s)
+      Lambda(
+        Symbol.spliceOwner,
+        MT(paramNames.take(params.size).toList)(
+          _ => paramReprs,
+          _ => resultRepr
+        ),
+        lmb
+      )
+   end genLambda
 
    def methodHandleBinderImpl[A: Type](
        nameExpr: Expr[String]
@@ -275,6 +328,7 @@ object NativePieces:
          case '[Long]          => '{ classOf[Long] }
          case '[Int]           => '{ classOf[Int] }
          case '[Float]         => '{ classOf[Float] }
+         case '[Double]        => '{ classOf[Double] }
          case '[Boolean]       => '{ classOf[Boolean] }
          case '[Char]          => '{ classOf[Char] }
          case '[String]        => '{ classOf[MemoryAddress] }
