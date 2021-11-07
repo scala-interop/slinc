@@ -13,35 +13,26 @@ import jdk.incubator.foreign.ResourceScope
 import scala.util.chaining.*
 import scala.quoted.*
 import javax.swing.text.Segment
-
-enum NativeOp[A]:
-   case Allocate[A](
-       aName: String,
-       layout: MemoryLayout,
-       structMaker: (MemorySegment) => A,
-       allocator: SegmentAllocator
-   ) extends NativeOp[A]
-   case Scope[A](result: (ResourceScope, SegmentAllocator) => NativeIO[A])
-       extends NativeOp[A]
-   case Unit extends NativeOp[Unit]
-   case Pure[A](value: () => A) extends NativeOp[A]
-   case Layout(
-       name: String,
-       layoutGen: Map[String, MemoryLayout] => NativeIO[MemoryLayout]
-   ) extends NativeOp[MemoryLayout]
-
+import java.lang.invoke.MethodHandle
 
 type NativeIO[A] = Free[NativeOp, A]
 object NativeIO:
-   inline def layout[A <: StructBacking]: NativeIO[MemoryLayout] =
+   inline def layout[A]: NativeIO[MemoryLayout] =
       Free.liftF(
-        NativeOp.Layout(
-          type2String[A],
-          _.get(type2String[A]).map(pure(_)).getOrElse(NativePieces.deriveLayout[A])
-        )
+        NativePieces
+           .deriveLayout[A]
+           .pipe((name, layout) =>
+              NativeOp
+                 .Layout(
+                   name,
+                   m =>
+                      if m.contains(name) then pure(m)
+                      else layout().map(l => m + (name -> l))
+                 )
+           )
       )
 
-   inline def allocate[A <: StructBacking](using
+   inline def allocate[A](using
        SegmentAllocator
    ): NativeIO[A] =
       for
@@ -56,7 +47,7 @@ object NativeIO:
          )
       yield r
 
-   inline def function[A](name: String) = ${
+   transparent inline def function[A](name: String) = ${
       NativePieces.functionImpl[A]('name)
    }
 
@@ -70,6 +61,7 @@ object NativeIO:
          var varHandles = Map.empty[String, VarHandleHandler]
          var layouts = Map.empty[String, MemoryLayout]
          val clinker = CLinker.getInstance
+         var methodHandles = Map.empty[String, MethodHandle]
 
          def apply[A](fa: NativeOp[A]): Id[A] =
             fa match
@@ -92,4 +84,20 @@ object NativeIO:
                   ()
                case NativeOp.Pure(aFn) => aFn()
                case NativeOp.Layout(name, gen) =>
-                  gen(layouts).foldMap(this).tap(layouts += name -> _)
+                  gen(layouts)
+                     .foldMap(this)
+                     .tap(m =>
+                        if m != layouts then
+                           ().tap(_ => layouts = m)
+                              .tap(_ => println(s"added $name ${m(name)}"))
+                     )
+                     .pipe(_(name))
+               case NativeOp.MethodHandleBinding(name, mhGen) =>
+                  methodHandles.getOrElse(
+                    name,
+                    mhGen(clinker)
+                       .foldMap(this)
+                       .tap(mh =>
+                          methodHandles = methodHandles.updated(name, mh)
+                       )
+                  )

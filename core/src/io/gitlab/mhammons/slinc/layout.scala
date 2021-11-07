@@ -9,18 +9,18 @@ import scala.collection.mutable.HashMap
 import java.lang.invoke.VarHandle
 import io.gitlab.mhammons.polymorphics.VarHandleHandler
 
-inline def deriveLayout[T <: StructBacking]: MemoryLayout = ${
+inline def deriveLayout[T]: MemoryLayout = ${
    deriveLayoutImpl[T]
 }
 
-inline def structFromMemorySegment[T <: StructBacking](
+inline def structFromMemorySegment[T](
     memorySegment: MemorySegment
 ) =
    ${
       structFromMemorySegmentImpl[T]('memorySegment)
    }
 
-def structFromMemorySegmentImpl[T <: StructBacking: Type](
+def structFromMemorySegmentImpl[T: Type](
     expr: Expr[MemorySegment]
 )(using
     Quotes

@@ -12,8 +12,19 @@ import io.gitlab.mhammons.polymorphics.*
 import cats.implicits.*
 import cats.catsInstancesForId
 
+type divor = StructBacking {
+   val quot: int
+   val rem: int
+}
+
 object Unistd extends CLib:
    val getPid = downcall[Long]("getpid")
+   val getPid2 =
+      NativeIO.function[() => Long]("getpid")
+
+   val getPie = ()
+   // NativeIO
+   //    .function[Int => divor]("getpid")
    val _exit = downcall[Long, Unit]("_exit")
 
 object Stdlib extends io.gitlab.mhammons.slinc.CLib:
@@ -23,6 +34,10 @@ object Stdlib extends io.gitlab.mhammons.slinc.CLib:
 object Time extends CLib:
    val time = downcall[MemoryAddress, Long]("time")
    val localTime = downcall[MemoryAddress, MemoryAddress]("localtime")
+// val div = NativeIO.function[(Int, Int) => divor]("div")
+
+// object String:
+//    val strcmp = NativeIO.function[(String) => Int]("strlen")
 
 trait div_t extends Struct[div_t]:
    import Fd.*
@@ -36,10 +51,6 @@ case class div_u(quot: int, rem: int) derives Structish
 //case class div_x(quot: Int, rem: Int) derives Structish
 
 import Fd.int
-type divor = StructBacking {
-   val quot: int
-   val jo: int
-}
 
 class divo:
    val quot: Int = 5
@@ -77,17 +88,21 @@ class Stuk extends Selectable:
    println(summon[Structish[div_u]].layout)
    println(summon[Structish[div_u]].layout)
 
-   //def allocie[A <: StructBacking] = NativeIO.allocate[A]
+   // def allocie[A <: StructBacking] = NativeIO.allocate[A]
 
-   val x = NativeIO.scope(for
-      // a <- NativeIO.allocate[divor]
-      // b <- NativeIO.allocate[divor]
-      l <- NativeIO.layout[divor]
-      // _ = println(a.quot.get)
-      // _ = b.quot.set(3)
-      // _ = println(a.quot.get)
-      // _ = println(b.quot.get)
-   yield println(l))
+   val x = NativeIO.scope(
+     for
+        // a <- NativeIO.allocate[divor]
+        // b <- NativeIO.allocate[divor]
+        l <- NativeIO.layout[divor]
+        pid <- Unistd.getPid2()
+
+     // _ = println(a.quot.get)
+     // _ = b.quot.set(3)
+     // _ = println(a.quot.get)
+     // _ = println(b.quot.get)
+     yield println(pid)
+   )
 
    x.foldMap(NativeIO.impureCompiler)
 

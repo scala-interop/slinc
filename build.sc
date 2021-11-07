@@ -26,7 +26,14 @@ object core extends ScalaModule {
    object test extends Tests {
       def ivyDeps = Agg(ivy"org.scalameta::munit::$munit")
 
-      def testFrameworks = Seq("munit.Framework")
+      def testFramework = T("munit.Framework")
+
+      def forkArgs = Seq(
+        "--add-modules",
+        "jdk.incubator.foreign",
+        "--enable-native-access",
+        "ALL-UNNAMED"
+      )
    }
 
    override def scalacOptions = Seq("-Xsemanticdb")
