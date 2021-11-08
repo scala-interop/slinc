@@ -41,7 +41,7 @@ object NativeIO:
            NativeOp.Allocate[A](
              type2String[A],
              l,
-             structFromMemorySegment[A](_),
+             toStruct(_),
              summon[SegmentAllocator]
            )
          )
@@ -90,7 +90,7 @@ object NativeIO:
                case NativeOp.Allocate(name, layout, structMaker, alloc) =>
                   structMaker(
                     alloc.allocate(layout)
-                  )
+                  ).foldMap(this)
 
                case NativeOp.Scope(ioFn) =>
                   val rs = ResourceScope.newConfinedScope
@@ -105,10 +105,11 @@ object NativeIO:
                   ()
                case NativeOp.Pure(aFn) => aFn()
                case NativeOp.Layout(name, gen) =>
-                  layouts.getOrElse(
-                    name,
-                    gen(layouts).foldMap(this).tap(ls => layouts = ls)(name)
-                  )
+                  layouts
+                     .getOrElse(
+                       name,
+                       gen(layouts).foldMap(this).tap(ls => layouts = ls)(name)
+                     )
                case NativeOp.MethodHandleBinding(name, mhGen) =>
                   methodHandles.getOrElse(
                     name,

@@ -11,7 +11,7 @@ enum NativeOp[A]:
    case Allocate[A](
        aName: String,
        layout: MemoryLayout,
-       structMaker: (MemorySegment) => A,
+       structMaker: (MemorySegment) => NativeIO[A],
        allocator: SegmentAllocator
    ) extends NativeOp[A]
    case Scope[A](result: (ResourceScope, SegmentAllocator) => NativeIO[A])
