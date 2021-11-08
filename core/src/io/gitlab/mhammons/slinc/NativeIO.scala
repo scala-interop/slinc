@@ -14,21 +14,21 @@ import scala.util.chaining.*
 import scala.quoted.*
 import javax.swing.text.Segment
 import java.lang.invoke.MethodHandle
+import java.lang.invoke.VarHandle
 
 type NativeIO[A] = Free[NativeOp, A]
 object NativeIO:
    inline def layout[A]: NativeIO[MemoryLayout] =
       Free.liftF(
         NativePieces
-           .deriveLayout[A]
-           .pipe((name, layout) =>
-              NativeOp
-                 .Layout(
-                   name,
-                   m =>
-                      if m.contains(name) then pure(m)
-                      else layout().map(l => m + (name -> l))
-                 )
+           .getStructName[A]
+           .pipe(name =>
+              NativeOp.Layout(
+                name,
+                m =>
+                   if m.contains(name) then pure(m)
+                   else NativePieces.deriveLayout[A].map(m.updated(name, _))
+              )
            )
       )
 
@@ -47,6 +47,16 @@ object NativeIO:
          )
       yield r
 
+   inline def toStruct[A](memorySegment: MemorySegment) =
+      NativeIO
+         .varHandles[A]
+         .map(
+           _.map((name, vh) =>
+              name -> Fd(memorySegment, VarHandleHandler(vh))
+           ).toMap
+              .updated("$mem", memorySegment)
+              .pipe(Struct(_).asInstanceOf[A])
+         )
    transparent inline def function[A](name: String) = ${
       NativePieces.functionImpl[A]('name)
    }
@@ -56,9 +66,21 @@ object NativeIO:
    def scope[A](fn: (ResourceScope, SegmentAllocator) ?=> NativeIO[A]) =
       Free.liftF[NativeOp, A](NativeOp.Scope((r, s) => fn(using r, s)))
 
+   inline def varHandles[A]: NativeIO[Seq[(String, VarHandle)]] = NativePieces
+      .getStructName[A]
+      .pipe(name =>
+         NativeOp.VarHandleBindings(
+           name,
+           m =>
+              if m.contains(name) then pure(m)
+              else NativePieces.generateVarHandles[A].map(m.updated(name, _))
+         )
+      )
+      .pipe(Free.liftF)
+
    val impureCompiler: NativeOp ~> Id =
       new (NativeOp ~> Id):
-         var varHandles = Map.empty[String, VarHandleHandler]
+         var varHandles = Map.empty[String, Seq[(String, VarHandle)]]
          var layouts = Map.empty[String, MemoryLayout]
          val clinker = CLinker.getInstance
          var methodHandles = Map.empty[String, MethodHandle]
@@ -78,20 +100,15 @@ object NativeIO:
                   ioFn(rs, segAlloc)
                      .foldMap(this)
                      .tap(_ => rs.close)
-                     .tap(_ => println("memory freed"))
 
                case NativeOp.Unit =>
                   ()
                case NativeOp.Pure(aFn) => aFn()
                case NativeOp.Layout(name, gen) =>
-                  gen(layouts)
-                     .foldMap(this)
-                     .tap(m =>
-                        if m != layouts then
-                           ().tap(_ => layouts = m)
-                              .tap(_ => println(s"added $name ${m(name)}"))
-                     )
-                     .pipe(_(name))
+                  layouts.getOrElse(
+                    name,
+                    gen(layouts).foldMap(this).tap(ls => layouts = ls)(name)
+                  )
                case NativeOp.MethodHandleBinding(name, mhGen) =>
                   methodHandles.getOrElse(
                     name,
@@ -100,4 +117,11 @@ object NativeIO:
                        .tap(mh =>
                           methodHandles = methodHandles.updated(name, mh)
                        )
+                  )
+               case NativeOp.VarHandleBindings(name, vhGen) =>
+                  varHandles.getOrElse(
+                    name,
+                    vhGen(varHandles)
+                       .foldMap(this)
+                       .tap(vhs => varHandles = vhs)(name)
                   )

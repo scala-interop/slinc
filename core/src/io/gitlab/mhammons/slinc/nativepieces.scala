@@ -13,66 +13,58 @@ import scala.util.chaining.*
 import cats.free.Free
 import cats.implicits.*
 import scala.compiletime.error
-import java.lang.invoke.MethodType
 import scala.jdk.OptionConverters.*
 import java.lang.invoke.MethodHandle
 import cats.data.Func
+import io.gitlab.mhammons.polymorphics.VarHandleHandler
 
 object NativePieces:
-
-   def functionDescriptor(
-       typ: Type[?],
-       args: Expr[NativeIO[Seq[MemoryLayout]]]
+   def functionDescriptor[A: Type](
+       paramTypes: List[Type[?]]
    )(using
        Quotes
    ): Expr[NativeIO[FunctionDescriptor]] =
-      typ match
+      val paramLayouts = paramTypes
+         .map { case '[p] => type2MemoryLayout[p] }
+         .pipe(Expr.ofSeq)
+         .pipe(exp => '{ $exp.sequence })
+      Type.of[A] match
          case '[Unit] =>
-            '{ $args.map(FunctionDescriptor.ofVoid(_*)) }
-         case r =>
+            '{ $paramLayouts.map(FunctionDescriptor.ofVoid(_*)) }
+         case '[r] =>
             '{
                for
-                  returnLayout <- ${ type2MemoryLayout(r) }
-                  rest <- $args
+                  returnLayout <- ${ type2MemoryLayout[r] }
+                  rest <- $paramLayouts
                yield FunctionDescriptor.of(returnLayout, rest*)
             }
 
-   def methodType(typ: Type[?], args: Expr[Seq[Class[?]]])(using
+   def methodType[A: Type](args: Seq[Expr[Class[?]]])(using
        Quotes
-   ) = typ match
-      case '[Unit] =>
-         '{
-            $args.pipe(as =>
-               if as.isEmpty then VoidHelper.methodTypeV()
-               else if as.size == 1 then VoidHelper.methodTypeV(as.head)
-               else VoidHelper.methodTypeV(as.head, as.tail*)
-            )
-         }
-      case r =>
-         '{
-            $args.pipe(as =>
-               if as.isEmpty then
-                  MethodType.methodType(${ type2MethodTypeArg(r) })
-               else if as.size == 1 then
-                  MethodType.methodType(${ type2MethodTypeArg(r) }, as.head)
-               else
-                  MethodType.methodType(
-                    ${ type2MethodTypeArg(r) },
-                    as.head,
-                    as.tail*
+   ) =
+      import java.lang.invoke.MethodType
+
+      Type.of[A] match
+         case '[Unit] =>
+            if args.isEmpty then '{ VoidHelper.methodTypeV() }
+            else
+               '{
+                  VoidHelper.methodTypeV(
+                    ${ args.head },
+                    ${ Varargs(args.tail) }*
                   )
-            )
-         }
-
-   def fetchImplicit[A: Type](using Quotes) =
-      import quotes.reflect.*
-
-      Implicits.search(TypeRepr.of[A]) match
-         case i: ImplicitSearchSuccess => i.tree.asExprOf[A]
-         case _ =>
-            report.errorAndAbort(
-              s"Couldn't find given for ${TypeRepr.of[A].show(using Printer.TypeReprCode)}"
-            )
+               }
+         case '[r] =>
+            if args.isEmpty then
+               '{ MethodType.methodType(${ type2MethodTypeArg[r] }) }
+            else
+               '{
+                  MethodType.methodType(
+                    ${ type2MethodTypeArg[r] },
+                    ${ args.head },
+                    ${ Varargs(args.tail) }*
+                  )
+               }
 
    val paramNames = LazyList.iterate(1)(_ + 1).map("p" + _.toString)
 
@@ -80,29 +72,18 @@ object NativePieces:
       import quotes.reflect.{MethodType => MT, *}
 
       TypeRepr.of[A] match
-         case a @ AppliedType(t, subtypes)
-             if t.typeSymbol.name.startsWith("Function") && t.typeSymbol.name
+         case a @ AppliedType(outer, subtypes)
+             if outer.typeSymbol.name.startsWith(
+               "Function"
+             ) && outer.typeSymbol.name
                 .replace("Function", "")
                 .toIntOption
                 .isDefined =>
-            val paramTypeReprs = subtypes.init
-            val paramTypes = paramTypeReprs.map(_.asType)
-
-            val parameterLayouts =
-               Expr.ofSeq(subtypes.init.map(typeRepr2MemoryLayout))
-            val resultTypeRepr = subtypes.last
-            val resultType = resultTypeRepr.asType
-            val functionD = functionDescriptor(
-              resultType,
-              '{
-                 $parameterLayouts.sequence
-              }
-            )
-
-            val methodT = methodType(
-              resultType,
-              Expr.ofSeq(subtypes.init.map(_.asType.pipe(type2MethodTypeArg)))
-            )
+            val outerTypeTree = outer.asType match
+               case '[o] => TypeTree.of[o]
+            val paramTypes = subtypes.init.map(_.asType)
+            val paramTypeTrees = paramTypes.map { case '[a] => TypeTree.of[a] }
+            val resultType = subtypes.last.asType
 
             val methodHandle: Expr[NativeIO[MethodHandle]] = '{
                Free.liftF[NativeOp, MethodHandle](
@@ -114,8 +95,8 @@ object NativePieces:
             }
 
             val resultNeedsSegmentAllocator = resultType match
-               case '[StructBacking] => true
-               case _                => false
+               case '[Struct] => true
+               case _         => false
 
             val needsSegmentAllocator =
                resultNeedsSegmentAllocator || paramTypes.exists {
@@ -123,45 +104,30 @@ object NativePieces:
                   case _         => false
                }
 
-            val newRes = t.asType
-               .pipe {
-                  case '[t] if needsSegmentAllocator =>
-                     Applied(
-                       TypeTree.of[t],
-                       paramTypes.map { case '[t] =>
-                          TypeTree.of[t]
-                       } :+ resultType.pipe { case '[t] =>
-                          Applied(
-                            TypeTree.of[ContextFunction1],
-                            List(
-                              TypeTree.of[SegmentAllocator],
-                              TypeTree.of[NativeIO[t]]
-                            )
-                          )
-                       }
-                     )
-                  case '[t] =>
-                     Applied(
-                       TypeTree.of[t],
-                       paramTypes.map { case '[t] =>
-                          TypeTree.of[t]
-                       } :+ resultType
-                          .pipe { case '[t] => TypeTree.of[NativeIO[t]] }
-                     )
-               }
-               .tpe
-               .asType
+            val newResultTypeTree = resultType match
+               case '[r] =>
+                  if needsSegmentAllocator then
+                     List(
+                       TypeTree.of[SegmentAllocator],
+                       TypeTree.of[NativeIO[r]]
+                     ).pipe(Applied(TypeTree.of[ContextFunction1], _))
+                  else TypeTree.of[NativeIO[r]]
 
-            (newRes, resultType).pipe { case ('[l], '[r]) =>
-               genLambda[r](
-                 needsSegmentAllocator,
-                 resultNeedsSegmentAllocator,
-                 methodHandle,
-                 paramTypes,
-                 resultType
-               ).asExprOf[l]
-            }
-         case f =>
+            val finalResultType = Applied(
+              outerTypeTree,
+              paramTypeTrees :+ newResultTypeTree
+            ).tpe.asType
+
+            (finalResultType, resultType) match
+               case ('[finalResult], '[initialResult]) =>
+                  genLambda[initialResult](
+                    needsSegmentAllocator,
+                    resultNeedsSegmentAllocator,
+                    methodHandle,
+                    paramTypes,
+                    resultType
+                  ).asExprOf[finalResult]
+         case f => // todo: elaborate
             report.errorAndAbort(
               f
                  .show(using Printer.TypeReprStructure)
@@ -178,10 +144,10 @@ object NativePieces:
                '{
                   CLinker.toCString(${ a.asExprOf[String] }, $impl).address
                }
-         case '[StructBacking] =>
+         case '[Struct] =>
             (a: Expr[Any]) =>
                '{
-                  ${ a.asExprOf[StructBacking] }.$mem
+                  ${ a.asExprOf[Struct] }.$mem
                }
          case _ => (a: Expr[Any]) => a
 
@@ -189,35 +155,48 @@ object NativePieces:
        Quotes
    ) =
       Type.of[r] match
-         case '[StructBacking] => '{ $expr.asInstanceOf[r] }
+         case '[Struct] =>
+            '{ NativeIO.toStruct[r]($expr.asInstanceOf[MemorySegment]) }
          case '[String] =>
-            '{ CLinker.toJavaString($expr.asInstanceOf[MemoryAddress]) }
-               .asExprOf[r]
-         case _ => '{ $expr.asInstanceOf[r] }
+            '{
+               NativeIO.pure(
+                 CLinker.toJavaString($expr.asInstanceOf[MemoryAddress])
+               )
+            }.asExprOf[NativeIO[r]]
+         case _ => '{ NativeIO.pure($expr.asInstanceOf[r]) }
 
    def mhCall[A: Type](using
-       q: Quotes
+       Quotes
    )(
+       resultTypeAllocates: Boolean,
        segAlloc: Option[Expr[SegmentAllocator]],
        ps: List[Expr[Any]],
        pTyps: List[Type[?]]
-   ): Expr[MethodHandle => A] = '{ mh =>
+   ): Expr[MethodHandle => NativeIO[A]] = '{ mh =>
       ${
          resultModifiers[A]('{
-            mh.invokeWithArguments(${ Varargs(trueArgs(segAlloc, ps, pTyps)) }*)
+            mh.invokeWithArguments(${
+               Varargs(trueArgs(resultTypeAllocates, segAlloc, ps, pTyps))
+            }*)
          })
       }
    }
 
    def trueArgs(using
-       q: Quotes
+       Quotes
    )(
+       resultTypeAllocates: Boolean,
        segAlloc: Option[Expr[SegmentAllocator]],
        args: List[Expr[Any]],
        typs: List[Type[?]]
    ): List[Expr[Any]] = args
       .zip(typs.map(paramModifiers(segAlloc)))
       .map((v, mod) => mod(v))
+      .pipe {
+         case tArgs if resultTypeAllocates =>
+            segAlloc.map(_ :: tArgs).getOrElse(tArgs)
+         case tArgs => tArgs
+      }
 
    def genLambda[r: Type](
        needsSegmentAllocator: Boolean,
@@ -230,11 +209,10 @@ object NativePieces:
 
       val paramReprs = params.map { case '[t] => TypeRepr.of[t] }
       val resultRepr =
-         if needsSegmentAllocator then
-            result.pipe { case '[t] =>
+         result match
+            case '[t] if needsSegmentAllocator =>
                TypeRepr.of[SegmentAllocator ?=> NativeIO[t]]
-            }
-         else result.pipe { case '[t] => TypeRepr.of[NativeIO[t]] }
+            case '[t] => TypeRepr.of[NativeIO[t]]
       val args = (ps: List[Expr[Any]]) =>
          if resultTypeAllocates then
             Expr.ofSeq(Expr.summon[SegmentAllocator].get :: ps)
@@ -242,11 +220,20 @@ object NativePieces:
       val lmb = (s: Symbol, ps: List[Tree]) =>
          if needsSegmentAllocator then
             '{ (seg: SegmentAllocator) ?=>
-               $meth.map(${ mhCall[r](Some('seg), ps.map(_.asExpr), params) })
+               $meth.flatMap(${
+                  mhCall[r](
+                    resultTypeAllocates,
+                    Some('seg),
+                    ps.map(_.asExpr),
+                    params
+                  )
+               })
             }.asTerm.changeOwner(s)
          else
             '{
-               $meth.map(${ mhCall[r](None, ps.map(_.asExpr), params) })
+               $meth.flatMap(${
+                  mhCall[r](resultTypeAllocates, None, ps.map(_.asExpr), params)
+               })
             }.asTerm.changeOwner(s)
       Lambda(
         Symbol.spliceOwner,
@@ -269,21 +256,21 @@ object NativePieces:
                 .replace("Function", "")
                 .toIntOption
                 .isDefined =>
-            val paramTypes = subtypes.init
-            val parameterTypes =
-               Expr.ofSeq(paramTypes.map(typeRepr2MemoryLayout))
-            val resultType = subtypes.last.asType
-            val functionD = functionDescriptor(
-              resultType,
-              '{
-                 $parameterTypes.sequence
-              }
-            )
+            val paramTypes = subtypes.init.map(_.asType)
 
-            val methodT = methodType(
-              resultType,
-              Expr.ofSeq(paramTypes.map(_.asType.pipe(type2MethodTypeArg)))
-            )
+            val resultType = subtypes.last.asType
+            val functionD = resultType match
+               case '[r] =>
+                  functionDescriptor[r](
+                    paramTypes
+                  )
+
+            val methodT = resultType match
+               case '[r] =>
+                  methodType[r](
+                    paramTypes
+                       .map(_.pipe { case '[a] => type2MethodTypeArg[a] })
+                  )
 
             '{ (c: CLinker) =>
                $functionD
@@ -295,21 +282,17 @@ object NativePieces:
             report.errorAndAbort(
               s"type ${f.show(using Printer.TypeReprCode)} cannot be translated to a method handle"
             )
-            report.errorAndAbort(
-              f
-                 .show(using Printer.TypeReprStructure)
-            )
    end methodHandleBinderImpl
 
    def typeRepr2MemoryLayout(using Quotes)(
        typeRepr: quotes.reflect.TypeRepr
    ): Expr[NativeIO[MemoryLayout]] =
-      type2MemoryLayout(typeRepr.asType)
+      typeRepr.asType.pipe { case '[a] => type2MemoryLayout[a] }
 
-   def type2MemoryLayout(typ: Type[?])(using
+   def type2MemoryLayout[A: Type](using
        q: Quotes
    ): Expr[NativeIO[MemoryLayout]] =
-      typ match
+      Type.of[A] match
          case '[Int] =>
             '{ NativeIO.pure(CLinker.C_INT) }
          case '[Float]   => '{ NativeIO.pure(CLinker.C_FLOAT) }
@@ -319,65 +302,118 @@ object NativePieces:
          case '[String]  => '{ NativeIO.pure(CLinker.C_POINTER) }
          case '[Short]   => '{ NativeIO.pure(CLinker.C_SHORT) }
          case '[Long]    => '{ NativeIO.pure(CLinker.C_LONG) }
-         case '[Fd[t]]   => type2MemoryLayout(Type.of[t])
-         case '[Ptr[t]]  => '{ NativeIO.pure(CLinker.C_POINTER) }
-         case '[t]       => '{ NativeIO.layout[t] }
+         case '[Fd[a]]   => type2MemoryLayout[a]
+         case '[Ptr[a]]  => '{ NativeIO.pure(CLinker.C_POINTER) }
+         case '[a]       => '{ NativeIO.layout[a] }
 
-   def type2MethodTypeArg(typ: Type[?])(using Quotes): Expr[Class[?]] =
-      typ match
-         case '[Long]          => '{ classOf[Long] }
-         case '[Int]           => '{ classOf[Int] }
-         case '[Float]         => '{ classOf[Float] }
-         case '[Double]        => '{ classOf[Double] }
-         case '[Boolean]       => '{ classOf[Boolean] }
-         case '[Char]          => '{ classOf[Char] }
-         case '[String]        => '{ classOf[MemoryAddress] }
-         case '[Short]         => '{ classOf[Short] }
-         case '[StructBacking] => '{ classOf[MemorySegment] }
-         case '[Ptr[t]]        => '{ classOf[MemoryAddress] }
-         case '[Fd[t]]         => type2MethodTypeArg(Type.of[t])
+   // todo: rewrite nicer
+   def type2MethodTypeArg[A: Type](using Quotes): Expr[Class[?]] =
+      import quotes.reflect.*
+      Type.of[A] match
+         case '[Long]    => '{ classOf[Long] }
+         case '[Int]     => '{ classOf[Int] }
+         case '[Float]   => '{ classOf[Float] }
+         case '[Double]  => '{ classOf[Double] }
+         case '[Boolean] => '{ classOf[Boolean] }
+         case '[Char]    => '{ classOf[Char] }
+         case '[String]  => '{ classOf[MemoryAddress] }
+         case '[Short]   => '{ classOf[Short] }
+         case '[Struct]  => '{ classOf[MemorySegment] }
+         case '[Ptr[t]]  => '{ classOf[MemoryAddress] }
+         case '[Fd[t]]   => type2MethodTypeArg[t]
+         case '[a] =>
+            report.errorAndAbort(s"received unknown type ${Type.show[a]}")
 
-   def refinementDataExtraction(using Quotes)(
-       typ: quotes.reflect.TypeRepr
+   def refinementDataExtraction[A: Type](using
+       Quotes
    ): List[(String, Type[?])] =
       import quotes.reflect.*
-      typ.dealias match
+      TypeRepr.of[A].dealias match
          case Refinement(ancestor, name, typ) =>
-            name -> typ.asType :: refinementDataExtraction(ancestor)
-         case TypeRef(_, "StructBacking") =>
+            name -> typ.asType :: ancestor.asType.pipe { case '[t] =>
+               refinementDataExtraction[t]
+            }
+         case TypeRef(repr, name)
+             if TypeRepr.of[Struct].typeSymbol.name == name =>
             Nil
          case t =>
             report.errorAndAbort(
               s"Cannot derive a layout for non-struct type ${t.show(using Printer.TypeReprCode)}"
             )
 
-   def deriveLayoutImpl[T: Type](using
-       q: Quotes
-   ): Expr[(String, () => NativeIO[MemoryLayout])] =
-      import quotes.reflect.*
+   inline def getStructName[T] = ${
+      getStructNameImpl[T]
+   }
 
-      val typRepr = TypeRepr.of[T]
-      val fieldsInfo = refinementDataExtraction(typRepr).reverse
-      val fieldLayouts = Expr.ofSeq(
-        fieldsInfo.map((name, typ) =>
-           '{ ${ type2MemoryLayout(typ) }.map(_.withName(${ Expr(name) })) }
-        )
+   def getStructNameImpl[A: Type](using Quotes): Expr[String] =
+      Expr(
+        refinementDataExtraction[A].reverse
+           .map { case (name, '[t]) =>
+              s"$name:${Type.show[t]}"
+           }
+           .mkString(",")
       )
 
-      val name = fieldsInfo
-         .map { case (name, '[t]) =>
-            s"$name: ${TypeRepr.of[t].show(using Printer.TypeReprCode)}"
+   def deriveLayoutImpl[T: Type](using
+       q: Quotes
+   ): Expr[NativeIO[MemoryLayout]] =
+      val fieldLayouts = refinementDataExtraction[T].reverse
+         .map { case (name, '[a]) =>
+            '{ ${ type2MemoryLayout[a] }.map(_.withName(${ Expr(name) })) }
          }
-         .mkString(",")
+         .pipe(Expr.ofSeq)
+
       '{
-         ${ Expr(name) } -> (() =>
-            ${ fieldLayouts }.sequence
-               .map(
-                 MemoryLayout
-                    .structLayout(_*)
-               )
-         )
+         ${ fieldLayouts }.sequence
+            .map(
+              MemoryLayout
+                 .structLayout(_*)
+            )
       }
 
    inline def deriveLayout[T] = ${ deriveLayoutImpl[T] }
+
+   inline def generateVarHandles[A] = ${ generateVarHandlesImpl[A] }
+
+   def generateVarHandlesImpl[A: Type](using q: Quotes) =
+      val refinementData = refinementDataExtraction[A]
+      val varHandles = (layout: Expr[MemoryLayout]) =>
+         refinementData
+            .map { case (name, '[a]) =>
+               val nameExp = Expr(name)
+               '{
+                  $nameExp -> $layout.varHandle(
+                    ${ type2MethodTypeArg[a] },
+                    MemoryLayout.PathElement.groupElement($nameExp)
+                  )
+               }
+            }
+            .pipe(Expr.ofSeq)
+      '{
+         NativeIO.layout[A].map(layout => ${ varHandles('layout) })
+      }
+
+   inline def memorySegment2Struct[T](memorySegment: MemorySegment) = ${
+      memorySegment2StructImpl[T]('memorySegment)
+   }
+
+   def memorySegment2StructImpl[T: Type](memSgmnt: Expr[MemorySegment])(using
+       Quotes
+   ) =
+      '{
+         NativeIO
+            .varHandles[T]
+            .map(varHandles =>
+               Struct(
+                 varHandles
+                    .map((name, vh) =>
+                       name -> Fd($memSgmnt, VarHandleHandler(vh))
+                    )
+                    .toMap
+                    .updated("$mem", $memSgmnt)
+               )
+            )
+      }
+   end memorySegment2StructImpl
+
 end NativePieces
