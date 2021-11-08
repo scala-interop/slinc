@@ -46,6 +46,14 @@ class StdlibSuite extends munit.FunSuite:
       )
    }
 
+   test("strlen") {
+      val strlen = NativeIO.function[String => Int]("strlen")
+      assertEquals(
+        NativeIO.scope(strlen("hello")).foldMap(NativeIO.impureCompiler),
+        5
+      )
+   }
+
    test("div") {
       import Fd.int
       type div_t = Struct {
