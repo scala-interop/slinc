@@ -17,6 +17,7 @@ import scala.jdk.OptionConverters.*
 import java.lang.invoke.MethodHandle
 import cats.data.Func
 import io.gitlab.mhammons.polymorphics.VarHandleHandler
+import io.gitlab.mhammons.polymorphics.MethodHandleHandler
 
 object NativePieces:
    def functionDescriptor[A: Type](
@@ -124,8 +125,7 @@ object NativePieces:
                     needsSegmentAllocator,
                     resultNeedsSegmentAllocator,
                     methodHandle,
-                    paramTypes,
-                    resultType
+                    paramTypes
                   ).asExprOf[finalResult]
          case f => // todo: elaborate
             report.errorAndAbort(
@@ -168,28 +168,31 @@ object NativePieces:
    def mhCall[A: Type](using
        Quotes
    )(
-       resultTypeAllocates: Boolean,
-       segAlloc: Option[Expr[SegmentAllocator]],
-       ps: List[Expr[Any]],
-       pTyps: List[Type[?]]
-   ): Expr[MethodHandle => NativeIO[A]] = '{ mh =>
-      ${
-         resultModifiers[A]('{
-            mh.invokeWithArguments(${
-               Varargs(trueArgs(resultTypeAllocates, segAlloc, ps, pTyps))
-            }*)
-         })
+       ps: List[Expr[Any]]
+   ): Expr[MethodHandle => NativeIO[A]] =
+      import quotes.reflect.*
+      val arity = ps.size
+      val helper = Ident(
+        TermRef(TypeRepr.of[MethodHandleHandler.type], s"call$arity")
+      )
+      val call = (mh: Expr[MethodHandle]) =>
+         Apply(
+           helper,
+           mh.asTerm :: ps.map(_.asTerm)
+         ).asExprOf[Any]
+      '{ mh =>
+         ${
+            resultModifiers[A](call('mh))
+         }
       }
-   }
 
-   def trueArgs(using
-       Quotes
-   )(
+   def trueArgs(
        resultTypeAllocates: Boolean,
-       segAlloc: Option[Expr[SegmentAllocator]],
-       args: List[Expr[Any]],
        typs: List[Type[?]]
-   ): List[Expr[Any]] = args
+   )(
+       segAlloc: Option[Expr[SegmentAllocator]],
+       args: List[Expr[Any]]
+   )(using Quotes): List[Expr[Any]] = args
       .zip(typs.map(paramModifiers(segAlloc)))
       .map((v, mod) => mod(v))
       .pipe {
@@ -202,46 +205,35 @@ object NativePieces:
        needsSegmentAllocator: Boolean,
        resultTypeAllocates: Boolean,
        meth: Expr[NativeIO[MethodHandle]],
-       params: List[Type[?]],
-       result: Type[?]
+       params: List[Type[?]]
    )(using Quotes) =
-      import quotes.reflect.{MethodType => MT, *}
+      import quotes.reflect.*
 
       val paramReprs = params.map { case '[t] => TypeRepr.of[t] }
       val resultRepr =
-         result match
-            case '[t] if needsSegmentAllocator =>
-               TypeRepr.of[SegmentAllocator ?=> NativeIO[t]]
-            case '[t] => TypeRepr.of[NativeIO[t]]
-      val args = (ps: List[Expr[Any]]) =>
-         if resultTypeAllocates then
-            Expr.ofSeq(Expr.summon[SegmentAllocator].get :: ps)
-         else Expr.ofSeq(ps)
-      val lmb = (s: Symbol, ps: List[Tree]) =>
+         if needsSegmentAllocator then
+            TypeRepr.of[SegmentAllocator ?=> NativeIO[r]]
+         else TypeRepr.of[NativeIO[r]]
+      val args = trueArgs(resultTypeAllocates, params)
+      def call(ps: List[Expr[Any]], seg: Option[Expr[SegmentAllocator]]) = '{
+         $meth.flatMap(${
+            mhCall[r](args(seg, ps))
+         })
+      }
+      def lmb(ps: List[Tree]) =
+         val psExpr = ps.map(_.asExpr)
          if needsSegmentAllocator then
             '{ (seg: SegmentAllocator) ?=>
-               $meth.flatMap(${
-                  mhCall[r](
-                    resultTypeAllocates,
-                    Some('seg),
-                    ps.map(_.asExpr),
-                    params
-                  )
-               })
-            }.asTerm.changeOwner(s)
-         else
-            '{
-               $meth.flatMap(${
-                  mhCall[r](resultTypeAllocates, None, ps.map(_.asExpr), params)
-               })
-            }.asTerm.changeOwner(s)
+               ${ call(psExpr, Some('seg)) }
+            }
+         else call(psExpr, None)
       Lambda(
         Symbol.spliceOwner,
-        MT(paramNames.take(params.size).toList)(
+        MethodType(paramNames.take(params.size).toList)(
           _ => paramReprs,
           _ => resultRepr
         ),
-        lmb
+        (s, ps) => lmb(ps).asTerm.changeOwner(s)
       )
    end genLambda
 
@@ -269,7 +261,7 @@ object NativePieces:
                case '[r] =>
                   methodType[r](
                     paramTypes
-                       .map(_.pipe { case '[a] => type2MethodTypeArg[a] })
+                       .map { case '[a] => type2MethodTypeArg[a] }
                   )
 
             '{ (c: CLinker) =>

@@ -2,3 +2,4 @@
 .metals
 .vscode
 out
+.attach*

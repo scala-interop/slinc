@@ -66,6 +66,8 @@ object NativeIO:
    def scope[A](fn: (ResourceScope, SegmentAllocator) ?=> NativeIO[A]) =
       Free.liftF[NativeOp, A](NativeOp.Scope((r, s) => fn(using r, s)))
 
+   def unit = Free.liftF(NativeOp.Unit)
+
    inline def varHandles[A]: NativeIO[Seq[(String, VarHandle)]] = NativePieces
       .getStructName[A]
       .pipe(name =>
@@ -88,13 +90,11 @@ object NativeIO:
          def apply[A](fa: NativeOp[A]): Id[A] =
             fa match
                case al @ NativeOp.Allocate(name, layout, structMaker, alloc) =>
-                  println(al)
                   structMaker(
                     alloc.allocate(layout)
                   ).foldMap(this)
 
                case sc @ NativeOp.Scope(ioFn) =>
-                  println(sc)
                   val rs = ResourceScope.newConfinedScope
                   val segAlloc = SegmentAllocator
                      .arenaAllocator(rs)
@@ -104,20 +104,18 @@ object NativeIO:
                      .tap(_ => rs.close)
 
                case u @ NativeOp.Unit =>
-                  println(u)
                   ()
-               case p @ NativeOp.Pure(aFn) =>
-                  println(p)
-                  aFn()
+               case p @ NativeOp.Pure(a) =>
+                  a()
                case l @ NativeOp.Layout(name, gen) =>
-                  println(l)
                   layouts
                      .getOrElse(
                        name,
-                       gen(layouts).foldMap(this).tap(ls => layouts = ls)(name)
+                       gen(layouts)
+                          .foldMap(this)
+                          .tap(ls => layouts = ls)(name)
                      )
                case mhb @ NativeOp.MethodHandleBinding(name, mhGen) =>
-                  println(mhb)
                   methodHandles.getOrElse(
                     name,
                     mhGen(clinker)
@@ -127,7 +125,6 @@ object NativeIO:
                        )
                   )
                case vhb @ NativeOp.VarHandleBindings(name, vhGen) =>
-                  println(vhb)
                   varHandles.getOrElse(
                     name,
                     vhGen(varHandles)

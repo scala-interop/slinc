@@ -5,6 +5,8 @@ object v {
    val cats = "2.6.1"
    val munit = "1.0.0-M1"
    val jmh = "1.33"
+   val jnr = "2.2.3"
+   val jna = "5.9.0"
 }
 
 object core extends ScalaModule {
@@ -60,7 +62,12 @@ object benchmarks extends ScalaModule {
    )
 
    import v._
-   def ivyDeps = Agg(ivy"org.openjdk.jmh:jmh-core:$jmh")
+   def ivyDeps =
+      Agg(
+        ivy"org.openjdk.jmh:jmh-core:$jmh",
+        ivy"com.github.jnr:jnr-ffi:$jnr",
+        ivy"net.java.dev.jna:jna:$jna"
+      )
 
    def jmhRun(args: String*) = T.command {
       val (_, resources) = generateBenchmarkSources()
