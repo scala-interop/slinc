@@ -1,34 +1,30 @@
 [![pipeline status](https://gitlab.com/mhammons/slinc/badges/master/pipeline.svg)](https://gitlab.com/mhammons/slinc/-/commits/master)
 ```
-s     lin  c
-Scala Link C
+S     Lin     C
+Scala Link to C
 ```
 
 Slinc is a Scala 3 library that allows users to interoperate with C code via Java 17's [foreign api incubator](https://docs.oracle.com/en/java/javase/17/docs/api/jdk.incubator.foreign/jdk/incubator/foreign/package-summary.html).
 
-It's designed to make use of Scala's type system and macros to handle most of the work of making bindings to C from Scala. It provides an effect type name `NativeIO` that attempts to make native operations and book keeping related to method invocation lazy as possible.
-
-A NativeIO is not run and does not produce results until it is compiled. At present, there is only one compiler (`NativeIO.impureCompiler`) provided.
+It's designed to make use of Scala's type system and macros to handle most of the work of making bindings to C from Scala.
 
 ## Binding to C functions
 
 The binding to the `abs` function looks like
 ```scala
-//result type: Int => NativeIO[Int]
-val abs = NativeIO.function[Int => Int]("abs") 
+def abs(i: Int): Int = bind
 ```
 
 The binding to the strlen function looks like
 
 ```scala
-//result type: String => (SegmentAllocator) ?=> NativeIO[Int]
-val strlen = NativeIO.function[String => Int]("strlen") 
+def strlen(string: String)(using SegmentAllocator): Int = bind
 ```
 As you can see, some function bindings have a dependency on a `SegmentAllocator` being in scope. This is because said functions allocate native memory (in the above case, `String` must be made into a C String via native allocation). At the moment, the cases where this happens is if there's a `String` in the function parameters, or if the function returns a `Struct`
 
 ## Scopes
 
-C interop naturally entails allocation of native memory. This memory is managed via `NativeIO.scope(...)`. The scope provides a `SegmentAllocator`, and frees memory associated with said allocator at the end of the `Scope` block.
+C interop naturally entails allocation of native memory. This memory is managed via `scope(...)`. The scope provides a `SegmentAllocator`, and frees memory associated with said allocator at the end of the `scope` block.
 
 ## Defining Structs
 
@@ -53,14 +49,11 @@ struct {
 Notice that the types of `quot` and `rem` are lowercase: `int`. This is a field-type, with get and set methods available for retrieving and setting data.
 
 ```scala
-val div = NativeIO.function[(Int,Int) => div_t]("div")
-NativeIO.scope(
-    for
-        result <- div(5,2)
-        quot = result.quot.get
-        rem = result.rem.get
-    yield (quot, rem)
-) //NativeIO((2, 1)) when compiled
+def div(num: Int, denom: Int)(using SegmentAllocator): div_t = bind
+scope{
+    val result = div(5,2)
+    (result.quot.get, result.rem.get)
+}
 ```
 
 ## C types to Scala Types

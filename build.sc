@@ -1,5 +1,5 @@
 import mill.define.Target
-import mill._, scalalib._, modules._
+import mill._, scalalib._, modules._, scalalib.publish._
 
 object v {
    val cats = "2.6.1"
@@ -11,9 +11,21 @@ object v {
 
 object core extends ScalaModule {
 
-   def moduleDeps = Seq(jworkaround, polymorphics)
+   def moduleDeps = Seq(polymorphics)
    def scalaVersion = "3.1.0"
    def publishVersion = "0.0.1"
+   def pomSetting = PomSettings(
+     description = "SLinC - Scala <-> C Interop",
+     organization = "io.mhammons",
+     url = "https://gitlab.io/mhammons/slinc",
+     licenses = Seq(License.`Apache-2.0`),
+     versionControl = VersionControl.gitlab("mhammons", "slinc"),
+     developers = Seq(
+       Developer("mhammons", "Mark Hammons", "https://gitlab.io/mhammons")
+     )
+   )
+
+   def sonatypeUri = "https://gitlab.io/api/v4/projects/28891787/packages/maven"
 
    def forkArgs = Seq(
      "--add-modules",
@@ -40,14 +52,24 @@ object core extends ScalaModule {
         "ALL-UNNAMED"
       )
    }
-
-   override def scalacOptions = Seq("-Xsemanticdb")
 }
-
-object jworkaround extends JavaModule {}
-
-object polymorphics extends ScalaModule {
+object polymorphics extends ScalaModule with PublishModule {
    def scalaVersion = "2.13.6"
+   def publishVersion = "0.0.1"
+   def pomSettings = PomSettings(
+     description =
+        "Shim to use polymorphic methods from scala 3 <DON'T DEPEND ON ME>",
+     organization = "io.mhammons",
+     url = "https://gitlab.io/mhammons/slinc",
+     licenses = Seq(License.`Apache-2.0`),
+     versionControl = VersionControl.gitlab("mhammons", "slinc"),
+     developers = Seq(
+       Developer("mhammons", "Mark Hammons", "https://gitlab.io/mhammons")
+     )
+   )
+
+   def sonatypeUri = "https://gitlab.io/api/v4/projects/28891787/packages/maven"
+
 }
 
 object benchmarks extends ScalaModule {

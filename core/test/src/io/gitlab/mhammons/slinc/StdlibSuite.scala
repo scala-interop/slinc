@@ -1,55 +1,57 @@
 package io.gitlab.mhammons.slinc
 
-import cats.implicits.*
-import cats.catsInstancesForId
+import jdk.incubator.foreign.SegmentAllocator
 
 class StdlibSuite extends munit.FunSuite:
-   val abs = NativeIO.function[Int => Int]("abs")
-   val atof = NativeIO.function[String => Double]("atof")
+   given NativeCache = NativeCache()
 
    test("getpid") {
-      val getpid = NativeIO.function[() => Long]("getpid")
+      def getpid(): Long = bind
 
       assertEquals(
-        getpid().foldMap(NativeIO.impureCompiler),
+        getpid(),
         ProcessHandle.current().pid
       )
    }
 
    test("abs") {
+      def abs(i: Int): Int = bind
       assertEquals(
-        abs(5).foldMap(NativeIO.impureCompiler),
+        abs(5),
         Math.abs(5)
       )
    }
 
    test("labs") {
-      val labs = NativeIO.function[Long => Long]("labs")
+      def labs(l: Long): Long = bind
       assertEquals(
-        labs(-5L).foldMap(NativeIO.impureCompiler),
+        labs(-5L),
         5L
       )
    }
 
    test("atof") {
+      def atof(s: String)(using NativeCache, SegmentAllocator): Double = bind
       assertEquals(
-        NativeIO.scope(atof("5.0")).foldMap(NativeIO.impureCompiler),
+        scope(atof("5.0")),
         5.0
       )
    }
 
    test("getenv") {
-      val getEnv = NativeIO.function[String => String]("getenv")
+      def getenv(name: String)(using NativeCache, SegmentAllocator): String =
+         bind
       assertEquals(
-        NativeIO.scope(getEnv("PATH")).foldMap(NativeIO.impureCompiler),
+        scope(getenv("PATH")),
         System.getenv("PATH")
       )
    }
 
    test("strlen") {
-      val strlen = NativeIO.function[String => Int]("strlen")
+      def strlen(string: String)(using NativeCache, SegmentAllocator): Int =
+         bind
       assertEquals(
-        NativeIO.scope(strlen("hello")).foldMap(NativeIO.impureCompiler),
+        scope(strlen("hello")),
         5
       )
    }
@@ -60,20 +62,14 @@ class StdlibSuite extends munit.FunSuite:
          val quot: int
          val rem: int
       }
-      val div = NativeIO.function[(Int, Int) => div_t]("div")
-      NativeIO
-         .scope(
-           for
-              res <- div(5, 2)
-              quot = res.quot.get
-              rem = res.rem.get
-           yield
-              assertEquals(quot, 2)
-              assertEquals(rem, 1)
-         )
-         .compile(NativeIO.impureCompiler)
+      def div(num: Int, denom: Int)(using SegmentAllocator): div_t = bind
+      scope {
+         val result = div(5, 2)
+         assertEquals(result.quot.get, 2)
+         assertEquals(result.rem.get, 1)
+      }
    }
 
-   test("getpie".fail) {
-      NativeIO.function[() => Long]("getpie")().foldMap(NativeIO.impureCompiler)
-   }
+// test("getpie".fail) {
+//    NativeIO.function[() => Long]("getpie")().foldMap(NativeIO.impureCompiler)
+// }
