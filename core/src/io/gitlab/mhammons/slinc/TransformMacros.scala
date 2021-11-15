@@ -25,24 +25,24 @@ object TransformMacros:
          case '[Struct] =>
             '{
                ${ Expr.summon[NativeCache].getOrElse(missingNativeCache) }
-                  .layout2[A]
+                  .layout[A]
             }
-         case '[Fd[t]] => type2MemLayout[t]
+         case '[Member[t]] => type2MemLayout[t]
 
-   def type2MemoryLayout[A: Type](using
-       q: Quotes
-   ): Expr[MemoryLayout] =
-      Type.of[A] match
-         case '[Int]     => '{ C_INT }
-         case '[Float]   => '{ C_FLOAT }
-         case '[Double]  => '{ C_DOUBLE }
-         case '[Boolean] => '{ C_CHAR }
-         case '[Char]    => '{ C_CHAR }
-         case '[String]  => '{ C_POINTER }
-         case '[Short]   => '{ C_SHORT }
-         case '[Long]    => '{ C_LONG }
-         case '[Fd[a]]   => type2MemoryLayout[a]
-         case '[Struct]  => '{ summonInline[NativeCache].layout[A] }
+   // def type2MemoryLayout[A: Type](using
+   //     q: Quotes
+   // ): Expr[MemoryLayout] =
+   //    Type.of[A] match
+   //       case '[Int]       => '{ C_INT }
+   //       case '[Float]     => '{ C_FLOAT }
+   //       case '[Double]    => '{ C_DOUBLE }
+   //       case '[Boolean]   => '{ C_CHAR }
+   //       case '[Char]      => '{ C_CHAR }
+   //       case '[String]    => '{ C_POINTER }
+   //       case '[Short]     => '{ C_SHORT }
+   //       case '[Long]      => '{ C_LONG }
+   //       case '[Member[a]] => type2MemoryLayout[a]
+   //       case '[Struct]    => '{ summonInline[NativeCache].layout[A] }
 
    // inline def type2MemLayout[A] =
    //    inline erasedValue match
@@ -59,16 +59,16 @@ object TransformMacros:
    def type2MethodTypeArg[A: Type](using Quotes): Expr[Class[?]] =
       import quotes.reflect.*
       Type.of[A] match
-         case '[Long]    => '{ classOf[Long] }
-         case '[Int]     => '{ classOf[Int] }
-         case '[Float]   => '{ classOf[Float] }
-         case '[Double]  => '{ classOf[Double] }
-         case '[Boolean] => '{ classOf[Boolean] }
-         case '[Char]    => '{ classOf[Char] }
-         case '[String]  => '{ classOf[MemoryAddress] }
-         case '[Short]   => '{ classOf[Short] }
-         case '[Struct]  => '{ classOf[MemorySegment] }
-         case '[Fd[t]]   => type2MethodTypeArg[t]
+         case '[Long]      => '{ classOf[Long] }
+         case '[Int]       => '{ classOf[Int] }
+         case '[Float]     => '{ classOf[Float] }
+         case '[Double]    => '{ classOf[Double] }
+         case '[Boolean]   => '{ classOf[Boolean] }
+         case '[Char]      => '{ classOf[Char] }
+         case '[String]    => '{ classOf[MemoryAddress] }
+         case '[Short]     => '{ classOf[Short] }
+         case '[Struct]    => '{ classOf[MemorySegment] }
+         case '[Member[t]] => type2MethodTypeArg[t]
          case '[a] =>
             report.errorAndAbort(s"received unknown type ${Type.show[a]}")
 
@@ -135,9 +135,10 @@ object TransformMacros:
                Struct(
                  $nCache
                     .varHandles[ST]
-                    .map((name, vh) => name -> Fd(sgmnt, vh))
+                    .map((name, vh) => name -> Member(sgmnt, vh))
                     .toMap
-                    .updated("$mem", sgmnt)
+                    .updated("$mem", sgmnt),
+                 sgmnt
                ).asInstanceOf[ST]
             }
          case ('{ $i: Int }, '[Int])       => i.asExprOf[ST]

@@ -13,7 +13,7 @@ object Ptr:
    inline def apply[T](t: T) =
       inline t match
          case s: Struct =>
-            val size = summonInline[NativeCache].layout2[T].underlying.byteSize
+            val size = summonInline[NativeCache].layout[T].underlying.byteSize
             new Ptr[T](s.$addr) {
                def `unary_!` = Segment(
                  Map.empty, // todo: must be replaced

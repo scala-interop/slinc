@@ -33,7 +33,7 @@ object LayoutMacros:
    def deriveLayoutImpl[A: Type](using
        q: Quotes
    ): Expr[MemoryLayout] =
-      import TransformMacros.type2MemoryLayout
+      import TransformMacros.type2MemLayout
       Type.of[A] match
          case '[Struct] =>
             val fieldLayouts = StructMacros
@@ -41,7 +41,7 @@ object LayoutMacros:
                .reverse
                .map { case (name, '[a]) =>
                   '{
-                     ${ type2MemoryLayout[a] }.withName(${ Expr(name) })
+                     ${ type2MemLayout[a] }.underlying.withName(${ Expr(name) })
                   }
                }
                .pipe(Expr.ofSeq)

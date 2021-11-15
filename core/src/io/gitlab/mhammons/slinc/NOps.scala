@@ -12,17 +12,6 @@ transparent inline def bind = ${
    bindImpl
 }
 
-inline def bind2[Ret](a: Any) = ${
-   bindImpl2[Ret]('a)
-}
-
-private def bindImpl2[Ret: Type](expr: Expr[Any])(using Quotes) =
-   import quotes.reflect.*
-
-   val ownersOwner = Symbol.spliceOwner.owner.owner.tree
-
-   '{}
-
 private def needsAllocator[T: Type](returnType: Boolean)(using Quotes) =
    Type.of[T] match
       case '[Struct] => returnType
@@ -125,7 +114,6 @@ def lazyScope[A](fn: (SegmentAllocator) ?=> A) =
    val resourceScope = ResourceScope.newImplicitScope
    given SegmentAllocator = SegmentAllocator.arenaAllocator(resourceScope)
    fn
-
 
 def call[Ret: Type](mh: Expr[MethodHandle], ps: List[Expr[Any]])(using
     Quotes

@@ -6,7 +6,7 @@ import jdk.incubator.foreign.{FunctionDescriptor, CLinker}
 import scala.compiletime.summonInline
 
 object MethodHandleMacros:
-   import TransformMacros.{type2MethodTypeArg, type2MemoryLayout}
+   import TransformMacros.{type2MethodTypeArg, type2MemLayout}
    def methodType[Ret: Type](args: List[Type[?]])(using Quotes) =
       import java.lang.invoke.MethodType
 
@@ -37,7 +37,7 @@ object MethodHandleMacros:
    ): Expr[FunctionDescriptor] =
       val paramLayouts =
          paramTypes
-            .map { case '[p] => type2MemoryLayout[p] }
+            .map { case '[p] => '{ ${ type2MemLayout[p] }.underlying } }
             .pipe(Varargs.apply)
 
       Type.of[Ret] match
@@ -45,7 +45,10 @@ object MethodHandleMacros:
             '{ FunctionDescriptor.ofVoid($paramLayouts*) }
          case '[r] =>
             '{
-               FunctionDescriptor.of(${ type2MemoryLayout[r] }, $paramLayouts*)
+               FunctionDescriptor.of(
+                 ${ type2MemLayout[r] }.underlying,
+                 $paramLayouts*
+               )
             }
 
    def downcall[Ret: Type](
@@ -55,8 +58,9 @@ object MethodHandleMacros:
       val functionD = functionDescriptor[Ret](params)
       val methodT = methodType[Ret](params)
 
+      val nCache = Expr.summon[NativeCache].getOrElse(missingNativeCache)
       '{
-         val c = summonInline[NativeCache]
+         val c = $nCache
          c.downcall(
            $name,
            c.clinker.downcallHandle(clookup($name), $methodT, $functionD)

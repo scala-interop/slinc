@@ -9,32 +9,41 @@ import java.lang.invoke.MethodHandle
 import io.gitlab.mhammons.slinc.components.MemLayout
 
 //todo: make NativeCache just a trait...
-class NativeCache:
-   private val layouts = TrieMap.empty[String, MemoryLayout]
-   private val varHandlesMap = TrieMap.empty[String, List[(String, VarHandle)]]
-   private val methodHandles = TrieMap.empty[String, MethodHandle]
 
-   inline def layout[A]: MemoryLayout =
-      given NativeCache = this
-
-      val name = LayoutMacros.layoutName[A]
-      layouts
-         .get(name)
-         .getOrElse(LayoutMacros.deriveLayout[A].tap(layouts.update(name, _)))
-
-   inline def layout2[A]: MemLayout =
-      given NativeCache = this
-
-      LayoutMacros.deriveLayout2[A]
-
+trait NativeCache:
+   def getLayout(name: String, layout: => MemLayout): MemLayout
+   def getVarHandles(
+       name: String,
+       varHandles: => List[(String, VarHandle)]
+   ): List[(String, VarHandle)]
+   def getDowncall(name: String, mh: => MethodHandle): MethodHandle
+   inline def layout[A]: MemLayout =
+      getLayout(LayoutMacros.layoutName[A], LayoutMacros.deriveLayout2[A])
    inline def varHandles[A]: List[(String, VarHandle)] =
-      varHandlesMap.getOrElseUpdate(
+      getVarHandles(
         LayoutMacros.layoutName[A],
         StructMacros.genVarHandles[A].toList
       )
+   def downcall(name: String, mh: => MethodHandle): MethodHandle =
+      getDowncall(name, mh)
+   val clinker: CLinker
 
-   inline def downcall(name: String, mh: => MethodHandle) =
+class NativeCacheDefaultImpl extends NativeCache:
+   private[slinc] val layouts = TrieMap.empty[String, MemLayout]
+   private[slinc] val varHandlesMap =
+      TrieMap.empty[String, List[(String, VarHandle)]]
+   private[slinc] val methodHandles = TrieMap.empty[String, MethodHandle]
+
+   def getDowncall(name: String, mh: => MethodHandle) =
       methodHandles.getOrElseUpdate(name, mh)
+   def getLayout(name: String, layout: => MemLayout) =
+      layouts.getOrElseUpdate(name, layout)
+
+   def getVarHandles(
+       name: String,
+       varHandles: => List[(String, VarHandle)]
+   ) =
+      varHandlesMap.getOrElseUpdate(name, varHandles)
 
    val clinker = CLinker.getInstance
 

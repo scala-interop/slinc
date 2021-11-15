@@ -7,31 +7,28 @@ import jdk.incubator.foreign.MemoryLayout
 import scala.quoted.*
 import scala.util.chaining.*
 import java.lang.invoke.VarHandle
+import io.gitlab.mhammons.slinc.components.Ptr
+import components.TypeInfo
 
-class Fd[T](memSgmnt: MemorySegment, varHandle: VarHandle):
+class Member[T](memSgmnt: MemorySegment, varHandle: VarHandle):
    def set(t: T) = VarHandleHandler.set(varHandle, memSgmnt, t)
    def get: T = VarHandleHandler.get(varHandle, memSgmnt).asInstanceOf[T]
 
    private[slinc] val mem = memSgmnt
 
-class Struct2(
-    vals: Map[String, Any],
-    memSgmnt: MemorySegment
-) extends Selectable:
-   private def selectDynamic(name: String) = vals(name)
-   private[slinc] def backing = memSgmnt
+object Member:
+   type int = Member[Int]
+   type float = Member[Float]
+   type long = Member[Long]
 
-object Fd:
-   type int = Fd[Int]
-   type float = Fd[Float]
-   type long = Fd[Long]
-
-class Struct(vals: Map[String, Any]) extends Selectable:
-   self =>
+class Struct(vals: Map[String, Any], memorySegment: MemorySegment)
+    extends Selectable:
    def selectDynamic(name: String) = vals(name)
 
-   val $mem: MemorySegment = vals("$mem").asInstanceOf[MemorySegment]
-   val `unary_~` = $mem.address
+   private[slinc] val $mem = memorySegment
+
+object Struct:
+   extension [S <: Struct](s: S) inline def `unary_~` = Ptr[S](s)
 
 object StructMacros:
    def refinementDataExtraction[A: Type](using
@@ -89,14 +86,14 @@ object StructMacros:
 
    def genVarHandlesImpl[A: Type](using q: Quotes) =
       import quotes.reflect.report
-      import TransformMacros.{type2MethodTypeArg, type2MemoryLayout}
+      import TransformMacros.{type2MethodTypeArg, type2MemLayout}
       val refinementData = refinementDataExtraction[A]
 
       refinementData
          .map { case (name, '[a]) =>
             val nameExp = Expr(name)
             '{
-               $nameExp -> ${ type2MemoryLayout[A] }
+               $nameExp -> ${ type2MemLayout[A] }.underlying
                   .varHandle(
                     ${ type2MethodTypeArg[a] },
                     MemoryLayout.PathElement.groupElement($nameExp)
@@ -105,3 +102,7 @@ object StructMacros:
          }
          .pipe(Expr.ofSeq)
          .tap(_.show.tap(report.info))
+
+   def genVarHandleStructs[A: Type](
+       refinementMembers: List[(Seq[String], Type[?])]
+   ) = ???
