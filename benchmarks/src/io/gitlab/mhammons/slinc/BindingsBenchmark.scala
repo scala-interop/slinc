@@ -2,7 +2,6 @@ package io.gitlab.mhammons.slinc
 
 import org.openjdk.jmh.annotations.*
 import java.util.concurrent.TimeUnit
-import cats.catsInstancesForId
 import scala.annotation.tailrec
 import org.openjdk.jmh.annotations.Mode
 import jnr.ffi.LibraryLoader
@@ -25,7 +24,7 @@ import NativeCache.given NativeCache
 class BindingsBenchmark:
    @Param(Array("1", "100", "10000"))
    var reps: Int = _
-   import Fd.int
+   import Member.int
    type div_t = Struct {
       val quot: int
       val rem: int
@@ -35,7 +34,7 @@ class BindingsBenchmark:
    val jnaLibC = JNALibC.INSTANCE
 
    object NativeCacheBased:
-      given NativeCache = NativeCache()
+      given NativeCache = NativeCacheDefaultImpl()
       def getpid(): Long = bind
       def div(numerator: Int, denominator: Int)(using SegmentAllocator): div_t =
          bind

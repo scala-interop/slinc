@@ -2,21 +2,20 @@ import mill.define.Target
 import mill._, scalalib._, modules._, scalalib.publish._
 
 object v {
-   val cats = "2.6.1"
    val munit = "1.0.0-M1"
    val jmh = "1.33"
    val jnr = "2.2.3"
    val jna = "5.9.0"
 }
 
-object core extends ScalaModule {
+object slinc extends ScalaModule with PublishModule {
 
    def moduleDeps = Seq(polymorphics)
    def scalaVersion = "3.1.0"
    def publishVersion = "0.0.1"
-   def pomSetting = PomSettings(
+   def pomSettings = PomSettings(
      description = "SLinC - Scala <-> C Interop",
-     organization = "io.mhammons",
+     organization = "io.gitlab.mhammons",
      url = "https://gitlab.io/mhammons/slinc",
      licenses = Seq(License.`Apache-2.0`),
      versionControl = VersionControl.gitlab("mhammons", "slinc"),
@@ -25,7 +24,7 @@ object core extends ScalaModule {
      )
    )
 
-   def sonatypeUri = "https://gitlab.io/api/v4/projects/28891787/packages/maven"
+   def sonatypeUri = "https://s01.oss.sonatype.org/"
 
    def forkArgs = Seq(
      "--add-modules",
@@ -35,11 +34,6 @@ object core extends ScalaModule {
    )
 
    import v._
-   def ivyDeps = Agg(
-     ivy"org.typelevel::cats-core:$cats",
-     ivy"org.typelevel::cats-free:$cats"
-   )
-
    object test extends Tests {
       def ivyDeps = Agg(ivy"org.scalameta::munit::$munit")
 
@@ -59,7 +53,7 @@ object polymorphics extends ScalaModule with PublishModule {
    def pomSettings = PomSettings(
      description =
         "Shim to use polymorphic methods from scala 3 <DON'T DEPEND ON ME>",
-     organization = "io.mhammons",
+     organization = "io.gitlab.mhammons",
      url = "https://gitlab.io/mhammons/slinc",
      licenses = Seq(License.`Apache-2.0`),
      versionControl = VersionControl.gitlab("mhammons", "slinc"),
@@ -73,7 +67,7 @@ object polymorphics extends ScalaModule with PublishModule {
 }
 
 object benchmarks extends ScalaModule {
-   def moduleDeps = Seq(core)
+   def moduleDeps = Seq(slinc)
    def scalaVersion = "3.1.0"
 
    def forkArgs = Seq(

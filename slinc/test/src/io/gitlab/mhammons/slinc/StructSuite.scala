@@ -1,12 +1,10 @@
 package io.gitlab.mhammons.slinc
 
-import cats.catsInstancesForId
-import NativeCache.given NativeCache
 import io.gitlab.mhammons.slinc.components.StructLayout
-import io.gitlab.mhammons.slinc.components.Primitives
+import io.gitlab.mhammons.slinc.components.{Primitives, Named}
 
 class StructSuite extends munit.FunSuite:
-   given NativeCache = NativeCache()
+   given NativeCache = NativeCacheDefaultImpl()
    test(
      "trying to fetch the layouts for c-incompatible types results in compiletime error".fail
    ) {
@@ -24,21 +22,23 @@ class StructSuite extends munit.FunSuite:
    test(
      "can retrieve layouts for simple structs made of non-pointer primitives"
    ) {
-      import Fd.int
+      import Member.int
       type div_t = Struct {
          val quot: int
          val rem: int
       }
       assertEquals(
-        summon[NativeCache].layout2[div_t],
-        StructLayout("quot" -> Primitives.Int, "rem" -> Primitives.Int)
+        summon[NativeCache].layout[div_t],
+        StructLayout(
+          Seq(Named(Primitives.Int, "quot"), Named(Primitives.Int, "rem"))
+        )
       )
    }
 
    test(
      "can retrieve layouts for structs with structs, and product types"
    ) {
-      import Fd.int
+      import Member.int
       type div_x = Struct {
          val quot: int
          val rem: int
@@ -50,12 +50,16 @@ class StructSuite extends munit.FunSuite:
       }
 
       assertEquals(
-        summon[NativeCache].layout2[div_y],
+        summon[NativeCache].layout[div_y],
         StructLayout(
-          "j" -> Primitives.Int,
-          "div_x" -> StructLayout(
-            "quot" -> Primitives.Int,
-            "rem" -> Primitives.Int
+          Seq(
+            Named(Primitives.Int, "j"),
+            Named(
+              StructLayout(
+                Seq(Named(Primitives.Int, "quot"), Named(Primitives.Int, "rem"))
+              ),
+              "div_x"
+            )
           )
         )
       )
@@ -74,4 +78,13 @@ class StructSuite extends munit.FunSuite:
         ),
         ""
       )
+   }
+
+   test("can grab varhandles from a struct layout") {
+      type div_t = Struct {
+         val quot: Int
+         val rem: Int
+      }
+
+      val varhandles = summon[NativeCache].varHandles[div_t]
    }

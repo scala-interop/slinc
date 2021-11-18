@@ -16,8 +16,8 @@ import java.util.concurrent.TimeUnit
 @BenchmarkMode(Array(Mode.SampleTime))
 class LayoutBenchmark:
 
-   val nativeCache = NativeCache()
-   import Fd.{int, float}
+   val nativeCache = NativeCacheDefaultImpl()
+   import Member.{int, float}
    type div_a = Struct {
       val a: float
       val b: float
@@ -36,4 +36,4 @@ class LayoutBenchmark:
 
    @Benchmark
    def layoutNativeCache =
-      nativeCache.layout[div_h].byteSize
+      nativeCache.layout[div_h].underlying.byteSize

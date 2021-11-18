@@ -7,6 +7,8 @@ import java.lang.invoke.MethodHandle
 import jdk.incubator.foreign.SegmentAllocator
 import scala.util.{Try => T}
 import jdk.incubator.foreign.ResourceScope
+import components.LoggingLevel
+import scala.compiletime.summonInline
 
 transparent inline def bind = ${
    bindImpl
@@ -22,6 +24,7 @@ private def bindImpl(using q: Quotes) =
    import quotes.reflect.*
 
    val owner = Symbol.spliceOwner.owner
+   val parentContext = owner.owner
 
    if owner.isDefDef then
 

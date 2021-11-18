@@ -2,11 +2,10 @@ package io.gitlab.mhammons.slinc
 
 import scala.quoted.*
 import scala.util.chaining.*
-import cats.catsInstancesForId
-import cats.implicits.*
 import jdk.incubator.foreign.MemoryLayout
 import io.gitlab.mhammons.slinc.components.MemLayout
 import io.gitlab.mhammons.slinc.components.StructLayout
+import components.{PrimitiveInfo, StructInfo, StructStub}
 
 object LayoutMacros:
    inline def layoutName[A] = ${ layoutNameImpl[A] }
@@ -60,36 +59,19 @@ object LayoutMacros:
       Type.of[A] match
          case '[Struct] | '[components.Struct] =>
             // todo: rename refinementDataExtraction2 to StructLikeDataExtraction
-            val fieldLayouts =
-               StructMacros
-                  .refinementDataExtraction2[A]()
-                  .reverse
-                  .map { case (names, '[a]) =>
-                     names -> type2MemLayout[a]
-                  }
-                  .toList
+            val structInfo = StructMacros
+               .getStructInfo[A]
 
-            report.info(fieldLayouts.map(_.toString).mkString)
+            val expr = structInfo.members
+               .map {
+                  case PrimitiveInfo(name, '[a]) =>
+                     '{ ${ type2MemLayout[a] }.withName(${ Expr(name) }) }
+                  case StructStub(name, '[a]) =>
+                     '{ ${ deriveLayoutImpl2[a] }.withName(${ Expr(name) }) }
 
-            buildStructLayouts(fieldLayouts)
+               }
+               .pipe(Expr.ofSeq)
 
-   private def buildStructLayouts(
-       namedLayouts: Seq[(Seq[String], Expr[MemLayout])]
-   )(using Quotes): Expr[StructLayout] =
-      val levelKeys = namedLayouts.map(_._1.head).distinct
-      val levelExtracted = namedLayouts
-         .groupMap(_._1.head)((names, layout) => (names.tail, layout))
-
-      val layouts: Expr[Seq[(String, MemLayout)]] = levelKeys
-         .map(name =>
-            levelExtracted(name) match
-               case Seq((Nil, layout)) =>
-                  '{ (${ Expr(name) }, $layout) }
-               case members =>
-                  '{ (${ Expr(name) }, ${ buildStructLayouts(members) }) }
-         )
-         .pipe(Varargs.apply)
-
-      '{
-         StructLayout($layouts*)
-      }
+            '{
+               StructLayout($expr)
+            }

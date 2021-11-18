@@ -8,7 +8,8 @@ import scala.quoted.*
 import scala.util.chaining.*
 import java.lang.invoke.VarHandle
 import io.gitlab.mhammons.slinc.components.Ptr
-import components.TypeInfo
+import components.{StructInfo, StructStub, PrimitiveInfo, NamedVarhandle}
+import io.gitlab.mhammons.slinc.components.MemLayout
 
 class Member[T](memSgmnt: MemorySegment, varHandle: VarHandle):
    def set(t: T) = VarHandleHandler.set(varHandle, memSgmnt, t)
@@ -80,29 +81,79 @@ object StructMacros:
               s"Cannot derive a layout for non-struct type ${t.show(using Printer.TypeReprCode)}"
             )
 
+   def getStructInfo[A: Type](using Quotes): StructInfo =
+      import quotes.reflect.*
+      TypeRepr.of[A].dealias match
+         case Refinement(ancestor, name, typ) =>
+            val typType = typ.asType
+
+            val thisType: PrimitiveInfo | StructStub = typType match
+               case '[Struct] =>
+                  StructStub(name, typType)
+
+               case '[a] =>
+                  PrimitiveInfo(name, typType)
+            ancestor.asType.pipe { case '[a] =>
+               getStructInfo[a].pipe(res =>
+                  res.copy(members = thisType +: res.members)
+               )
+            }
+
+         case repr if repr =:= TypeRepr.of[Struct] =>
+            StructInfo(None, Seq.empty)
+
+         case t =>
+            report.errorAndAbort(
+              s"Cannot extract refinement data for non-struct type ${t.show(using Printer.TypeReprCode)}"
+            )
+   end getStructInfo
+
+   inline def structFromMemSegment[A] = ${
+      structFromMemSegmentImpl[A]
+   }
+
+   private def structFromMemSegmentImpl[A: Type](using Quotes) =
+      ???
+
    inline def genVarHandles[A] = ${
       genVarHandlesImpl[A]
    }
 
-   def genVarHandlesImpl[A: Type](using q: Quotes) =
+   private def genVarHandlesImpl[A: Type](using q: Quotes) =
       import quotes.reflect.report
       import TransformMacros.{type2MethodTypeArg, type2MemLayout}
-      val refinementData = refinementDataExtraction[A]
+      val structInfo = getStructInfo[A]
+      val nCache = Expr.summon[NativeCache].getOrElse(missingNativeCache)
 
-      refinementData
-         .map { case (name, '[a]) =>
-            val nameExp = Expr(name)
-            '{
-               $nameExp -> ${ type2MemLayout[A] }.underlying
-                  .varHandle(
-                    ${ type2MethodTypeArg[a] },
-                    MemoryLayout.PathElement.groupElement($nameExp)
-                  )
-            }
+      { (layoutExpr: Expr[MemLayout]) =>
+         {
+            structInfo.members
+               .flatMap {
+
+                  case PrimitiveInfo(name, '[a]) =>
+                     val nameExp = Expr(name)
+                     List(
+                       '{
+                          NamedVarhandle(
+                            $nameExp,
+                            $layoutExpr.varHandle(
+                              ${ type2MethodTypeArg[a] },
+                              MemoryLayout.PathElement.groupElement($nameExp)
+                            )
+                          )
+                       }
+                     )
+
+                  case _ => Nil
+               }
+               .pipe(Expr.ofSeq)
          }
-         .pipe(Expr.ofSeq)
-         .tap(_.show.tap(report.info))
+      }
+         .pipe(lambdaList =>
+            Expr.betaReduce('{
+               val layout = $nCache.layout[A]
+               ${ lambdaList('layout) }
 
-   def genVarHandleStructs[A: Type](
-       refinementMembers: List[(Seq[String], Type[?])]
-   ) = ???
+            })
+         )
+         .tap(_.show.tap(report.info))

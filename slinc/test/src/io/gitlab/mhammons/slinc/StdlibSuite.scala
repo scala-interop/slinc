@@ -3,13 +3,13 @@ package io.gitlab.mhammons.slinc
 import jdk.incubator.foreign.SegmentAllocator
 
 class StdlibSuite extends munit.FunSuite:
-   given NativeCache = NativeCache()
+   given NativeCache = NativeCacheDefaultImpl()
 
    test("getpid") {
-      def getpid(): Long = bind
+      def getpid: Long = bind
 
       assertEquals(
-        getpid(),
+        getpid,
         ProcessHandle.current().pid
       )
    }
@@ -57,7 +57,7 @@ class StdlibSuite extends munit.FunSuite:
    }
 
    test("div") {
-      import Fd.int
+      import Member.int
       type div_t = Struct {
          val quot: int
          val rem: int

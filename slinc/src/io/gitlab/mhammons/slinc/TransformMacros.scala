@@ -19,15 +19,18 @@ object TransformMacros:
       import components.Primitives
       import quotes.reflect.report
       Type.of[A] match
-         case '[Int]   => '{ Primitives.Int }
-         case '[Float] => '{ Primitives.Float }
-         case '[Long]  => '{ Primitives.Long }
+         case '[Int]    => '{ Primitives.Int }
+         case '[Float]  => '{ Primitives.Float }
+         case '[Long]   => '{ Primitives.Long }
+         case '[String] => '{ Primitives.Pointer }
+         case '[Double] => '{ Primitives.Double }
          case '[Struct] =>
             '{
                ${ Expr.summon[NativeCache].getOrElse(missingNativeCache) }
                   .layout[A]
             }
          case '[Member[t]] => type2MemLayout[t]
+         case '[t] => report.errorAndAbort(s"Unrecognized type ${Type.show[t]}")
 
    // def type2MemoryLayout[A: Type](using
    //     q: Quotes
@@ -135,7 +138,7 @@ object TransformMacros:
                Struct(
                  $nCache
                     .varHandles[ST]
-                    .map((name, vh) => name -> Member(sgmnt, vh))
+                    .map(vh => vh.name -> Member(sgmnt, vh.varhandle))
                     .toMap
                     .updated("$mem", sgmnt),
                  sgmnt

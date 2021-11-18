@@ -7,6 +7,7 @@ import scala.collection.mutable.Map
 import java.lang.invoke.VarHandle
 import java.lang.invoke.MethodHandle
 import io.gitlab.mhammons.slinc.components.MemLayout
+import io.gitlab.mhammons.slinc.components.NamedVarhandle
 
 //todo: make NativeCache just a trait...
 
@@ -14,15 +15,15 @@ trait NativeCache:
    def getLayout(name: String, layout: => MemLayout): MemLayout
    def getVarHandles(
        name: String,
-       varHandles: => List[(String, VarHandle)]
-   ): List[(String, VarHandle)]
+       varHandles: => Seq[NamedVarhandle]
+   ): Seq[NamedVarhandle]
    def getDowncall(name: String, mh: => MethodHandle): MethodHandle
    inline def layout[A]: MemLayout =
       getLayout(LayoutMacros.layoutName[A], LayoutMacros.deriveLayout2[A])
-   inline def varHandles[A]: List[(String, VarHandle)] =
+   inline def varHandles[A]: Seq[NamedVarhandle] =
       getVarHandles(
         LayoutMacros.layoutName[A],
-        StructMacros.genVarHandles[A].toList
+        StructMacros.genVarHandles[A]
       )
    def downcall(name: String, mh: => MethodHandle): MethodHandle =
       getDowncall(name, mh)
@@ -31,7 +32,7 @@ trait NativeCache:
 class NativeCacheDefaultImpl extends NativeCache:
    private[slinc] val layouts = TrieMap.empty[String, MemLayout]
    private[slinc] val varHandlesMap =
-      TrieMap.empty[String, List[(String, VarHandle)]]
+      TrieMap.empty[String, Seq[NamedVarhandle]]
    private[slinc] val methodHandles = TrieMap.empty[String, MethodHandle]
 
    def getDowncall(name: String, mh: => MethodHandle) =
@@ -41,7 +42,7 @@ class NativeCacheDefaultImpl extends NativeCache:
 
    def getVarHandles(
        name: String,
-       varHandles: => List[(String, VarHandle)]
+       varHandles: => Seq[NamedVarhandle]
    ) =
       varHandlesMap.getOrElseUpdate(name, varHandles)
 
