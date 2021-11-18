@@ -2,9 +2,13 @@ package io.gitlab.mhammons.slinc
 
 import io.gitlab.mhammons.slinc.components.StructLayout
 import io.gitlab.mhammons.slinc.components.{Primitives, Named}
+import scala.collection.immutable.ArraySeq
+import jdk.incubator.foreign.SegmentAllocator
+import java.io.File
+import java.nio.file.Paths
 
 class StructSuite extends munit.FunSuite:
-   given NativeCache = NativeCacheDefaultImpl()
+   Testlib
    test(
      "trying to fetch the layouts for c-incompatible types results in compiletime error".fail
    ) {
@@ -66,7 +70,7 @@ class StructSuite extends munit.FunSuite:
    }
 
    test(
-     "produces compile-time errors for structs that contain non-field members"
+     "produces compile-time errors for structs that contain non-field members".fail
    ) {
       type div_t = Struct {
          val quot: Int
@@ -87,4 +91,33 @@ class StructSuite extends munit.FunSuite:
       }
 
       val varhandles = summon[NativeCache].varHandles[div_t]
+   }
+
+   test("test") {}
+
+   test("can allocate and use nested structs") {
+
+      scope {
+         val b_t = allocate[Testlib.b_t]
+         b_t.d.a() = 6
+         val b2 = Testlib.slinc_test_modify(b_t)
+
+         assertEquals(b_t.d.a(), 6)
+         assertEquals(b2.d.a(), 12)
+      }
+
+   }
+
+   test(
+     "nested structs have memsegment addresses that are in line with what's expected"
+   ) {
+      scope {
+         val b_t = allocate[Testlib.b_t]
+         val offsetOfA_t =
+            summon[NativeCache].layout[Testlib.b_t].byteOffset("d")
+         assertEquals(
+           b_t.d.$mem.address.toRawLongValue - b_t.$mem.address.toRawLongValue,
+           offsetOfA_t
+         )
+      }
    }

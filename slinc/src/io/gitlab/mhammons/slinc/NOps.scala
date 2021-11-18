@@ -24,7 +24,6 @@ private def bindImpl(using q: Quotes) =
    import quotes.reflect.*
 
    val owner = Symbol.spliceOwner.owner
-   val parentContext = owner.owner
 
    if owner.isDefDef then
 
@@ -45,11 +44,13 @@ private def bindImpl(using q: Quotes) =
                   case t @ TermParamClause(valDefs) =>
                      dt.tpe.asType match
                         case '[ret] =>
-                           val params = valDefs.map(t => Ref(t.symbol).asExpr)
+                           val params = valDefs.map(t =>
+                              Ref(t.symbol).asExpr -> t.tpt.tpe.asType
+                           )
 
                            val mh = MethodHandleMacros.downcall[ret](
                              Expr(name),
-                             params.map { case '{ $x: p } => Type.of[p] }
+                             params.map { case (_, typ) => typ }
                            )
 
                            val resultTypeAllocates =
@@ -70,8 +71,10 @@ private def bindImpl(using q: Quotes) =
                               else Nil
 
                            val transformedParams = params
-                              .map { case '{ $x: p } =>
-                                 TransformMacros.param2Native[p](x)
+                              .map { case (expr, '[a]) =>
+                                 TransformMacros.param2Native[a](
+                                   expr.asExprOf[a]
+                                 )
                               }
                               .pipe(segAllocArg ++ _)
 
@@ -138,4 +141,18 @@ def call[Ret: Type](mh: Expr[MethodHandle], ps: List[Expr[Any]])(using
            }
          )
       }
+   }
+
+inline def allocate[T](using SegmentAllocator) = ${
+   allocateImpl[T]
+}
+
+private def allocateImpl[T](using Type[T], Quotes) =
+   val nc = Expr.summon[NativeCache].getOrElse(missingNativeCache)
+   val sa = Expr.summon[SegmentAllocator].getOrElse(???)
+
+   '{
+      StructMacros.structFromMemSegment[T](
+        $sa.allocate($nc.layout[T].underlying)
+      )
    }

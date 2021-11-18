@@ -3,6 +3,7 @@ package io.gitlab.mhammons.slinc
 import scala.quoted.*
 import scala.util.chaining.*
 import jdk.incubator.foreign.{FunctionDescriptor, CLinker}
+import components.SymbolLookup
 import scala.compiletime.summonInline
 
 object MethodHandleMacros:
@@ -59,11 +60,13 @@ object MethodHandleMacros:
       val methodT = methodType[Ret](params)
 
       val nCache = Expr.summon[NativeCache].getOrElse(missingNativeCache)
+      val symbolLookup = Expr.summon[SymbolLookup].getOrElse(???)
       '{
          val c = $nCache
          c.downcall(
            $name,
-           c.clinker.downcallHandle(clookup($name), $methodT, $functionD)
+           c.clinker
+              .downcallHandle($symbolLookup.lookup($name), $methodT, $functionD)
          )
       }
 end MethodHandleMacros

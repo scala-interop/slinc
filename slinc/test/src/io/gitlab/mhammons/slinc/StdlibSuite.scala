@@ -65,8 +65,8 @@ class StdlibSuite extends munit.FunSuite:
       def div(num: Int, denom: Int)(using SegmentAllocator): div_t = bind
       scope {
          val result = div(5, 2)
-         assertEquals(result.quot.get, 2)
-         assertEquals(result.rem.get, 1)
+         assertEquals(result.quot(), 2)
+         assertEquals(result.rem(), 1)
       }
    }
 

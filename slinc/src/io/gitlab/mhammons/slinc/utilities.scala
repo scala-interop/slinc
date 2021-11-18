@@ -2,14 +2,17 @@ package io.gitlab.mhammons.slinc
 
 import scala.quoted.*
 
-import jdk.incubator.foreign.CLinker
+import jdk.incubator.foreign.{CLinker, SymbolLookup, MemoryAddress}
 import scala.jdk.OptionConverters.*
 
 //todo: Change this. Lookup failure should not return match failure!!
-val clookup = Function.unlift(
-  ((s: String) => CLinker.systemLookup.lookup(s))
-     .andThen(_.toScala)
-)
+val clookup: String => MemoryAddress =
+   (s: String) =>
+      CLinker.systemLookup
+         .lookup(s)
+         .toScala
+         .orElse(SymbolLookup.loaderLookup.lookup(s).toScala)
+         .getOrElse(throw new Exception(s"Couldn't find $s anywhere"))
 
 def missingNativeCache(using Quotes) =
    import quotes.reflect.report

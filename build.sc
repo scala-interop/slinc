@@ -45,6 +45,31 @@ object slinc extends ScalaModule with PublishModule {
         "--enable-native-access",
         "ALL-UNNAMED"
       )
+
+      def nativeSource = T.sources { millSourcePath / "native" }
+      def compileNative = T {
+         val nativeFiles = nativeSource().head.path
+         os.list(nativeFiles)
+            .filter(_.last.endsWith(".c"))
+            .flatMap { p =>
+               val soLocation =
+                  p / os.up / s"lib${p.last.stripSuffix(".c")}.so"
+               os.proc(
+                 "gcc",
+                 "-shared",
+                 "-o",
+                 p / os.up / s"lib${p.last.stripSuffix(".c")}.so",
+                 p
+               ).call()
+               List(PathRef(soLocation))
+            }
+         nativeFiles
+      }
+
+      override def compile = T {
+         compileNative()
+         super.compile()
+      }
    }
 }
 object polymorphics extends ScalaModule with PublishModule {

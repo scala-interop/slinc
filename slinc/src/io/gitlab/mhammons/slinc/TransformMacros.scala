@@ -102,7 +102,7 @@ object TransformMacros:
                }
          case _ => (a: Expr[Any]) => a
 
-   def param2Native[T: Type](p: Expr[T])(using Quotes) =
+   def param2Native[T: Type](p: Expr[T])(using Quotes): Expr[Any] =
       import quotes.reflect.report
       p match
          case '{ $string: String } =>
@@ -126,24 +126,7 @@ object TransformMacros:
       import quotes.reflect.report
       (n, Type.of[ST]) match
          case ('{ $memSgmnt: MemorySegment }, '[Struct]) =>
-            val nCache = Expr
-               .summon[NativeCache]
-               .getOrElse(
-                 report.errorAndAbort(
-                   "A native cache is needed for this function to operate. Please import one from slinc.NativeCache"
-                 )
-               )
-            '{
-               val sgmnt = $memSgmnt
-               Struct(
-                 $nCache
-                    .varHandles[ST]
-                    .map(vh => vh.name -> Member(sgmnt, vh.varhandle))
-                    .toMap
-                    .updated("$mem", sgmnt),
-                 sgmnt
-               ).asInstanceOf[ST]
-            }
+            '{ StructMacros.structFromMemSegment[ST]($memSgmnt) }
          case ('{ $i: Int }, '[Int])       => i.asExprOf[ST]
          case ('{ $l: Long }, '[Long])     => l.asExprOf[ST]
          case ('{ $d: Double }, '[Double]) => d.asExprOf[ST]

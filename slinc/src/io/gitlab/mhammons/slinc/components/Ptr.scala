@@ -4,6 +4,7 @@ import jdk.incubator.foreign.MemoryAddress
 import java.lang.annotation.Native
 import scala.compiletime.{erasedValue, summonInline}
 import io.gitlab.mhammons.slinc.NativeCache
+import io.gitlab.mhammons.slinc.StructMacros
 
 trait Ptr[T](memoryAddress: MemoryAddress):
    def mem = memoryAddress
@@ -13,10 +14,11 @@ object Ptr:
    inline def apply[T](t: T) =
       inline t match
          case s: Struct =>
-            val size = summonInline[NativeCache].layout[T].underlying.byteSize
+            val size = summonInline[NativeCache].layout[T].byteSize()
             new Ptr[T](s.$addr) {
-               def `unary_!` = Segment(
-                 Map.empty, // todo: must be replaced
-                 s.$addr.asSegment(size, s.$addr.scope())
-               ).asInstanceOf[T]
+               def `unary_!` = StructMacros
+                  .structFromMemSegment[T](
+                    s.$addr.asSegment(size, s.$addr.scope())
+                  )
+                  .asInstanceOf[T]
             }

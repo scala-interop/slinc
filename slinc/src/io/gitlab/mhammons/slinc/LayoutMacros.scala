@@ -14,10 +14,13 @@ object LayoutMacros:
       Type.of[A] match
          case '[Struct] =>
             StructMacros
-               .refinementDataExtraction[A]
-               .reverse
-               .map { case (name, '[a]) =>
-                  s"$name:${Type.show[a]}"
+               .getStructInfo[A]
+               .members
+               .map {
+                  case PrimitiveInfo(name, '[a]) =>
+                     s"$name:${Type.show[a]}"
+                  case StructStub(name, '[a]) =>
+                     s"$name:${Type.show[a]}"
                }
                .mkString(",")
                .pipe(Expr.apply)
@@ -26,34 +29,11 @@ object LayoutMacros:
               s"received type ${Type.show[r]}. I cannot process it. Sorry..."
             )
 
-   inline def deriveLayout[A]: MemoryLayout = ${
-      deriveLayoutImpl[A]
-   }
-   def deriveLayoutImpl[A: Type](using
-       q: Quotes
-   ): Expr[MemoryLayout] =
-      import TransformMacros.type2MemLayout
-      Type.of[A] match
-         case '[Struct] =>
-            val fieldLayouts = StructMacros
-               .refinementDataExtraction[A]
-               .reverse
-               .map { case (name, '[a]) =>
-                  '{
-                     ${ type2MemLayout[a] }.underlying.withName(${ Expr(name) })
-                  }
-               }
-               .pipe(Expr.ofSeq)
-
-            '{
-               MemoryLayout.structLayout($fieldLayouts*)
-            }
-
-   inline def deriveLayout2[A]: MemLayout = ${
+   inline def deriveLayout2[A]: StructLayout = ${
       deriveLayoutImpl2[A]
    }
 
-   private def deriveLayoutImpl2[A: Type](using q: Quotes): Expr[MemLayout] =
+   private def deriveLayoutImpl2[A: Type](using q: Quotes): Expr[StructLayout] =
       import TransformMacros.type2MemLayout
       import quotes.reflect.report
       Type.of[A] match
