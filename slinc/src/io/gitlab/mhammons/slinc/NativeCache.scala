@@ -26,6 +26,12 @@ trait NativeCache:
         LayoutMacros.layoutName[A],
         StructMacros.genVarHandles[A]
       )
+
+   inline def sortedVarHandles[A]: Seq[VarHandle] =
+      getVarHandles(
+        LayoutMacros.layoutName[A],
+        StructMacros.genVarHandles[A]
+      ).sortBy(_.name).map(_.varhandle)
    def downcall(name: String, mh: => MethodHandle): MethodHandle =
       getDowncall(name, mh)
    val clinker: CLinker

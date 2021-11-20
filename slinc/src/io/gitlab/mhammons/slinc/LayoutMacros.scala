@@ -6,8 +6,10 @@ import jdk.incubator.foreign.MemoryLayout
 import io.gitlab.mhammons.slinc.components.MemLayout
 import io.gitlab.mhammons.slinc.components.StructLayout
 import components.{PrimitiveInfo, StructInfo, StructStub}
+import scala.collection.concurrent.TrieMap
 
 object LayoutMacros:
+   private val layoutCache = TrieMap.empty[String, MemLayout]
    inline def layoutName[A] = ${ layoutNameImpl[A] }
    def layoutNameImpl[A: Type](using Quotes) =
       import quotes.reflect.report
@@ -37,7 +39,7 @@ object LayoutMacros:
       import TransformMacros.type2MemLayout
       import quotes.reflect.report
       Type.of[A] match
-         case '[Struct] | '[components.Struct] =>
+         case '[Struct] =>
             // todo: rename refinementDataExtraction2 to StructLikeDataExtraction
             val structInfo = StructMacros
                .getStructInfo[A]

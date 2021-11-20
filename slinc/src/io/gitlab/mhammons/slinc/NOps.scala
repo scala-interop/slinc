@@ -142,17 +142,21 @@ def call[Ret: Type](mh: Expr[MethodHandle], ps: List[Expr[Any]])(using
          )
       }
    }
-
-inline def allocate[T](using SegmentAllocator) = ${
-   allocateImpl[T]
+import jdk.incubator.foreign.MemorySegment
+inline def allocate[T](
+    inline builder: MemorySegment => T = StructMacros.structFromMemSegment[T](_)
+)(using SegmentAllocator) = ${
+   allocateImpl[T]('builder)
 }
 
-private def allocateImpl[T](using Type[T], Quotes) =
+private def allocateImpl[T](
+    builder: Expr[MemorySegment => T]
+)(using Type[T], Quotes) =
    val nc = Expr.summon[NativeCache].getOrElse(missingNativeCache)
    val sa = Expr.summon[SegmentAllocator].getOrElse(???)
 
    '{
-      StructMacros.structFromMemSegment[T](
+      $builder(
         $sa.allocate($nc.layout[T].underlying)
       )
    }

@@ -12,15 +12,17 @@ import components.{StructInfo, StructStub, PrimitiveInfo, NamedVarhandle}
 import io.gitlab.mhammons.slinc.components.MemLayout
 import io.gitlab.mhammons.slinc.components.StructLayout
 
-
-class Struct(vals: Map[String, Any], memorySegment: MemorySegment)
-    extends Selectable:
-   def selectDynamic(name: String) = vals(name)
+trait Struct(memorySegment: MemorySegment) extends Selectable:
+   def selectDynamic(name: String): Any
 
    private[slinc] val $mem = memorySegment
 
-object Struct:
-   extension [S <: Struct](s: S) inline def `unary_~` = Ptr[S](s)
+class MapStruct(map: Map[String, Any], memorySegment: MemorySegment)
+    extends Struct(memorySegment):
+   def selectDynamic(name: String) = map(name)
+
+// object Struct:
+//    extension [S <: Struct](s: S) inline def `unary_~` = Ptr[S](s)
 
 object StructMacros:
    def getStructInfo[A: Type](using Quotes): StructInfo =
@@ -90,7 +92,7 @@ object StructMacros:
 
          val structs = ${ Expr.betaReduce(fn('layout)) }
 
-         Struct(varHandles.toMap ++ structs.toMap, msgmnt).asInstanceOf[A]
+         MapStruct((varHandles ++ structs).toMap, msgmnt).asInstanceOf[A]
       }.tap(e => report.info(e.show))
 
    inline def genVarHandles[A] = ${

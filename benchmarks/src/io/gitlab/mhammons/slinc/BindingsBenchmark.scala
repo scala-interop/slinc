@@ -9,6 +9,7 @@ import io.gitlab.mhammons.polymorphics.MethodHandleHandler
 import jdk.incubator.foreign.{SegmentAllocator, ResourceScope}
 
 import NativeCache.given NativeCache
+import scala.util.Random
 
 @State(Scope.Thread)
 @Fork(
@@ -102,3 +103,15 @@ class BindingsBenchmark:
       while count > 0 do
          jnaLibC.div(5, 2)
          count -= 1
+
+   @Benchmark
+   def libTestModifyBench =
+      scope {
+         var count = reps
+         while count > 0 do
+            val b = allocate[b_t]()
+            b.d.a() = 5
+            LibTest.slinc_test_modify(b)
+            b.d.a()
+            count -= 1
+      }
