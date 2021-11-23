@@ -1,4 +1,4 @@
-package io.gitlab.mhammons.slinc
+package io.gitlab.mhammons.slinc.components
 
 import jdk.incubator.foreign.MemorySegment
 import java.lang.invoke.VarHandle

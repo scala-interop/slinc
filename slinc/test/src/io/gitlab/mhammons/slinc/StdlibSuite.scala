@@ -57,7 +57,7 @@ class StdlibSuite extends munit.FunSuite:
    }
 
    test("div") {
-      import Member.int
+      import components.Member.int
       type div_t = Struct {
          val quot: int
          val rem: int

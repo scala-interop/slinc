@@ -18,7 +18,7 @@ import scala.annotation.tailrec
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 @BenchmarkMode(Array(Mode.SampleTime))
 class StructBenchmark:
-   import Member.int
+   import components.Member.int
    type div_t = Struct {
       val a: int
       val b: int

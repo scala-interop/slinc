@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit
 class LayoutBenchmark:
 
    val nativeCache = NativeCacheDefaultImpl()
-   import Member.{int, float}
+   import components.Member.{int, float}
    type div_a = Struct {
       val a: float
       val b: float

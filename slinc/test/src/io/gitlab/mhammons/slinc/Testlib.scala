@@ -6,7 +6,7 @@ import io.gitlab.mhammons.slinc.components.Location
 import jdk.incubator.foreign.SegmentAllocator
 
 object Testlib extends Library(Location.Local("slinc/test/native/libtest.so")):
-   import Member.int
+   import components.Member.int
    type a_t = Struct {
       val a: int
       val b: int

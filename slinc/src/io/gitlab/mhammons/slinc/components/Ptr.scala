@@ -1,25 +1,17 @@
 package io.gitlab.mhammons.slinc.components
 
-import jdk.incubator.foreign.MemoryAddress
+import jdk.incubator.foreign.{MemoryAddress, MemoryAccess, MemorySegment}
 import java.lang.annotation.Native
 import scala.compiletime.{erasedValue, summonInline}
 import io.gitlab.mhammons.slinc.NativeCache
 import io.gitlab.mhammons.slinc.StructMacros
 import io.gitlab.mhammons.slinc.Struct
 
-trait Ptr[T](memoryAddress: MemoryAddress):
-   def mem = memoryAddress
-   def `unary_!` : T
-
-// object Ptr:
-//    inline def apply[T](t: T) =
-//       inline t match
-//          case s: Struct =>
-//             val size = summonInline[NativeCache].layout[T].byteSize()
-//             new Ptr[T](s.$addr) {
-//                def `unary_!` = StructMacros
-//                   .structFromMemSegment[T](
-//                     s.$addr.asSegment(size, s.$addr.scope())
-//                   )
-//                   .asInstanceOf[T]
-//             }
+class Ptr[T](
+    private[components] val memoryAddress: MemoryAddress,
+    segmentSize: Long,
+    template: MemorySegment => T
+):
+   def `unary_!` : T = template(
+     memoryAddress.asSegment(segmentSize, memoryAddress.scope)
+   )

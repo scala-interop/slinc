@@ -25,7 +25,7 @@ import scala.util.Random
 class BindingsBenchmark:
    @Param(Array("1", "100", "10000"))
    var reps: Int = _
-   import Member.int
+   import components.Member.int
    type div_t = Struct {
       val quot: int
       val rem: int

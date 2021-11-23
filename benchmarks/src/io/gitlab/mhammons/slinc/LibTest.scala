@@ -4,7 +4,7 @@ import io.gitlab.mhammons.slinc.components.Library
 import io.gitlab.mhammons.slinc.components.Location
 import jdk.incubator.foreign.SegmentAllocator
 
-import Member.int
+import components.Member.int
 
 type a_t = Struct {
    val a: int

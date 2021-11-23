@@ -4,7 +4,6 @@ import scala.quoted.*
 import jdk.incubator.foreign.MemorySegment
 import io.gitlab.mhammons.slinc.{
    StructMacros,
-   Member,
    NativeCache,
    missingNativeCache,
    Struct

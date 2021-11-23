@@ -12,17 +12,17 @@ import scala.compiletime.summonInline
 import CLinker.{C_CHAR, C_FLOAT, C_DOUBLE, C_POINTER, C_LONG, C_SHORT, C_INT}
 import io.gitlab.mhammons.polymorphics.VarHandleHandler
 import scala.util.chaining.*
-import io.gitlab.mhammons.slinc.components.MemLayout
+import io.gitlab.mhammons.slinc.components.{MemLayout, Member}
 
 object TransformMacros:
    def type2MemLayout[A: Type](using Quotes): Expr[MemLayout] =
-      import components.Primitives
+      import components.{Primitives, Str}
       import quotes.reflect.report
       Type.of[A] match
          case '[Int]    => '{ Primitives.Int }
          case '[Float]  => '{ Primitives.Float }
          case '[Long]   => '{ Primitives.Long }
-         case '[String] => '{ Primitives.Pointer }
+         case '[String] => '{ Str }
          case '[Double] => '{ Primitives.Double }
          case '[Struct] =>
             '{

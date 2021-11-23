@@ -8,7 +8,7 @@ import java.lang.invoke.VarHandle
 import java.lang.invoke.MethodHandle
 import io.gitlab.mhammons.slinc.components.MemLayout
 import io.gitlab.mhammons.slinc.components.NamedVarhandle
-import io.gitlab.mhammons.slinc.components.StructLayout
+import io.gitlab.mhammons.slinc.components.{StructLayout, StructTemplate}
 
 //todo: make NativeCache just a trait...
 
@@ -26,6 +26,8 @@ trait NativeCache:
         LayoutMacros.layoutName[A],
         StructMacros.genVarHandles[A]
       )
+
+   inline def template[A]: StructTemplate = ???
 
    inline def sortedVarHandles[A]: Seq[VarHandle] =
       getVarHandles(

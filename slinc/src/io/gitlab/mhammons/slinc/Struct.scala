@@ -7,10 +7,11 @@ import jdk.incubator.foreign.MemoryLayout
 import scala.quoted.*
 import scala.util.chaining.*
 import java.lang.invoke.VarHandle
-import io.gitlab.mhammons.slinc.components.Ptr
+import io.gitlab.mhammons.slinc.components.{Ptr, Member}
 import components.{StructInfo, StructStub, PrimitiveInfo, NamedVarhandle}
 import io.gitlab.mhammons.slinc.components.MemLayout
 import io.gitlab.mhammons.slinc.components.StructLayout
+import scala.collection.concurrent.TrieMap
 
 trait Struct(memorySegment: MemorySegment) extends Selectable:
    def selectDynamic(name: String): Any
@@ -21,35 +22,38 @@ class MapStruct(map: Map[String, Any], memorySegment: MemorySegment)
     extends Struct(memorySegment):
    def selectDynamic(name: String) = map(name)
 
-// object Struct:
-//    extension [S <: Struct](s: S) inline def `unary_~` = Ptr[S](s)
-
 object StructMacros:
+   lazy val structInfoCache = TrieMap.empty[Type[?], StructInfo]
    def getStructInfo[A: Type](using Quotes): StructInfo =
-      import quotes.reflect.*
-      TypeRepr.of[A].dealias match
-         case Refinement(ancestor, name, typ) =>
-            val typType = typ.asType
+      structInfoCache.getOrElseUpdate(
+        Type.of[A], {
+           import quotes.reflect.*
+           TypeRepr.of[A].dealias match
+              case Refinement(ancestor, name, typ) =>
+                 val typType = typ.asType
 
-            val thisType: PrimitiveInfo | StructStub = typType match
-               case '[Struct] =>
-                  StructStub(name, typType)
+                 val thisType: PrimitiveInfo | StructStub = typType match
+                    case '[Struct] =>
+                       StructStub(name, typType)
 
-               case '[a] =>
-                  PrimitiveInfo(name, typType)
-            ancestor.asType.pipe { case '[a] =>
-               getStructInfo[a].pipe(res =>
-                  res.copy(members = res.members :+ thisType)
-               )
-            }
+                    case '[a] =>
+                       PrimitiveInfo(name, typType)
+                 ancestor.asType.pipe { case '[a] =>
+                    getStructInfo[a].pipe(res =>
+                       res.copy(members = res.members :+ thisType)
+                    )
+                 }
 
-         case repr if repr =:= TypeRepr.of[Struct] =>
-            StructInfo(None, Seq.empty)
+              case repr if repr =:= TypeRepr.of[Struct] =>
+                 StructInfo(None, Seq.empty)
 
-         case t =>
-            report.errorAndAbort(
-              s"Cannot extract refinement data for non-struct type ${t.show(using Printer.TypeReprCode)}"
-            )
+              case t =>
+                 report.errorAndAbort(
+                   s"Cannot extract refinement data for non-struct type ${t
+                      .show(using Printer.TypeReprCode)}"
+                 )
+        }
+      )
    end getStructInfo
 
    inline def structFromMemSegment[A](memSegment: MemorySegment): A = ${
