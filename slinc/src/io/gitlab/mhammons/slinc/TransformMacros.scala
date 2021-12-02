@@ -26,38 +26,11 @@ object TransformMacros:
          case '[Double] => '{ Primitives.Double }
          case '[Struct] =>
             '{
-               ${ Expr.summon[NativeCache].getOrElse(missingNativeCache) }
-                  .layout[A]
+                  LayoutMacros.deriveLayout2[A]
             }
          case '[Member[t]] => type2MemLayout[t]
          case '[t] => report.errorAndAbort(s"Unrecognized type ${Type.show[t]}")
 
-   // def type2MemoryLayout[A: Type](using
-   //     q: Quotes
-   // ): Expr[MemoryLayout] =
-   //    Type.of[A] match
-   //       case '[Int]       => '{ C_INT }
-   //       case '[Float]     => '{ C_FLOAT }
-   //       case '[Double]    => '{ C_DOUBLE }
-   //       case '[Boolean]   => '{ C_CHAR }
-   //       case '[Char]      => '{ C_CHAR }
-   //       case '[String]    => '{ C_POINTER }
-   //       case '[Short]     => '{ C_SHORT }
-   //       case '[Long]      => '{ C_LONG }
-   //       case '[Member[a]] => type2MemoryLayout[a]
-   //       case '[Struct]    => '{ summonInline[NativeCache].layout[A] }
-
-   // inline def type2MemLayout[A] =
-   //    inline erasedValue match
-   //       case _: Int     => C_INT
-   //       case _: Float   => C_FLOAT
-   //       case _: Double  => C_DOUBLE
-   //       case _: Boolean => C_CHAR
-   //       case _: Char    => C_CHAR
-   //       case _: String  => C_POINTER
-   //       case _: Short   => C_SHORT
-   //       case _: Long    => C_LONG
-   //       case _: Struct  => summonInline[NativeCache].layout[A]
 
    def type2MethodTypeArg[A: Type](using Quotes): Expr[Class[?]] =
       import quotes.reflect.*
@@ -102,41 +75,3 @@ object TransformMacros:
                }
          case _ => (a: Expr[Any]) => a
 
-   def param2Native[T: Type](p: Expr[T])(using Quotes): Expr[Any] =
-      import quotes.reflect.report
-      p match
-         case '{ $string: String } =>
-            val alloc = Expr
-               .summon[SegmentAllocator]
-               .getOrElse(
-                 report.errorAndAbort(
-                   "This binding needs a segment allocator. Please import one or make one available in your scope"
-                 )
-               )
-            '{
-               CLinker
-                  .toCString($string, $alloc)
-                  .address
-            }
-         case '{ $struct: Struct } =>
-            '{ $struct.$mem }
-         case _ => p
-
-   def native2ST[ST: Type](n: Expr[Any])(using Quotes) =
-      import quotes.reflect.report
-      (n, Type.of[ST]) match
-         case ('{ $memSgmnt: MemorySegment }, '[Struct]) =>
-            '{ StructMacros.structFromMemSegment[ST]($memSgmnt) }
-         case ('{ $i: Int }, '[Int])       => i.asExprOf[ST]
-         case ('{ $l: Long }, '[Long])     => l.asExprOf[ST]
-         case ('{ $d: Double }, '[Double]) => d.asExprOf[ST]
-         case ('{ $s: MemoryAddress }, '[String]) =>
-            val nCache = Expr.summon[NativeCache].getOrElse(missingNativeCache)
-            '{
-               val addr = $s
-               CLinker.toJavaString(addr)
-            }.asExprOf[ST]
-         case (expr, _) =>
-            report.errorAndAbort(
-              s"got expr ${expr.show} with conversion to ${Type.show[ST]} requested"
-            )

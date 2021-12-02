@@ -1,18 +1,16 @@
-package io.gitlab.mhammons.slinc
+package io.gitlab.mhammons.slinc.components
 
 import scala.quoted.*
 import scala.util.chaining.*
 import jdk.incubator.foreign.{FunctionDescriptor, CLinker}
-import components.SymbolLookup
-import scala.compiletime.summonInline
-
+                           import scala.language.experimental
+                           
 object MethodHandleMacros:
-   import TransformMacros.{type2MethodTypeArg, type2MemLayout}
    def methodType[Ret: Type](args: List[Type[?]])(using Quotes) =
       import java.lang.invoke.MethodType
 
-      val methodTypes = args.map { case '[p] => type2MethodTypeArg[p] }
-      val returnMethodType = type2MethodTypeArg[Ret]
+      val methodTypes = args.map { case '[p] => Expr.summon[LayoutOf[p]].getOrElse(missingLayout[p]).pipe(exp => '{$exp.carrierType}) }
+      val returnMethodType = Expr.summon[LayoutOf[Ret]].getOrElse(missingLayout[Ret]).pipe(exp => '{$exp.carrierType})
       Type.of[Ret] match
          case '[Unit] =>
             if args.isEmpty then '{ VoidHelper.methodTypeV() }
@@ -38,7 +36,7 @@ object MethodHandleMacros:
    ): Expr[FunctionDescriptor] =
       val paramLayouts =
          paramTypes
-            .map { case '[p] => '{ ${ type2MemLayout[p] }.underlying } }
+            .map { case '[p] => Expr.summon[LayoutOf[p]].getOrElse(missingLayout[p]).pipe(exp => '{$exp.layout}) }
             .pipe(Varargs.apply)
 
       Type.of[Ret] match
@@ -47,26 +45,23 @@ object MethodHandleMacros:
          case '[r] =>
             '{
                FunctionDescriptor.of(
-                 ${ type2MemLayout[r] }.underlying,
+                 ${ Expr.summon[LayoutOf[r]].getOrElse(missingLayout[Ret]) }.layout,
                  $paramLayouts*
                )
             }
 
    def downcall[Ret: Type](
-       name: Expr[String],
+       name: String,
        params: List[Type[?]]
    )(using Quotes) =
       val functionD = functionDescriptor[Ret](params)
       val methodT = methodType[Ret](params)
 
-      val nCache = Expr.summon[NativeCache].getOrElse(missingNativeCache)
       val symbolLookup = Expr.summon[SymbolLookup].getOrElse(???)
+      val nameExpr = Expr(name)
+
+      val idx = Expr(UniversalNativeCache.getBindingIndex(name))
       '{
-         val c = $nCache
-         c.downcall(
-           $name,
-           c.clinker
-              .downcallHandle($symbolLookup.lookup($name), $methodT, $functionD)
-         )
+         UniversalNativeCache.addMethodHandle($idx, Linker.linker.downcallHandle($symbolLookup.lookup($nameExpr), $methodT, $functionD))
       }
 end MethodHandleMacros

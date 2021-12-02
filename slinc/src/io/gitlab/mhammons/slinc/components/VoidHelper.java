@@ -1,4 +1,4 @@
-package io.gitlab.mhammons.slinc;
+package io.gitlab.mhammons.slinc.components;
 
 import java.lang.invoke.MethodType;
 

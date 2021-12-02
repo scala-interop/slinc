@@ -5,11 +5,12 @@ import scala.util.chaining.*
 import jdk.incubator.foreign.MemoryLayout
 import io.gitlab.mhammons.slinc.components.MemLayout
 import io.gitlab.mhammons.slinc.components.StructLayout
-import components.{PrimitiveInfo, StructInfo, StructStub}
+import components.StructInfo
 import scala.collection.concurrent.TrieMap
+import scala.deriving.Mirror.ProductOf
+import io.gitlab.mhammons.slinc.components.StructElement
 
 object LayoutMacros:
-   private val layoutCache = TrieMap.empty[String, MemLayout]
    inline def layoutName[A] = ${ layoutNameImpl[A] }
    def layoutNameImpl[A: Type](using Quotes) =
       import quotes.reflect.report
@@ -19,9 +20,7 @@ object LayoutMacros:
                .getStructInfo[A]
                .members
                .map {
-                  case PrimitiveInfo(name, '[a]) =>
-                     s"$name:${Type.show[a]}"
-                  case StructStub(name, '[a]) =>
+                  case StructElement(name, '[a]) =>
                      s"$name:${Type.show[a]}"
                }
                .mkString(",")
@@ -30,6 +29,12 @@ object LayoutMacros:
             report.errorAndAbort(
               s"received type ${Type.show[r]}. I cannot process it. Sorry..."
             )
+
+   inline def layoutIndex[A] = ${layoutIndexImpl[A]}
+
+   def layoutIndexImpl[A: Type](using Quotes) =
+      val name = layoutNameImpl.valueOrAbort
+      Expr(components.UniversalNativeCache.getLayoutIndex(name))
 
    inline def deriveLayout2[A]: StructLayout = ${
       deriveLayoutImpl2[A]
@@ -40,17 +45,13 @@ object LayoutMacros:
       import quotes.reflect.report
       Type.of[A] match
          case '[Struct] =>
-            // todo: rename refinementDataExtraction2 to StructLikeDataExtraction
             val structInfo = StructMacros
                .getStructInfo[A]
 
             val expr = structInfo.members
                .map {
-                  case PrimitiveInfo(name, '[a]) =>
+                  case StructElement(name, '[a]) =>
                      '{ ${ type2MemLayout[a] }.withName(${ Expr(name) }) }
-                  case StructStub(name, '[a]) =>
-                     '{ ${ deriveLayoutImpl2[a] }.withName(${ Expr(name) }) }
-
                }
                .pipe(Expr.ofSeq)
 

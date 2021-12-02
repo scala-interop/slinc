@@ -1,4 +1,4 @@
-package io.gitlab.mhammons.slinc
+package io.gitlab.mhammons.slinc_benches
 
 import com.sun.jna.Library
 import com.sun.jna.Native

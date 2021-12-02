@@ -1,9 +1,13 @@
-package io.gitlab.mhammons.slinc
+package io.gitlab.mhammons.slinc_benches
 
 import org.openjdk.jmh.annotations.*
 import java.util.concurrent.TimeUnit
 import scala.util.Random
+import io.gitlab.mhammons.slinc.Struct
 import io.gitlab.mhammons.slinc.components.MinimalPerfectHashtable
+import io.gitlab.mhammons.slinc.components.MinimalFastPerfectHashtable
+import io.gitlab.mhammons.slinc.components.Member.int
+import io.gitlab.mhammons.slinc.components.Primitives
 
 @State(Scope.Thread)
 class Str:
@@ -16,8 +20,15 @@ class Str:
    var map: Map[String, Int] = _
 
    var mpht: MinimalPerfectHashtable[Int] = _
-   var pht: PerfectHashtable[Int] = _
+   var mfpht: MinimalFastPerfectHashtable[Int] = _
    var key: String = _
+   var keys: Iterator[String] = _
+
+   type div_t = Struct {
+      val a: int
+      val b: int
+   }
+   val layout = Primitives.Int
 
    @Setup
    def setup =
@@ -41,14 +52,19 @@ class Str:
       values = (0 until strings.size).toList
 
       println("generating pht")
-      pht = PerfectHashtable.runtimeConstruct(strings, values)
       println("done")
       println("generating mpht")
       mpht = MinimalPerfectHashtable.runtimeConstruct(strings, values)
+      mfpht = MinimalFastPerfectHashtable.runtimeConstruct(strings, values)
       println("generating map")
       map = strings.zip(values).toMap
-      println("done")
       key = Random.shuffle(strings).head
+      val shuffledBig = (0 until 100_000).flatMap(_ => Random.shuffle(strings))
+
+      keys = (0 until 200_000_000 / shuffledBig.size)
+         .flatMap(_ => shuffledBig)
+         .iterator
+      println("done")
 
 @Fork(
   jvmArgsAppend = Array(
@@ -63,28 +79,17 @@ class Str:
 class BackingsBenchmark:
    @Benchmark
    def mapBench(str: Str) =
-      repeatInl(str.map(str.key), 10000)
+      val key = str.keys.next
+      repeatInl(str.map(key), 10000)
    @Benchmark
    def minimalPerfectHashTable(str: Str) =
-      repeatInl(str.mpht(str.key), 10000)
+      val key = str.keys.next
+      repeatInl(str.mpht(key), 10000)
 
    @Benchmark
-   def perfectHashTable(str: Str) =
-      repeatInl(str.pht(str.key), 10000)
+   def minimalPowerPerfectHashtable(str: Str) =
+      val key = str.keys.next
+      repeatInl(str.mfpht(key), 10000)
 
-   @Benchmark
-   def ifThenElse(str: Str) =
-      repeatInl(
-        {
-           if str.key == "tm_sec" then 0
-           else if str.key == "tm_min" then 1
-           else if str.key == "tm_hour" then 2
-           else if str.key == "tm_mday" then 3
-           else if str.key == "tm_mon" then 4
-           else if str.key == "tm_year" then 5
-           else if str.key == "tm_wday" then 6
-           else if str.key == "tm_yday" then 7
-           else 8
-        },
-        10000
-      )
+   // @Benchmark
+   // def summonVarhandleFromLayout(str: Str) = str.layout.varHandle(classOf[Int])

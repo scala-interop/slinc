@@ -1,8 +1,10 @@
-package io.gitlab.mhammons.slinc
+package io.gitlab.mhammons.slinc_benches
 
+import io.gitlab.mhammons.slinc.*
 import io.gitlab.mhammons.slinc.components.Library
 import io.gitlab.mhammons.slinc.components.Location
 import jdk.incubator.foreign.SegmentAllocator
+
 
 import components.Member.int
 

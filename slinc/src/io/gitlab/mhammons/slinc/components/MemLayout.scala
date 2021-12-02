@@ -14,45 +14,36 @@ import scala.util.chaining.*
 import java.lang.invoke.VarHandle
 
 sealed trait MemLayout(
-    val underlying: MemoryLayout,
-    val template: MemorySegment => Any
+    val underlying: MemoryLayout
 ):
    export underlying.{byteSize, varHandle}
 
    def withName(name: String) = Named(this, name)
 
 case class Named[M <: MemLayout](memLayout: M, name: String)
-    extends MemLayout(memLayout.underlying.withName(name), memLayout.template)
+    extends MemLayout(memLayout.underlying.withName(name))
 
-enum Primitives(
-    underlying: MemoryLayout,
-    classRepr: Class[?],
-    template: MemorySegment => Any
-) extends MemLayout(underlying, template):
-   val intVarhandle = C_INT.varHandle(classOf[Int])
+enum Primitives(underlying: MemoryLayout, classRepr: Class[?])
+    extends MemLayout(underlying):
    case Int
        extends Primitives(
          C_INT,
-         classOf[Int],
-         m => int(m, m.address, Primitives.intVh)
+         classOf[Int]
        )
    case Float
        extends Primitives(
          C_FLOAT,
-         classOf[Float],
-         m => float(m, m.address, Primitives.floatVh)
+         classOf[Float]
        )
    case Long
        extends Primitives(
          C_LONG,
-         classOf[Long],
-         m => long(m, m.address, Primitives.longVh)
+         classOf[Long]
        )
    case Double
        extends Primitives(
          C_DOUBLE,
-         classOf[Double],
-         m => double(m, m.address, Primitives.doubleVh)
+         classOf[Double]
        )
    def repr = classRepr
 object Primitives:
@@ -64,17 +55,16 @@ object Primitives:
    val doubleVh = C_DOUBLE.varHandle(classOf[Double])
 
 case class Pointer(derefsTo: MemLayout)
-    extends MemLayout(C_POINTER, m => ptr(m, 0L, derefsTo))
+    extends MemLayout(C_POINTER)
 
-case object Str extends MemLayout(C_POINTER, m => toJavaString(m))
+case object Str extends MemLayout(C_POINTER)
 
 //todo: MemorySegment, which carries layout information with it
 case class StructLayout(layouts: Seq[Named[MemLayout]])
     extends MemLayout(
       layouts
          .map(_.underlying)
-         .pipe(MemoryLayout.structLayout(_*)),
-      m => ()
+         .pipe(MemoryLayout.structLayout(_*))
     ):
 
    lazy val layoutsMap =

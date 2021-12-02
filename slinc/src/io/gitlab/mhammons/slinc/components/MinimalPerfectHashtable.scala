@@ -7,31 +7,22 @@ import scala.compiletime.constValue
 import scala.compiletime.ops.int.+
 
 case class MinimalPerfectHashtable[T](
-    val salts: Array[Int],
-    val values: Array[T]
+    val salts: ArraySeq[Int],
+    val values: ArraySeq[T]
 ):
+   val underSalts = salts.unsafeArray.asInstanceOf[Array[Int]]
+   val underValues = values.unsafeArray.asInstanceOf[Array[T]]
    val mask = values.length
 
-   def apply(str: String) = values(
-     MinimalPerfectHashtable.indexOfStr(str, salts, mask)
-   )
+   inline def apply(str: String) =
+      val index = MinimalPerfectHashtable.indexOfStr(str, underSalts, mask)
+      underValues(index)
 
 object MinimalPerfectHashtable:
-   val intMask = 0xffffffffL
-
-   // def firstHash(string: String, mask: Int) =
-   //    secondHash(string, mask, 435)
-   // var h = string.hashCode
-   // h ^= (h >> 20) ^ (h >> 12)
-   // h ^= (h >> 7) ^ (h >> 4)
-   // math.abs(h) % mask
-
-   inline def secondHash(inline string: String, mask: Int, salt: Int) =
+   inline def secondHash(string: String, mask: Int, salt: Int) =
       var h = string.hashCode + salt
-      // h ^= (h >> 20) ^ (h >> 12)
-      // h ^= (h >> 7) ^ (h >> 4)
       h ^= (h >> 4)
-      math.abs(h % mask)
+      (h & 0xfffffff) % mask
 
    inline def apply[T](inline strings: String*)(values: T*) = ${
       applyImpl[T]('strings, 'values)
@@ -151,14 +142,16 @@ object MinimalPerfectHashtable:
          case '[i] =>
             '{
                val size = ${ Expr(stringSize) }
-               val salts = Array($slots*)
+               val salts = ArraySeq($slots*)
                val vs =
-                  $strings
-                     .map(indexOfStr(_, salts, size))
-                     .zip($values)
-                     .sortBy(_._1)
-                     .map(_._2)
-                     .toArray(using $tClassTag)
+                  ArraySeq.unsafeWrapArray(
+                    $strings
+                       .map(indexOfStr(_, salts, size))
+                       .zip($values)
+                       .sortBy(_._1)
+                       .map(_._2)
+                       .toArray(using $tClassTag)
+                  )
                new MinimalPerfectHashtable[T](
                  salts,
                  vs
@@ -169,7 +162,7 @@ object MinimalPerfectHashtable:
 
    def runtimeConstruct[T: ClassTag](strings: Seq[String], values: Seq[T]) =
       val mask = strings.size
-      val salts = findSalts(strings).toArray
+      val salts = findSalts(strings)
       val vs =
          strings
             .map(indexOfStr(_, salts, mask))
@@ -177,7 +170,7 @@ object MinimalPerfectHashtable:
             .tapEach(println)
             .sortBy(_._1)
             .map(_._2)
-            .toArray
+            .to(ArraySeq)
 
       new MinimalPerfectHashtable[T](salts, vs)
 
@@ -190,7 +183,15 @@ object MinimalPerfectHashtable:
    def bitwiseAbs(x: Int) =
       (isPositive(x) * x) + (isNegative(x) * -x)
 
-   final def indexOfStr(str: String, salts: Array[Int], mask: Int) =
+   inline def indexOfStr(str: String, salts: ArraySeq[Int], mask: Int) =
       val salt = salts(secondHash(str, mask, 435))
       if salt < 0 then (salt * -1) - 1
       else secondHash(str, mask, salt)
+
+   inline def indexOfStr(str: String, salts: Array[Int], mask: Int) =
+      val salt = salts(secondHash(str, mask, 435))
+      (isNegative(salt) * -(salt) - 1) | (isPositive(salt) * secondHash(
+        str,
+        mask,
+        salt
+      ))

@@ -1,4 +1,4 @@
-package io.gitlab.mhammons.slinc
+package io.gitlab.mhammons.slinc_benches
 
 def repeat[A](fn: => A, times: Int) =
    var count = times
@@ -6,7 +6,7 @@ def repeat[A](fn: => A, times: Int) =
       fn
       count -= 1
 
-inline def repeatInl[A](fn: => A, times: Int) =
+inline def repeatInl[A](inline fn: A, times: Int) =
    var count = times
    while count > 0 do
       fn

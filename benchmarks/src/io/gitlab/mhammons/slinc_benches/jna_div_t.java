@@ -1,4 +1,4 @@
-package io.gitlab.mhammons.slinc;
+package io.gitlab.mhammons.slinc_benches;
 
 import com.sun.jna.Structure;
 import com.sun.jna.Structure.FieldOrder;

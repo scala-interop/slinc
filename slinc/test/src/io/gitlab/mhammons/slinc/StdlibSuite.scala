@@ -1,10 +1,9 @@
 package io.gitlab.mhammons.slinc
 
 import jdk.incubator.foreign.SegmentAllocator
+import components.Ptr
 
 class StdlibSuite extends munit.FunSuite:
-   given NativeCache = NativeCacheDefaultImpl()
-
    test("getpid") {
       def getpid: Long = bind
 
@@ -31,7 +30,7 @@ class StdlibSuite extends munit.FunSuite:
    }
 
    test("atof") {
-      def atof(s: String)(using NativeCache, SegmentAllocator): Double = bind
+      def atof(s: String)(using SegmentAllocator): Double = bind
       assertEquals(
         scope(atof("5.0")),
         5.0
@@ -39,7 +38,7 @@ class StdlibSuite extends munit.FunSuite:
    }
 
    test("getenv") {
-      def getenv(name: String)(using NativeCache, SegmentAllocator): String =
+      def getenv(name: String)(using SegmentAllocator): String =
          bind
       assertEquals(
         scope(getenv("PATH")),
@@ -48,7 +47,7 @@ class StdlibSuite extends munit.FunSuite:
    }
 
    test("strlen") {
-      def strlen(string: String)(using NativeCache, SegmentAllocator): Int =
+      def strlen(string: String)(using SegmentAllocator): Int =
          bind
       assertEquals(
         scope(strlen("hello")),
@@ -57,17 +56,46 @@ class StdlibSuite extends munit.FunSuite:
    }
 
    test("div") {
-      import components.Member.int
       type div_t = Struct {
          val quot: int
          val rem: int
       }
+      import io.gitlab.mhammons.slinc.components.LayoutOf
+      summon[LayoutOf[div_t]]
       def div(num: Int, denom: Int)(using SegmentAllocator): div_t = bind
       scope {
          val result = div(5, 2)
          assertEquals(result.quot(), 2)
          assertEquals(result.rem(), 1)
       }
+   }
+
+   test("asctime"){
+      type tm= Struct{
+         val tm_sec: int
+         val tm_min: int
+         val tm_hour: int
+         val tm_mday: int
+         val tm_mon: int
+         val tm_year: int
+         val tm_wday: int
+         val tm_yday: int 
+         val tm_isdst: int
+      }
+
+      import components.BoundaryCrossing
+
+      summon[BoundaryCrossing[Ptr[long], ?]]
+
+      def time(timer: Ptr[long]): long = bind 
+
+      val t = time(Ptr.nul)
+
+      def asctime(timePtr: Ptr[tm])(using SegmentAllocator): String = bind
+
+      asctime(~t)
+
+
    }
 
 // test("getpie".fail) {

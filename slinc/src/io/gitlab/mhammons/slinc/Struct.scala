@@ -3,23 +3,101 @@ package io.gitlab.mhammons.slinc
 import jdk.incubator.foreign.MemorySegment
 import io.gitlab.mhammons.polymorphics.VarHandleHandler
 import jdk.incubator.foreign.GroupLayout
-import jdk.incubator.foreign.MemoryLayout
+import jdk.incubator.foreign.MemoryLayout, MemoryLayout.PathElement
 import scala.quoted.*
 import scala.util.chaining.*
 import java.lang.invoke.VarHandle
 import io.gitlab.mhammons.slinc.components.{Ptr, Member}
-import components.{StructInfo, StructStub, PrimitiveInfo, NamedVarhandle}
+import components.{StructInfo, NamedVarhandle}
 import io.gitlab.mhammons.slinc.components.MemLayout
 import io.gitlab.mhammons.slinc.components.StructLayout
 import scala.collection.concurrent.TrieMap
+import io.gitlab.mhammons.slinc.components.{
+   Template,
+   Allocatable,
+   LayoutOf,
+   missingTemplate
+}
+import io.gitlab.mhammons.slinc.components.StructTemplate
+import io.gitlab.mhammons.slinc.components.BoundaryCrossing
+import io.gitlab.mhammons.slinc.components.StructElement
+import io.gitlab.mhammons.slinc.components.SegmentTemplate
 
-trait Struct(memorySegment: MemorySegment) extends Selectable:
+trait Struct(
+    memorySegment: MemorySegment,
+    layout: MemoryLayout,
+    path: Seq[PathElement]
+) extends Selectable:
    def selectDynamic(name: String): Any
 
-   private[slinc] val $mem = memorySegment
+   val $mem = memorySegment
+   val $layout = layout
+   val $path = path
+   lazy val thisSize = layout.select(path*).byteSize
+   lazy val offset = layout.byteOffset(path*)
+   lazy val thisSegment = memorySegment.address
+      .addOffset(offset)
+      .asSegment(thisSize, memorySegment.scope)
 
-class MapStruct(map: Map[String, Any], memorySegment: MemorySegment)
-    extends Struct(memorySegment):
+object Struct:
+   extension [S <: Struct: Template](s: S)
+      def update(os: S) =
+         s.thisSegment.copyFrom(os.thisSegment)
+
+      def `unary_~` = Ptr[S](s.thisSegment.address)
+
+   inline given [A <: Struct]: SegmentTemplate[A] = ${
+      genStructTemplateImpl[A]
+   }
+
+   def genStructTemplateImpl[A <: Struct: Type](using q: Quotes) =
+      val name = LayoutMacros.layoutNameImpl[A]
+
+      val index = Expr(
+        components.UniversalNativeCache.getLayoutIndex(name.valueOrAbort)
+      )
+
+      val templates = StructMacros
+         .getStructInfo[A]
+         .members
+         .map { case StructElement(name, '[a]) =>
+            val template = Expr
+               .summon[Template[a]]
+               .getOrElse(missingTemplate[a]) // todo: report proper error
+            (name, template)
+         }
+
+      val namedTemplates = templates
+         .map { case (name, templateExpr) =>
+            '{ (${ Expr(name) }, $templateExpr) }
+         }
+         .pipe(Expr.ofSeq)
+
+      '{
+         components.UniversalNativeCache
+            .getTemplate[A](
+              $index,
+              StructTemplate[A]($namedTemplates, summon[LayoutOf[A]].layout)
+            )
+            .asInstanceOf[SegmentTemplate[A]]
+      }
+
+   inline given [A <: Struct](using
+       t: Template[A]
+   ): BoundaryCrossing[A, MemorySegment] =
+      components.UniversalNativeCache.getBoundaryCrossing(
+        LayoutMacros.layoutIndex[A],
+        new BoundaryCrossing[A, MemorySegment]:
+           def toNative(a: A) = a.$mem
+           def toJVM(sgmnt: MemorySegment) = summon[Template[A]](sgmnt)
+      )
+end Struct
+class MapStruct(
+    map: Map[String, Any],
+    memorySegment: MemorySegment,
+    layout: MemoryLayout,
+    path: Seq[PathElement]
+) extends Struct(memorySegment, layout, path):
    def selectDynamic(name: String) = map(name)
 
 object StructMacros:
@@ -32,20 +110,18 @@ object StructMacros:
               case Refinement(ancestor, name, typ) =>
                  val typType = typ.asType
 
-                 val thisType: PrimitiveInfo | StructStub = typType match
-                    case '[Struct] =>
-                       StructStub(name, typType)
-
+                 val thisType = typType match
                     case '[a] =>
-                       PrimitiveInfo(name, typType)
+                       StructElement(name, typType)
+
                  ancestor.asType.pipe { case '[a] =>
                     getStructInfo[a].pipe(res =>
                        res.copy(members = res.members :+ thisType)
                     )
                  }
 
-              case repr if repr =:= TypeRepr.of[Struct] =>
-                 StructInfo(None, Seq.empty)
+              case repr if repr =:= TypeRepr.of[Pt1] =>
+                 StructInfo(Seq.empty)
 
               case t =>
                  report.errorAndAbort(
@@ -56,88 +132,21 @@ object StructMacros:
       )
    end getStructInfo
 
-   inline def structFromMemSegment[A](memSegment: MemorySegment): A = ${
-      structFromMemSegmentImpl[A]('memSegment)
+   transparent inline def makePTDual[A] = ${
+      makePTDualImpl[A]
    }
 
-   private def structFromMemSegmentImpl[A: Type](
-       memSegmentExpr: Expr[MemorySegment]
-   )(using Quotes) =
+   def transformRefinement[A: Type](using Quotes): quotes.reflect.TypeRepr =
       import quotes.reflect.*
+       TypeRepr.of[A].dealias match 
+          case Refinement(ancestor, name, typ) => 
+             ancestor.asType.pipe{ case '[a] => Refinement(transformRefinement[a], name, typ.asType.pipe{ case '[b] => TypeRepr.of[Wrap[b]]})}
+          case repr if repr =:= TypeRepr.of[Pt1] => repr
+   def makePTDualImpl[A: Type](using Quotes) =
+      import quotes.reflect.*
+      val newTypeRepr = transformRefinement[A].asType
 
-      def fn(parentLayout: Expr[StructLayout]): Expr[Seq[(String, ?)]] =
-         getStructInfo[A].members
-            .flatMap {
-               case StructStub(name, '[a]) =>
-                  Seq('{
-                     (
-                       ${ Expr(name) },
-                       structFromMemSegment[a](
-                         $parentLayout
-                            .subsegmntOf(${ Expr(name) }, $memSegmentExpr)
-                       )
-                     )
-                  })
-               case _ => Nil
-            }
-            .pipe(Expr.ofSeq)
-
-      val nc = Expr.summon[NativeCache].getOrElse(missingNativeCache)
-
-      '{
-         val msgmnt = $memSegmentExpr
-         val nativeCache = $nc
-
-         val layout = nativeCache.layout[A]
-
-         val varHandles = nativeCache
-            .varHandles[A]
-            .map(nvh => (nvh.name, Member[Any](msgmnt, nvh.varhandle)))
-
-         val structs = ${ Expr.betaReduce(fn('layout)) }
-
-         MapStruct((varHandles ++ structs).toMap, msgmnt).asInstanceOf[A]
-      }.tap(e => report.info(e.show))
-
-   inline def genVarHandles[A] = ${
-      genVarHandlesImpl[A]
-   }
-
-   private def genVarHandlesImpl[A: Type](using q: Quotes) =
-      import quotes.reflect.report
-      import TransformMacros.{type2MethodTypeArg, type2MemLayout}
-      val structInfo = getStructInfo[A]
-      val nCache = Expr.summon[NativeCache].getOrElse(missingNativeCache)
-
-      { (layoutExpr: Expr[MemLayout]) =>
-         {
-            structInfo.members
-               .flatMap {
-
-                  case PrimitiveInfo(name, '[a]) =>
-                     val nameExp = Expr(name)
-                     List(
-                       '{
-                          NamedVarhandle(
-                            $nameExp,
-                            $layoutExpr.varHandle(
-                              ${ type2MethodTypeArg[a] },
-                              MemoryLayout.PathElement.groupElement($nameExp)
-                            )
-                          )
-                       }
-                     )
-
-                  case _ => Nil
-               }
-               .pipe(Expr.ofSeq)
+      newTypeRepr match 
+         case '[a] => '{
+            Pt1(Map("h" -> Wrap(4), "k" -> Wrap("hello") )).asInstanceOf[a]
          }
-      }
-         .pipe(lambdaList =>
-            Expr.betaReduce('{
-               val layout = $nCache.layout[A]
-               ${ lambdaList('layout) }
-
-            })
-         )
-         .tap(_.show.tap(report.info))

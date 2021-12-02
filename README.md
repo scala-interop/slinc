@@ -56,17 +56,21 @@ scope{
 }
 ```
 
+## int vs Int
+
+In SLinC, int and Int are both types that represent integers. The big difference between the two is where those integers are stored. Ints live on the java heap/stack, but ints live in the native world and data has to be copied either from them `int()` or to them `int() = 5`. Most SLinC types have native counterparts, which are always named in the lowercase fashion.
+
 ## C types to Scala Types
 
 The following table shows how C types map to Scala types in function bindings
 
 |C   | Scala|
 |----|------|
-|int | Int  |
-|float| Float|
-|double | Double|
-|long | Long |
-| const char * | String |
+|int | Int or int  |
+|float| Float or float|
+|double | Double or double |
+|long | Long or long |
+| const char * | String or string |
 | void | Unit |
 | struct | see struct section |
 

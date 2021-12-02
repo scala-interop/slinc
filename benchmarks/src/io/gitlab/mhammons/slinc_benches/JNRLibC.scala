@@ -1,4 +1,4 @@
-package io.gitlab.mhammons.slinc
+package io.gitlab.mhammons.slinc_benches
 
 trait JNRLibC:
    def getpid(): Long

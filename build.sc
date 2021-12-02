@@ -12,6 +12,12 @@ object slinc extends ScalaModule with PublishModule {
 
    def moduleDeps = Seq(polymorphics)
    def scalaVersion = "3.1.0"
+   def scalacOptions = Seq(
+        "-deprecation",
+        "-Wunused:all",
+        "-unchecked",
+        "-Xcheck-macros"
+    )
    def publishVersion = "0.0.1"
    def pomSettings = PomSettings(
      description = "SLinC - Scala <-> C Interop",

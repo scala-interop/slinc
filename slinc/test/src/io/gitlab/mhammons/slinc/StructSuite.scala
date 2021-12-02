@@ -1,7 +1,7 @@
 package io.gitlab.mhammons.slinc
 
 import io.gitlab.mhammons.slinc.components.StructLayout
-import io.gitlab.mhammons.slinc.components.{Primitives, Named}
+import io.gitlab.mhammons.slinc.components.{Primitives, Named, Template}
 import scala.collection.immutable.ArraySeq
 import jdk.incubator.foreign.SegmentAllocator
 import java.io.File
@@ -26,13 +26,13 @@ class StructSuite extends munit.FunSuite:
    test(
      "can retrieve layouts for simple structs made of non-pointer primitives"
    ) {
-      import components.Member.int
+
       type div_t = Struct {
          val quot: int
          val rem: int
       }
       assertEquals(
-        summon[NativeCache].layout[div_t],
+        LayoutMacros.deriveLayout2[div_t],
         StructLayout(
           Seq(Named(Primitives.Int, "quot"), Named(Primitives.Int, "rem"))
         )
@@ -42,7 +42,6 @@ class StructSuite extends munit.FunSuite:
    test(
      "can retrieve layouts for structs with structs, and product types"
    ) {
-      import components.Member.int
       type div_x = Struct {
          val quot: int
          val rem: int
@@ -53,8 +52,10 @@ class StructSuite extends munit.FunSuite:
          val div_x: div_x
       }
 
+      summon[Template[div_y]]
+
       assertEquals(
-        summon[NativeCache].layout[div_y],
+        LayoutMacros.deriveLayout2[div_y],
         StructLayout(
           Seq(
             Named(Primitives.Int, "j"),
@@ -84,21 +85,10 @@ class StructSuite extends munit.FunSuite:
       )
    }
 
-   test("can grab varhandles from a struct layout") {
-      type div_t = Struct {
-         val quot: Int
-         val rem: Int
-      }
-
-      val varhandles = summon[NativeCache].varHandles[div_t]
-   }
-
-   test("test") {}
-
    test("can allocate and use nested structs") {
 
       scope {
-         val b_t = allocate[Testlib.b_t]()
+         val b_t = allocate[Testlib.b_t]
          b_t.d.a() = 6
          val b2 = Testlib.slinc_test_modify(b_t)
 
@@ -106,18 +96,24 @@ class StructSuite extends munit.FunSuite:
          assertEquals(b2.d.a(), 12)
       }
 
+      case class X(a: Int, b: Int)
+
+      Pt(X(5,4)).dual.a
+
+
+
    }
 
-   test(
-     "nested structs have memsegment addresses that are in line with what's expected"
-   ) {
-      scope {
-         val b_t = allocate[Testlib.b_t]()
-         val offsetOfA_t =
-            summon[NativeCache].layout[Testlib.b_t].byteOffset("d")
-         assertEquals(
-           b_t.d.$mem.address.toRawLongValue - b_t.$mem.address.toRawLongValue,
-           offsetOfA_t
-         )
-      }
-   }
+// test(
+//   "nested structs have memsegment addresses that are in line with what's expected"
+// ) {
+//    scope {
+//       val b_t = allocate[Testlib.b_t]
+//       val offsetOfA_t =
+//          summon[NativeCache].layout[Testlib.b_t].byteOffset("d")
+//       assertEquals(
+//         b_t.d.$mem.address.toRawLongValue - b_t.$mem.address.toRawLongValue,
+//         offsetOfA_t
+//       )
+//    }
+// }

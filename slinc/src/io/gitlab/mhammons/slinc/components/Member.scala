@@ -1,16 +1,17 @@
 package io.gitlab.mhammons.slinc.components
 
-import jdk.incubator.foreign.MemorySegment
-import java.lang.invoke.VarHandle
+import jdk.incubator.foreign.{MemorySegment, MemoryLayout},
+MemoryLayout.PathElement
 import io.gitlab.mhammons.polymorphics.VarHandleHandler
+import java.lang.invoke.VarHandle
+import jdk.incubator.foreign.CLinker.{C_INT, C_FLOAT}
 
-class Member[T](memSgmnt: MemorySegment, varHandle: VarHandle):
+class Member[T](
+    memSgmnt: MemorySegment,
+    varHandle: VarHandle,
+    layout: MemoryLayout,
+    path: Seq[PathElement]
+)(using Template[Member[T]]):
    def update(t: T) = VarHandleHandler.set(varHandle, memSgmnt, t)
    def apply(): T = VarHandleHandler.get(varHandle, memSgmnt).asInstanceOf[T]
-
-   private[slinc] val mem = memSgmnt
-
-object Member:
-   type int = Member[Int]
-   type float = Member[Float]
-   type long = Member[Long]
+   def `unary_~` = Ptr[Member[T]](memSgmnt.address)
