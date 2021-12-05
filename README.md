@@ -28,16 +28,13 @@ C interop naturally entails allocation of native memory. This memory is managed 
 
 ## Defining Structs
 
-Creating bindings to structs are fairly simple in slinc.
+Creating struct descriptions are fairly simple in SLinC
 
 ```scala
-type div_t = Struct {
-    val quot: int
-    val rem: int
-}
+case class div_t(quot: Int, rem: Int) derives Struct
 ```
 
-is a binding of 
+is the equivalent of 
 
 ```C
 struct {
@@ -46,19 +43,39 @@ struct {
 } div_t;
 ```
 
-Notice that the types of `quot` and `rem` are lowercase: `int`. This is a field-type, with get and set methods available for retrieving and setting data.
-
 ```scala
 def div(num: Int, denom: Int)(using SegmentAllocator): div_t = bind
-scope{
-    val result = div(5,2)
-    (result.quot.get, result.rem.get)
+val result = scope{
+    div(5,2)
 }
+
+assertEquals(result.quot, 2)
+assertEquals(result.rem, 1)
 ```
 
-## int vs Int
+Please note that case classes sent to/received from a function are pass by value. These values are immutable and copied into the JVM heap from the native world.
 
-In SLinC, int and Int are both types that represent integers. The big difference between the two is where those integers are stored. Ints live on the java heap/stack, but ints live in the native world and data has to be copied either from them `int()` or to them `int() = 5`. Most SLinC types have native counterparts, which are always named in the lowercase fashion.
+## Pointers
+
+Pointers can be generated from types via the `.serialize` method. This method is added to all compatible types, including types that derive `Struct`, via importing all from SLinC via `import io.gitlab.mhammons.slinc.*`. 
+
+Pointers are dereferencable by the unary ! operator: 
+```scala
+case class div_t(quot: Int, rem: Int) derives Struct
+
+val ptr: Ptr[div_t] = div_t(2,1).serialize
+assertEquals(!ptr, div_t(2, 1))
+!ptr = div_t(3,7)
+assertEquals(!ptr, div_t(3, 7))
+```
+
+Please note that this dereferencing operation involves copying data to and from the jvm into and out of the native world, and can consequently be costly. If you only wish to access or modify a small piece of a struct that is stored in the native heap, you can use the `.partial` method on pointers:
+
+```scala
+!ptr.quot //copies the entire div_t from ptr into the jvm, then accesses quot
+!ptr.partial.quot //copies only quot into the jvm
+!ptr = div_t(5,6) //updating ptr normally requires copying in an entire new div_n
+!ptr.partial.quot = 5 //only copies 5 from the jvm, and only writes it to the memory for quot
 
 ## C types to Scala Types
 

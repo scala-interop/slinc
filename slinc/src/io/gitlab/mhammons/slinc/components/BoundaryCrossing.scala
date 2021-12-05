@@ -1,6 +1,7 @@
 package io.gitlab.mhammons.slinc.components
 
-import jdk.incubator.foreign.{MemoryAddress, SegmentAllocator, CLinker}
+import jdk.incubator.foreign.{MemoryAddress, MemorySegment, SegmentAllocator, CLinker}
+import io.gitlab.mhammons.slinc.Struckt
 import scala.quoted.*
 
 trait BoundaryCrossing[A, B]:
@@ -25,8 +26,13 @@ object BoundaryCrossing:
       def toNative(long: Long) = long
       def toJVM(long: Long) = long
 
-   given (using seg: SegmentAllocator): BoundaryCrossing[String, MemoryAddress]
+
+   given (using seg: SegmentAllocator): BoundaryCrossing[String, MemoryAddress] 
       with
       def toNative(string: String) = CLinker.toCString(string, seg).address
       def toJVM(memoryAddress: MemoryAddress) =
          CLinker.toJavaString(memoryAddress)
+
+   given [A <: Product](using SegmentAllocator)(using struckt: Struckt[A]): BoundaryCrossing[A, MemorySegment] with
+      def toNative(a: A) = struckt.to(a).asMemorySegment
+      def toJVM(memorySegment: MemorySegment) = struckt.from(memorySegment, 0)

@@ -5,18 +5,8 @@ import io.gitlab.mhammons.slinc.components.Library
 import io.gitlab.mhammons.slinc.components.Location
 import jdk.incubator.foreign.SegmentAllocator
 
-
-import components.Member.int
-
-type a_t = Struct {
-   val a: int
-   val b: int
-}
-
-type b_t = Struct {
-   val c: int
-   val d: a_t
-}
+case class a_t(a: Int, b: Int) derives Struckt
+case class b_t(c: Int, d: a_t) derives Struckt
 
 object LibTest
     extends Library(Location.Local("../../../../slinc/test/native/libtest.so")):

@@ -19,6 +19,24 @@ trait LayoutOf[A]:
    val carrierType: Class[?]
 
 object LayoutOf:
+   def fromTypeInfo(typeInfo: TypeInfo)(using Quotes): Expr[MemoryLayout] =
+      typeInfo match
+         case PrimitiveInfo(name, '[a]) =>
+            '{
+               ${ Expr.summonOrError[LayoutOf[a]] }.layout.withName(${
+                  Expr(name)
+               })
+            }
+         case PtrInfo(name, _, _) => '{ C_POINTER.withName(${ Expr(name) }) }
+         case ProductInfo(name, members, _) =>
+            '{
+               MemoryLayout
+                  .structLayout(${
+                     members.map(fromTypeInfo).pipe(Expr.ofSeq)
+                  }*)
+                  .withName(${ Expr(name) })
+            }
+
    given LayoutOf[Int] with
       val layout = C_INT
       val carrierType = classOf[Int]
@@ -38,11 +56,6 @@ object LayoutOf:
    given LayoutOf[String] with
       val layout = C_POINTER
       val carrierType = classOf[MemoryAddress]
-
-   val pointerLayout = new LayoutOf[Ptr[Any]]:
-      val layout = C_POINTER
-      val carrierType = classOf[MemoryAddress]
-   given [A]: LayoutOf[Ptr[A]] = pointerLayout.asInstanceOf[LayoutOf[Ptr[A]]]
 
    given [T](using LayoutOf[T]): LayoutOf[Member[T]] =
       summon[LayoutOf[T]].asInstanceOf[LayoutOf[Member[T]]]

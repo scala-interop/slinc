@@ -6,7 +6,6 @@ import scala.util.Random
 import io.gitlab.mhammons.slinc.Struct
 import io.gitlab.mhammons.slinc.components.MinimalPerfectHashtable
 import io.gitlab.mhammons.slinc.components.MinimalFastPerfectHashtable
-import io.gitlab.mhammons.slinc.components.Member.int
 import io.gitlab.mhammons.slinc.components.Primitives
 
 @State(Scope.Thread)
@@ -24,11 +23,6 @@ class Str:
    var key: String = _
    var keys: Iterator[String] = _
 
-   type div_t = Struct {
-      val a: int
-      val b: int
-   }
-   val layout = Primitives.Int
 
    @Setup
    def setup =

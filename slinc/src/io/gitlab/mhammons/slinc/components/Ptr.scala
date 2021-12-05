@@ -3,13 +3,11 @@ package io.gitlab.mhammons.slinc.components
 import jdk.incubator.foreign.{MemoryAddress, MemoryAccess, MemorySegment}
 
 class Ptr[+T](
-    private[components] val memoryAddress: MemoryAddress
-)(using template: Template[T]):
-
+    private[components] val memoryAddress: MemoryAddress, 
+)(using template: Template[T]) extends Selectable:
    def `unary_!` : T = template(
      memoryAddress.asSegment(template.layout.byteSize(), memoryAddress.scope)
    )
-
 object Ptr:
    def nul = Ptr[Nothing](MemoryAddress.NULL)
 

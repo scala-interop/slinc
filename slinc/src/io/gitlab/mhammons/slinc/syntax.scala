@@ -16,7 +16,8 @@ import io.gitlab.mhammons.slinc.components.{
    missingBoundaryCrossing,
    missingSegmentAllocator
 }
-import io.gitlab.mhammons.slinc.components.SegmentTemplate
+import io.gitlab.mhammons.slinc.components.{SegmentTemplate, summonOrError}
+import io.gitlab.mhammons.slinc.components.BoundaryCrossing2
 
 transparent inline def bind = ${
    bindImpl
@@ -24,9 +25,10 @@ transparent inline def bind = ${
 
 private def needsAllocator[T: Type](returnType: Boolean)(using Quotes) =
    Type.of[T] match
-      case '[Struct] => returnType
-      case '[String] => !returnType
-      case _         => false
+      case '[Struct]  => returnType
+      case '[Product] => returnType
+      case '[String]  => !returnType
+      case _          => false
 
 private def bindImpl(using q: Quotes) =
    import quotes.reflect.*
@@ -75,10 +77,10 @@ private def bindImpl(using q: Quotes) =
    params
       .map { case (expr, '[a]) =>
          val aExpr = expr.asExprOf[a]
-         Expr
-            .summon[BoundaryCrossing[a, ?]]
-            .getOrElse(missingBoundaryCrossing[a])
-            .pipe(bc => '{ $bc.toNative($aExpr) })
+         // Expr
+         //    .summonOrError[BoundaryCrossing[a, ?]]
+         //    .pipe(bc => '{ $bc.toNative($aExpr) })
+         BoundaryCrossing2.to(aExpr)
       }
       .pipe(segAllocArg ++ _)
       .pipe(callFn(_))
@@ -108,20 +110,7 @@ def call[Ret: Type](mh: Expr[MethodHandle], ps: List[Expr[Any]])(using
      mh.asTerm :: ps.map(_.asTerm)
    ).asExprOf[Any]
 
-   val boundaryCrossing = Expr
-      .summon[BoundaryCrossing[Ret, ?]]
-      .getOrElse(
-        report.errorAndAbort(
-          s"no boundary crossing found for ${Type.show[Ret]}"
-        )
-      )
-
-   '{
-      val methodHandle = $mh
-      val bc = $boundaryCrossing
-      type N = bc.Native
-      bc.toJVM(${ callFn('{ methodHandle }, ps) }.asInstanceOf[N])
-   }
+   BoundaryCrossing2.from[Ret](callFn(mh, ps)).tap(_.show.tap(report.warning))
 
 def allocate[A: SegmentTemplate](using
     seg: SegmentAllocator,
@@ -129,7 +118,9 @@ def allocate[A: SegmentTemplate](using
 ) =
    template(seg.allocate(template.layout))
 
-
 type int = Member[Int]
 type float = Member[Float]
 type long = Member[Long]
+
+extension [A <: Product](a: A)(using struckt: Struckt[A])
+   def serialize(using SegmentAllocator) = struckt.to(a)

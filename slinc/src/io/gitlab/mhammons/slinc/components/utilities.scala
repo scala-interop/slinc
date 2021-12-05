@@ -37,3 +37,10 @@ def missingTemplate[A: Type](using Quotes) =
    report.errorAndAbort(
      s"No template for type ${Type.show[A]} was found. Please define one if you need this type"
    )
+
+extension (expr: Expr.type)
+   def summonOrError[A: Type](using Quotes): Expr[A] =
+      import quotes.reflect.{report}
+      Expr
+         .summon[A]
+         .getOrElse(report.errorAndAbort(s"Could not summon ${Type.show[A]} in macro"))

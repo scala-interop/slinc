@@ -20,7 +20,6 @@ import jdk.incubator.foreign.{SegmentAllocator, ResourceScope}
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 @BenchmarkMode(Array(Mode.SampleTime))
 class StructBenchmark:
-   import components.Member.int
    type div_t = Struct {
       val a: int
       val b: int
