@@ -38,10 +38,10 @@ object Serializer:
          MemoryAccess.setFloatAtOffset(memorySegment, offset, a)
 
    given Serializer[Double] with
-      def into(a: Double, memorySegment: MemorySegment, offset: Long) = 
+      def into(a: Double, memorySegment: MemorySegment, offset: Long) =
          MemoryAccess.setDoubleAtOffset(memorySegment, offset, a)
 
-   given Serializer[Short] with 
+   given Serializer[Short] with
       def into(a: Short, memorySegment: MemorySegment, offset: Long) =
          MemoryAccess.setShortAtOffset(memorySegment, offset, a)
 
@@ -49,10 +49,23 @@ object Serializer:
       def into(a: Boolean, memorySegment: MemorySegment, offset: Long) =
          MemoryAccess.setByteAtOffset(memorySegment, offset, if a then 1 else 0)
 
-   given Serializer[Char] with 
+   given Serializer[Char] with
       def into(a: Char, memorySegment: MemorySegment, offset: Long) =
          MemoryAccess.setCharAtOffset(memorySegment, offset, a)
+   given Serializer[Byte] with
+      def into(a: Byte, memorySegment: MemorySegment, offset: Long) =
+         MemoryAccess.setByteAtOffset(memorySegment, offset, a)
 
+   private val ptrSerializer = new Serializer[Ptr[Any]]:
+      def into(ptr: Ptr[Any], memorySegment: MemorySegment, offset: Long) =
+         MemoryAccess.setAddressAtOffset(
+           memorySegment,
+           offset,
+           ptr.asMemoryAddress
+         )
+
+   given [A]: Serializer[Ptr[A]] =
+      ptrSerializer.asInstanceOf[Serializer[Ptr[A]]]
 
    def fromTypeInfo(
        a: Expr[?],
@@ -86,3 +99,6 @@ object Serializer:
                )
             }
             Expr.block(memberSelect.toList, '{}).tap(_.show.tap(report.info))
+
+         //pointer handling is exactly the same as primitive handling here.
+         case PtrInfo(name, _, t) => fromTypeInfo(a, memorySegment, offset, layout, path, PrimitiveInfo(name, t))

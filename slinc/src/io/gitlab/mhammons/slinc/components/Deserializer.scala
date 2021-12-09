@@ -10,8 +10,6 @@ trait Deserializer[A]:
    def from(memorySegment: MemorySegment, offset: Long): A
 
 object Deserializer:
-   case class a_t(a: Int, b: Int)
-
    def primitive[A: Type](
        memorySegmentExpr: Expr[MemorySegment],
        byteOffsetExpr: Expr[Long]
@@ -38,9 +36,12 @@ object Deserializer:
       def from(memorySegment: MemorySegment, offset: Long) =
          MemoryAccess.getShortAtOffset(memorySegment, offset)
 
-   given Deserializer[Byte] with 
+   given Deserializer[Byte] with
       def from(memorySegment: MemorySegment, offset: Long) =
          MemoryAccess.getByteAtOffset(memorySegment, offset)
+
+   // todo: deserialize pointers into memory segments without grabbing the layout
+   // val ptrDeserializer
 
    def fromTypeInfo(
        memorySegmentExpr: Expr[MemorySegment],
@@ -56,8 +57,8 @@ object Deserializer:
             })
             '{
                ${ Expr.summonOrError[Deserializer[a]] }.from(
-                  $memorySegmentExpr,
-                  $layout.byteOffset($updatedPath*)
+                 $memorySegmentExpr,
+                 $layout.byteOffset($updatedPath*)
                )
             }.asTerm
          case ProductInfo(name, members, '[a]) =>
@@ -81,5 +82,4 @@ object Deserializer:
                  .toList
             )
 
-         case PtrInfo(name, underlying, _) =>
-            ???
+         case PtrInfo(name, underlying, _) => ???
