@@ -1,7 +1,5 @@
 package io.gitlab.mhammons.slinc
 
-import io.gitlab.mhammons.slinc.components.StructLayout
-import io.gitlab.mhammons.slinc.components.{Primitives, Named, Template}
 import scala.collection.immutable.ArraySeq
 import jdk.incubator.foreign.SegmentAllocator
 import java.io.File
@@ -25,7 +23,7 @@ class StructSuite extends munit.FunSuite:
    test(
      "Can serialize and deserialize simple structs"
    ) {
-      case class div_t(quot: Int, rem: Int) derives Struckt
+      case class div_t(quot: Int, rem: Int) derives Struct
 
       val result = scope {
          !div_t(5, 2).serialize
@@ -35,8 +33,8 @@ class StructSuite extends munit.FunSuite:
    }
 
    test("can serialize and deserialize nested structs") {
-      case class div_t(quot: Int, rem: Int) derives Struckt
-      case class div_x(x: Int, div: div_t) derives Struckt
+      case class div_t(quot: Int, rem: Int) derives Struct
+      case class div_x(x: Int, div: div_t) derives Struct
 
       val sample = div_x(5, div_t(5, 4))
 
@@ -48,7 +46,7 @@ class StructSuite extends munit.FunSuite:
    }
 
    test("can update structs that are on the native heap") {
-      case class div_t(quot: Int, rem: Int) derives Struckt
+      case class div_t(quot: Int, rem: Int) derives Struct
       val expectedResult = div_t(2, 9)
       val result = scope {
          val ptr = div_t(3, 4).serialize
@@ -59,7 +57,7 @@ class StructSuite extends munit.FunSuite:
    }
 
    test("can partially dereference pointers") {
-      case class div_t(quot: Int, rem: Int) derives Struckt
+      case class div_t(quot: Int, rem: Int) derives Struct
       val result = scope {
          !div_t(3, 4).serialize.partial.quot
       }
@@ -68,7 +66,7 @@ class StructSuite extends munit.FunSuite:
    }
 
    test("can partially update pointers") {
-      case class div_t(quot: Int, rem: Int) derives Struckt
+      case class div_t(quot: Int, rem: Int) derives Struct
       val result = scope {
          val ptr = div_t(3, 4).serialize
          !ptr.partial.quot = 8
@@ -78,67 +76,52 @@ class StructSuite extends munit.FunSuite:
       assertEquals(result, div_t(8, 4))
    }
 
-   //  test(
-   //    "can retrieve layouts for simple structs made of non-pointer primitives"
-   //  ) {
+//  test(
+//    "can retrieve layouts for simple structs made of non-pointer primitives"
+//  ) {
 
-   //     type div_t = Struct {
-   //        val quot: int
-   //        val rem: int
-   //     }
-   //     assertEquals(
-   //       LayoutMacros.deriveLayout2[div_t],
-   //       StructLayout(
-   //         Seq(Named(Primitives.Int, "quot"), Named(Primitives.Int, "rem"))
-   //       )
-   //     )
-   //  }
+//     type div_t = Struct {
+//        val quot: int
+//        val rem: int
+//     }
+//     assertEquals(
+//       LayoutMacros.deriveLayout2[div_t],
+//       StructLayout(
+//         Seq(Named(Primitives.Int, "quot"), Named(Primitives.Int, "rem"))
+//       )
+//     )
+//  }
 
-   //  test(
-   //    "can retrieve layouts for structs with structs, and product types"
-   //  ) {
-   //     type div_x = Struct {
-   //        val quot: int
-   //        val rem: int
-   //     }
+//  test(
+//    "can retrieve layouts for structs with structs, and product types"
+//  ) {
+//     type div_x = Struct {
+//        val quot: int
+//        val rem: int
+//     }
 
-   //     type div_y = Struct {
-   //        val j: int
-   //        val div_x: div_x
-   //     }
+//     type div_y = Struct {
+//        val j: int
+//        val div_x: div_x
+//     }
 
-   //     summon[Template[div_y]]
+//     summon[Template[div_y]]
 
-   //     assertEquals(
-   //       LayoutMacros.deriveLayout2[div_y],
-   //       StructLayout(
-   //         Seq(
-   //           Named(Primitives.Int, "j"),
-   //           Named(
-   //             StructLayout(
-   //               Seq(Named(Primitives.Int, "quot"), Named(Primitives.Int, "rem"))
-   //             ),
-   //             "div_x"
-   //           )
-   //         )
-   //       )
-   //     )
-   //  }
-
-   test(
-     "produces compile-time errors for structs that contain non-field members".fail
-   ) {
-      type div_t = Struct {
-         val quot: Int
-         val rem: Int
-      }
-      assertNoDiff(
-        compileErrors(
-          "type div_t = Struct{ val quot: Int; val rem: Int};NativeIO.layout[div_t].compile(NativeIO.impureCompiler)"
-        ),
-        ""
-      )
-   }
+//     assertEquals(
+//       LayoutMacros.deriveLayout2[div_y],
+//       StructLayout(
+//         Seq(
+//           Named(Primitives.Int, "j"),
+//           Named(
+//             StructLayout(
+//               Seq(Named(Primitives.Int, "quot"), Named(Primitives.Int, "rem"))
+//             ),
+//             "div_x"
+//           )
+//         )
+//       )
+//     )
+//  }
 
 //  test("can allocate and use nested structs") {
 

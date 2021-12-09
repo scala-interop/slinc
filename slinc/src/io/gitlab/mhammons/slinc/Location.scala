@@ -1,6 +1,4 @@
-package io.gitlab.mhammons.slinc.components
-
-import io.gitlab.mhammons.slinc.Struckt
+package io.gitlab.mhammons.slinc
 
 enum Location:
    case Local(relativePath: String)

@@ -8,7 +8,6 @@ import org.openjdk.jmh.annotations.Mode
 import jnr.ffi.LibraryLoader
 import io.gitlab.mhammons.polymorphics.MethodHandleHandler
 import jdk.incubator.foreign.{SegmentAllocator, ResourceScope}
-import components.NPtr
 
 import scala.util.Random
 
@@ -24,17 +23,16 @@ import scala.util.Random
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 @BenchmarkMode(Array(Mode.SampleTime))
 class BindingsBenchmark:
-   case class div_t(quot: Int, rem: Int) derives Struckt
+   case class div_t(quot: Int, rem: Int) derives Struct
 
    var rs: ResourceScope = _
    var segAlloc: SegmentAllocator = _
-   var b: b_t = b_t(5, a_t(1,3))
+   var b: b_t = b_t(5, a_t(1, 3))
 
    @Setup(Level.Iteration)
    def setup() =
       rs = ResourceScope.newConfinedScope
       segAlloc = SegmentAllocator.arenaAllocator(rs)
-
 
    @TearDown(Level.Iteration)
    def teardown() =
@@ -58,7 +56,7 @@ class BindingsBenchmark:
    @Benchmark
    def divSlincBench =
       given SegmentAllocator = segAlloc
-      NativeCacheBased.div(5, 2)
+      NativeCacheBased.div(5, 2).quot
 
    @Benchmark
    def getpidSlincBench =
@@ -82,11 +80,15 @@ class BindingsBenchmark:
 
    @Benchmark
    def divJNABench =
-      jnaLibC.div(5, 2)
+      jnaLibC.div(5, 2).quot
 
-   @Benchmark
-   def libTestModifyBench =
-      given SegmentAllocator = segAlloc
-      val input = b.copy(d = b.d.copy(a = 5))
-      val result = LibTest.slinc_test_modify(input)
-      result.d.a
+   // @Benchmark
+   // def divJNRBench =
+   //    jnrLibC.div(5, 2).quot.get()
+
+// @Benchmark
+// def libTestModifyBench =
+//    given SegmentAllocator = segAlloc
+//    val input = b.copy(d = b.d.copy(a = 5))
+//    val result = LibTest.slinc_test_modify(input)
+//    result.d.a

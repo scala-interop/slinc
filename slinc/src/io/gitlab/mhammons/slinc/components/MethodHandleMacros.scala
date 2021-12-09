@@ -3,14 +3,18 @@ package io.gitlab.mhammons.slinc.components
 import scala.quoted.*
 import scala.util.chaining.*
 import jdk.incubator.foreign.{FunctionDescriptor, CLinker}
-                           import scala.language.experimental
-                           
+import scala.language.experimental
+
 object MethodHandleMacros:
    def methodType[Ret: Type](args: List[Type[?]])(using Quotes) =
       import java.lang.invoke.MethodType
 
-      val methodTypes = args.map { case '[p] => Expr.summon[LayoutOf[p]].getOrElse(missingLayout[p]).pipe(exp => '{$exp.carrierType}) }
-      val returnMethodType = Expr.summon[LayoutOf[Ret]].getOrElse(missingLayout[Ret]).pipe(exp => '{$exp.carrierType})
+      val methodTypes = args.map { case '[p] =>
+         Expr
+            .summon[LayoutOf[p]]
+            .getOrElse(missingLayout[p])
+            .pipe(exp => '{ $exp.carrierType })
+      }
       Type.of[Ret] match
          case '[Unit] =>
             if args.isEmpty then '{ VoidHelper.methodTypeV() }
@@ -22,6 +26,9 @@ object MethodHandleMacros:
                   )
                }
          case '[r] =>
+            val returnMethodType = Expr
+               .summonOrError[LayoutOf[Ret]]
+               .pipe(exp => '{ $exp.carrierType })
             if args.isEmpty then '{ MethodType.methodType($returnMethodType) }
             else
                '{
@@ -36,7 +43,12 @@ object MethodHandleMacros:
    ): Expr[FunctionDescriptor] =
       val paramLayouts =
          paramTypes
-            .map { case '[p] => Expr.summon[LayoutOf[p]].getOrElse(missingLayout[p]).pipe(exp => '{$exp.layout}) }
+            .map { case '[p] =>
+               Expr
+                  .summon[LayoutOf[p]]
+                  .getOrElse(missingLayout[p])
+                  .pipe(exp => '{ $exp.layout })
+            }
             .pipe(Varargs.apply)
 
       Type.of[Ret] match
@@ -45,7 +57,9 @@ object MethodHandleMacros:
          case '[r] =>
             '{
                FunctionDescriptor.of(
-                 ${ Expr.summon[LayoutOf[r]].getOrElse(missingLayout[Ret]) }.layout,
+                 ${
+                    Expr.summonOrError[LayoutOf[r]]
+                 }.layout,
                  $paramLayouts*
                )
             }
@@ -62,6 +76,13 @@ object MethodHandleMacros:
 
       val idx = Expr(UniversalNativeCache.getBindingIndex(name))
       '{
-         UniversalNativeCache.addMethodHandle($idx, Linker.linker.downcallHandle($symbolLookup.lookup($nameExpr), $methodT, $functionD))
+         UniversalNativeCache.addMethodHandle(
+           $idx,
+           Linker.linker.downcallHandle(
+             $symbolLookup.lookup($nameExpr),
+             $methodT,
+             $functionD
+           )
+         )
       }
 end MethodHandleMacros

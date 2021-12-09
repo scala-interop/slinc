@@ -3,16 +3,14 @@ package io.gitlab.mhammons.slinc.components
 import scala.quoted.*
 import scala.util.chaining.*
 
+import io.gitlab.mhammons.slinc.Ptr
+
 import jdk.incubator.foreign.{
    MemoryLayout,
    CLinker,
    MemoryAddress,
    MemorySegment
 }, CLinker.{C_INT, C_FLOAT, C_DOUBLE, C_LONG, C_POINTER}
-
-import io.gitlab.mhammons.slinc.Struct
-import io.gitlab.mhammons.slinc.StructMacros
-import io.gitlab.mhammons.slinc.LayoutMacros
 
 trait LayoutOf[A]:
    val layout: MemoryLayout
@@ -57,46 +55,8 @@ object LayoutOf:
       val layout = C_POINTER
       val carrierType = classOf[MemoryAddress]
 
-   given [T](using LayoutOf[T]): LayoutOf[Member[T]] =
-      summon[LayoutOf[T]].asInstanceOf[LayoutOf[Member[T]]]
+   object PtrLayout extends LayoutOf[Ptr[?]]:
+      val layout = C_POINTER
+      val carrierType = classOf[MemoryAddress]
 
-   inline given [T]: LayoutOf[T] = ${
-      deriveLayoutImpl[T]
-   }
-
-   private def deriveLayoutImpl[T: Type](using q: Quotes) =
-      import quotes.reflect.report
-
-      Type.of[T] match
-         case '[Product] =>
-            ???
-
-         case '[Struct] =>
-            val (index, subLayouts) = StructMacros
-               .getStructInfo[T]
-               .members
-               .map { case StructElement(name, '[a]) =>
-                  s"$name:${Type.of[a]}" ->
-                     Expr
-                        .summon[LayoutOf[a]]
-                        .getOrElse(missingLayout[T])
-                        .pipe(exp =>
-                           '{ ${ exp }.layout.withName(${ Expr(name) }) }
-                        )
-               }
-               .pipe(_.unzip)
-               .pipe((namePieces, layoutPieces) =>
-                  namePieces
-                     .mkString(",")
-                     .pipe(UniversalNativeCache.getLayoutIndex) -> Expr.ofSeq(
-                    layoutPieces
-                  )
-               )
-            '{
-               UniversalNativeCache.getLayout[T](
-                 ${ Expr(index) },
-                 new LayoutOf[T]:
-                    val layout = MemoryLayout.structLayout($subLayouts*)
-                    val carrierType = classOf[MemorySegment]
-               )
-            }
+   given [A]: LayoutOf[Ptr[A]] = PtrLayout.asInstanceOf[LayoutOf[Ptr[A]]]

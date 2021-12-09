@@ -2,7 +2,7 @@ package io.gitlab.mhammons.slinc.components
 
 import scala.quoted.*
 import scala.util.chaining.*
-import NPtr.*
+import io.gitlab.mhammons.slinc.Ptr
 
 sealed trait TypeInfo:
    def rename(name: String): TypeInfo
@@ -15,7 +15,8 @@ case class ProductInfo(
    def rename(name: String) = copy(name = name)
 case class PrimitiveInfo(name: String, myType: Type[?]) extends TypeInfo:
    def rename(name: String) = copy(name = name)
-case class PtrInfo(name: String, underlying: TypeInfo, myType: Type[?]) extends TypeInfo:
+case class PtrInfo(name: String, underlying: TypeInfo, myType: Type[?])
+    extends TypeInfo:
    def rename(name: String) = copy(name = name)
 
 object TypeInfo:
@@ -37,5 +38,5 @@ object TypeInfo:
          case '[Int] | '[Float] | '[Long] | '[Short] | '[Byte] | '[Char] |
              '[Boolean] =>
             PrimitiveInfo("", Type.of[A])
-         case '[NPtr[a]] =>
+         case '[Ptr[a]] =>
             PtrInfo("", TypeInfo[a], Type.of[A])

@@ -1,38 +1,62 @@
 package io.gitlab.mhammons.slinc.components
 
-import jdk.incubator.foreign.{MemoryAddress, MemorySegment, SegmentAllocator, CLinker}
-import io.gitlab.mhammons.slinc.Struckt
 import scala.quoted.*
-
-trait BoundaryCrossing[A, B]:
-   def toNative(a: A): B
-   def toJVM(b: B): A
-   type Native = B
+import io.gitlab.mhammons.slinc.{Struct, Ptr}
+import jdk.incubator.foreign.{
+   SegmentAllocator,
+   MemorySegment,
+   CLinker,
+   MemoryAddress
+}
 
 object BoundaryCrossing:
-   given BoundaryCrossing[Int, Int] with
-      def toNative(int: Int) = int
-      def toJVM(int: Int) = int
+   def to[A: Type](a: Expr[A])(using Quotes): Expr[Any] =
+      a match
+         case '{ $b: Product & A } =>
+            val struckt = Expr.summonOrError[Struct[Product & A]]
+            val segAlloc = Expr.summonOrError[SegmentAllocator]
 
-   given BoundaryCrossing[Float, Float] with
-      def toNative(float: Float) = float
-      def toJVM(float: Float) = float
+            '{
+               $struckt.to($b)(using $segAlloc, $struckt).asMemorySegment
+            }
 
-   given BoundaryCrossing[Double, Double] with
-      def toNative(double: Double) = double
-      def toJVM(double: Double) = double
+         case '{ $b: Int }    => b
+         case '{ $b: Long }   => b
+         case '{ $b: Float }  => b
+         case '{ $b: Double } => b
+         case '{ $b: String } =>
+            '{
+               CLinker
+                  .toCString($b, ${ Expr.summonOrError[SegmentAllocator] })
+                  .address
+            }
 
-   given BoundaryCrossing[Long, Long] with
-      def toNative(long: Long) = long
-      def toJVM(long: Long) = long
+         case '{ $b: Ptr[a] } =>
+            '{
+               $b.asMemoryAddress
+            }
 
+   def from[A: Type](a: Expr[?])(using Quotes): Expr[A] =
+      Type.of[A] match
+         case '[Product & A] =>
+            val struckt = Expr.summonOrError[Struct[Product & A]]
+            '{
+               $struckt.from($a.asInstanceOf[MemorySegment], 0)
+            }
+         case '[Int] | '[Long] | '[Float] | '[Double] =>
+            '{ $a.asInstanceOf[A] }
 
-   given (using seg: SegmentAllocator): BoundaryCrossing[String, MemoryAddress] 
-      with
-      def toNative(string: String) = CLinker.toCString(string, seg).address
-      def toJVM(memoryAddress: MemoryAddress) =
-         CLinker.toJavaString(memoryAddress)
-
-   given [A <: Product](using SegmentAllocator)(using struckt: Struckt[A]): BoundaryCrossing[A, MemorySegment] with
-      def toNative(a: A) = struckt.to(a).asMemorySegment
-      def toJVM(memorySegment: MemorySegment) = struckt.from(memorySegment, 0)
+         case '[Unit] => '{ () }.asExprOf[A]
+         case '[String] =>
+            '{ CLinker.toJavaString($a.asInstanceOf[MemoryAddress]) }
+               .asExprOf[A]
+         case '[Ptr[a]] =>
+            val layoutOf = Expr.summonOrError[LayoutOf[a]]
+            '{
+               val address = $a.asInstanceOf[MemoryAddress]
+               Ptr[a](
+                 address.asSegment($layoutOf.layout.byteSize, address.scope),
+                 0,
+                 Map.empty
+               )
+            }.asExprOf[A]

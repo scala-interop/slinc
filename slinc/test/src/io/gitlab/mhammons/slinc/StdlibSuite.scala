@@ -1,9 +1,20 @@
 package io.gitlab.mhammons.slinc
 
 import jdk.incubator.foreign.SegmentAllocator
-import components.{Ptr, NPtr}
 
 class StdlibSuite extends munit.FunSuite:
+   case class tm(
+      tm_sec: Int,
+      tm_min: Int,
+      tm_hour: Int,
+      tm_mday: Int,
+      tm_mon: Int,
+      tm_year: Int,
+      tm_wday: Int,
+      tm_yday: Int,
+      tm_isdst: Int
+   ) derives Struct
+
    test("getpid") {
       def getpid: Long = bind
 
@@ -56,7 +67,7 @@ class StdlibSuite extends munit.FunSuite:
    }
 
    test("div") {
-      case class div_t(quot: Int, rem: Int) derives Struckt
+      case class div_t(quot: Int, rem: Int) derives Struct
 
       def div(a: Int, b: Int)(using SegmentAllocator): div_t = bind
 
@@ -66,47 +77,28 @@ class StdlibSuite extends munit.FunSuite:
       assertEquals(result, div_t(2, 1))
    }
 
-// test("div") {
-//    type div_t = Struct {
-//       val quot: int
-//       val rem: int
-//    }
-//    import io.gitlab.mhammons.slinc.components.LayoutOf
-//    summon[LayoutOf[div_t]]
-//    def div(num: Int, denom: Int)(using SegmentAllocator): div_t = bind
-//    scope {
-//       val result = div(5, 2)
-//       assertEquals(result.quot(), 2)
-//       assertEquals(result.rem(), 1)
-//    }
-// }
+   test("asctime") {
 
-// test("asctime"){
-//    type tm= Struct{
-//       val tm_sec: int
-//       val tm_min: int
-//       val tm_hour: int
-//       val tm_mday: int
-//       val tm_mon: int
-//       val tm_year: int
-//       val tm_wday: int
-//       val tm_yday: int
-//       val tm_isdst: int
-//    }
+      def time(timer: Ptr[Long]): Long = bind
 
-//    import components.BoundaryCrossing
+      val t = time(Ptr.Null())
 
-//    summon[BoundaryCrossing[Ptr[long], ?]]
+      def localtime(timer: Ptr[Long]): Ptr[tm] = bind
 
-//    def time(timer: Ptr[long]): long = bind
+      def asctime(timePtr: Ptr[tm])(using SegmentAllocator): String = bind
 
-//    val t = time(Ptr.nul)
+      val result = scope {
+         val timerPtr = t.serialize
+         val tmPtr = localtime(timerPtr)
+         asctime(tmPtr)
+      }
+   }
 
-//    def asctime(timePtr: Ptr[tm])(using SegmentAllocator): String = bind
+   test("localtime") {
+      def time(timer: Ptr[Long]): Long = bind
 
-//    asctime(~t)
-
-// }
+      def localtime(timer: Ptr[Long]): Ptr[tm] = bind
+   }
 
 // test("getpie".fail) {
 //    NativeIO.function[() => Long]("getpie")().foldMap(NativeIO.impureCompiler)

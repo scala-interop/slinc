@@ -16,7 +16,8 @@ object slinc extends ScalaModule with PublishModule {
         "-deprecation",
         "-Wunused:all",
         "-unchecked",
-        "-Xcheck-macros"
+        "-Xcheck-macros",
+        "-Xprint-suspension"
     )
    def publishVersion = "0.0.1"
    def pomSettings = PomSettings(
@@ -100,6 +101,15 @@ object polymorphics extends ScalaModule with PublishModule {
 object benchmarks extends ScalaModule {
    def moduleDeps = Seq(slinc)
    def scalaVersion = "3.1.0"
+
+
+   def scalacOptions = Seq(
+        "-deprecation",
+        "-Wunused:all",
+        "-unchecked",
+        "-Xcheck-macros",
+        "-Xprint-suspension"
+   )
 
    def forkArgs = Seq(
      "--add-modules",

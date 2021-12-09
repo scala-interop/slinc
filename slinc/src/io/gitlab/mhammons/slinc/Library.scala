@@ -1,8 +1,9 @@
-package io.gitlab.mhammons.slinc.components
+package io.gitlab.mhammons.slinc
 
 import java.nio.file.Paths
 import jdk.incubator.foreign.{SymbolLookup => JSymbolLookup}
 import scala.jdk.OptionConverters.*
+import components.SymbolLookup
 
 trait Library(location: Location):
    location match

@@ -20,39 +20,30 @@ import jdk.incubator.foreign.{SegmentAllocator, ResourceScope}
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 @BenchmarkMode(Array(Mode.SampleTime))
 class StructBenchmark:
-   type div_t = Struct {
-      val a: int
-      val b: int
-   }
-   type div_nested = Struct {
-      val a: div_t
-      val b: div_t
-   }
-
-   type div_t_ro = Struct {
-      val a: Int
-      val b: Int
-   }
+   case class div_t(a: Int, b: Int) derives Struct
+   // case class div_nested(a: div_t, b: div_t) derives Struct
 
    @Param(Array("1", "100", "10000"))
    var reps: Int = _
 
    var rs: ResourceScope = _
    var segAlloc: SegmentAllocator = _
-   var divSimple: div_t = _
-   var divNested: div_nested = _
-   var div2Simple: div_t = _
-   var div2Nested: div_nested = _
-   var divRo: div_t_ro = _
+   // var divNested: Ptr[div_nested] = _
+   var divRo: div_t = _
+
+   var divSimple: Ptr[div_t] = _
+
+   // var divN: div_nested = _
 
    @Setup(Level.Iteration)
    def setup() =
       rs = ResourceScope.newConfinedScope
       segAlloc = SegmentAllocator.arenaAllocator(rs)
       given SegmentAllocator = segAlloc
-      div2Simple = allocate[div_t]
-      div2Nested = allocate[div_nested]
-      divRo = allocate[div_t_ro]
+      divRo = div_t(5, 3)
+      // divN = div_nested(divRo, divRo)
+      divSimple = divRo.serialize
+   // divNested = divN.serialize
 
    @TearDown(Level.Iteration)
    def teardown() =
@@ -61,24 +52,20 @@ class StructBenchmark:
    @Benchmark
    def allocate2Simple =
       given SegmentAllocator = segAlloc
-      repeatInl(allocate[div_t], reps)
+      repeat(divRo.serialize, reps)
 
-   @Benchmark
-   def allocate2Nested =
-      given SegmentAllocator = segAlloc
-      repeatInl(allocate[div_nested], reps)
+   // @Benchmark
+   // def allocate2Nested =
+   //    given SegmentAllocator = segAlloc
+   //    repeat(divN.serialize, reps)
 
    @Benchmark
    def access2Simple =
-      repeatInl(div2Simple.a(), reps)
-   @Benchmark
-   def access2Nested =
-      repeatInl(div2Nested.a.a(), reps)
+      repeat(!divSimple.partial.a, reps)
+   // @Benchmark
+   // def access2Nested =
+   //    repeat(!divNested.partial.a, reps)
 
    @Benchmark
    def accessROSimple =
-      repeatInl(divRo.a, reps)
-
-
-
-
+      repeat(divRo.a, reps)

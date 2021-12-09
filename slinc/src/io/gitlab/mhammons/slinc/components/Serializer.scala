@@ -8,24 +8,51 @@ import jdk.incubator.foreign.{
    MemoryLayout
 }, CLinker.C_INT, MemoryLayout.PathElement
 
+import io.gitlab.mhammons.slinc.Ptr
+
 import scala.quoted.*
 import scala.util.chaining.*
 
 //todo: rename to encoder
-trait ToNative[A]:
+trait Serializer[A]:
    def to(a: A)(using
        segAlloc: SegmentAllocator,
        layout: LayoutOf[A]
-   ): NPtr[A] =
+   ): Ptr[A] =
       val segment = segAlloc.allocate(layout.layout)
       into(a, segment, 0)
-      NPtr[A](segment, 0)
+      Ptr[A](segment, 0)
    def into(a: A, memorySegment: MemorySegment, offset: Long): Unit
 
-object ToNative:
-   given ToNative[Int] with
+object Serializer:
+   given Serializer[Int] with
       def into(a: Int, memorySegment: MemorySegment, offset: Long) =
          MemoryAccess.setIntAtOffset(memorySegment, offset, a)
+
+   given Serializer[Long] with
+      def into(a: Long, memorySegment: MemorySegment, offset: Long) =
+         MemoryAccess.setLongAtOffset(memorySegment, offset, a)
+
+   given Serializer[Float] with
+      def into(a: Float, memorySegment: MemorySegment, offset: Long) =
+         MemoryAccess.setFloatAtOffset(memorySegment, offset, a)
+
+   given Serializer[Double] with
+      def into(a: Double, memorySegment: MemorySegment, offset: Long) = 
+         MemoryAccess.setDoubleAtOffset(memorySegment, offset, a)
+
+   given Serializer[Short] with 
+      def into(a: Short, memorySegment: MemorySegment, offset: Long) =
+         MemoryAccess.setShortAtOffset(memorySegment, offset, a)
+
+   given Serializer[Boolean] with
+      def into(a: Boolean, memorySegment: MemorySegment, offset: Long) =
+         MemoryAccess.setByteAtOffset(memorySegment, offset, if a then 1 else 0)
+
+   given Serializer[Char] with 
+      def into(a: Char, memorySegment: MemorySegment, offset: Long) =
+         MemoryAccess.setCharAtOffset(memorySegment, offset, a)
+
 
    def fromTypeInfo(
        a: Expr[?],
@@ -38,7 +65,7 @@ object ToNative:
       import quotes.reflect.*
       typeInfo match
          case PrimitiveInfo(name, '[a]) =>
-            val to = Expr.summonOrError[ToNative[a]]
+            val to = Expr.summonOrError[Serializer[a]]
             '{
                $to.into(
                  ${ a.asExprOf[a] },

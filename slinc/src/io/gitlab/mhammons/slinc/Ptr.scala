@@ -1,27 +1,54 @@
-package io.gitlab.mhammons.slinc.components
+package io.gitlab.mhammons.slinc
 
 import scala.quoted.*
 import scala.util.chaining.*
-import jdk.incubator.foreign.{MemorySegment, MemoryLayout},
+import jdk.incubator.foreign.{MemorySegment, MemoryLayout, MemoryAddress},
 MemoryLayout.PathElement
-class NPtr[A](
+import components.{
+   Deserializer,
+   Serializer,
+   TypeInfo,
+   LayoutOf,
+   summonOrError,
+   ProductInfo,
+   PrimitiveInfo,
+   PtrInfo
+}
+import io.gitlab.mhammons.slinc.components.PtrEnrichment
+
+class Ptr[A](
     memorySegment: MemorySegment,
     offset: Long,
     map: Map[String, Any] = Map.empty
 ) extends Selectable:
-   def `unary_!`(using from: FromNative[A]): A =
+   def `unary_!`(using from: Deserializer[A]): A =
       from.from(memorySegment, offset)
-   def `unary_!_=`(a: A)(using to: ToNative[A]): Unit =
+   def `unary_!_=`(a: A)(using to: Serializer[A]): Unit =
       to.into(a, memorySegment, offset)
    def asMemorySegment = memorySegment
    def asMemoryAddress = memorySegment.address
+   // lazy val pt = PtrEnrichment.PartialCapable[A](this)
+   // transparent inline def partial = ${ Ptr.selectableImpl[A]('this) }
    def selectDynamic(key: String) = map(key)
 
-object NPtr:
-   extension [A](a: NPtr[A])
+object Ptr:
+   class Null[A] extends Ptr[A](null, 0, Map.empty):
+      override def `unary_!`(using from: Deserializer[A]) =
+         throw NullPointerException("SLinC Null Ptr attempted dereference")
+      override def `unary_!_=`(a: A)(using to: Serializer[A]) =
+         throw NullPointerException("SLinC Null Ptr attempted value update")
+      override def asMemoryAddress = MemoryAddress.NULL
+      override def asMemorySegment = throw NullPointerException(
+        "SLinC Null Ptr cannot be made into a MemorySegment"
+      )
+   extension [A](a: Ptr[A])
       transparent inline def partial = ${ selectableImpl[A]('a) }
 
-   def selectableImpl[A: Type](nptr: Expr[NPtr[A]])(using Quotes) =
+   transparent inline def PartialCapable[A](p: Ptr[A]) = ${
+      selectableImpl[A]('p)
+   }
+
+   def selectableImpl[A: Type](nptr: Expr[Ptr[A]])(using Quotes) =
       import quotes.reflect.*
       val typeInfo = TypeInfo[A]
       produceDualRefinement(typeInfo) match
@@ -38,46 +65,12 @@ object NPtr:
                }.asInstanceOf[refinement]
             }
 
-   // private def genPtr[A: LayoutOf](
-   //     memorySegment: MemorySegment,
-   //     map: Map[String, Any],
-   //     path: Seq[PathElement]
-   // ) = new NPtr[A](memorySegment, map, path)
-   // transparent inline def apply[A](
-   //     memorySegment: MemorySegment
-   // )(using layout: LayoutOf[A]) = ${
-   //    applyImpl[A]('memorySegment, 'layout)
-   // }
-
-   // private def applyImpl[A](
-   //     memorySegmentExpr: Expr[MemorySegment],
-   //     offsetExpr: Expr[Long],
-   //     layoutExpr: Expr[LayoutOf[A]]
-   // )(using
-   //     Quotes,
-   //     Type[A]
-   // ) =
-   //    val typeInfo = TypeInfo[A]
-
-   //    typeInfo match
-   //       case PrimitiveInfo(name, '[a]) => '{
-   //          genPtr[A]($memorySegmentExpr, Map.empty, )
-   //       }
-   //    applyImpl
-   //    produceDualRefinement[A] match
-   //       case '[refinement] =>
-   //          '{
-   //             genPtr[A]($memorySegmentExpr, Map.empty, $offsetExpr)(using
-   //               $layoutExpr
-   //             ).asInstanceOf[refinement]
-   //          }
-
    def produceDualRefinement(typeInfo: TypeInfo)(using Quotes): Type[?] =
       import quotes.reflect.*
       typeInfo match
          case ProductInfo(name, members, '[a]) =>
             members
-               .foldLeft(TypeRepr.of[NPtr[a]]) { (accum, m) =>
+               .foldLeft(TypeRepr.of[Ptr[a]]) { (accum, m) =>
                   Refinement(
                     accum,
                     m.name,
@@ -88,7 +81,7 @@ object NPtr:
                }
                .asType
          case PrimitiveInfo(name, '[a]) =>
-            Type.of[NPtr[a]]
+            Type.of[Ptr[a]]
          case PtrInfo(_, _, _) => ???
 
    def getNPtrs(
@@ -96,7 +89,7 @@ object NPtr:
        segment: Expr[MemorySegment],
        layout: Expr[MemoryLayout],
        path: Seq[Expr[PathElement]]
-   )(using Quotes): Expr[NPtr[?]] =
+   )(using Quotes): Expr[Ptr[?]] =
       typeInfo match
          case ProductInfo(name, members, '[a]) =>
             val modifiedPath =
@@ -113,7 +106,7 @@ object NPtr:
                )
                .pipe(Expr.ofSeq)
             '{
-               NPtr[a](
+               Ptr[a](
                  $segment,
                  $layout.byteOffset(${ Expr.ofSeq(modifiedPath) }*),
                  $membersMap.toMap
@@ -124,7 +117,7 @@ object NPtr:
                PathElement.groupElement(${ Expr(name) })
             }
             '{
-               NPtr[a](
+               Ptr[a](
                  $segment,
                  $layout.byteOffset(${ Expr.ofSeq(modifiedPath) }*)
                )
