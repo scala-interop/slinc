@@ -25,6 +25,8 @@ class Ptr[A](
       from.from(memorySegment, offset)
    def `unary_!_=`(a: A)(using to: Serializer[A]): Unit =
       to.into(a, memorySegment, offset)
+
+   def +(plus: Long) = Ptr[A](memorySegment, offset + plus, map)
    def asMemorySegment = memorySegment
    def asMemoryAddress = memorySegment.address
    // lazy val pt = PtrEnrichment.PartialCapable[A](this)

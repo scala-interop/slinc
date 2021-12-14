@@ -5,7 +5,8 @@ import jdk.incubator.foreign.{
    CLinker,
    MemoryAccess,
    MemorySegment,
-   MemoryLayout
+   MemoryLayout,
+   GroupLayout
 }, CLinker.C_INT, MemoryLayout.PathElement
 
 import io.gitlab.mhammons.slinc.Ptr
@@ -21,6 +22,9 @@ trait Serializer[A]:
    ): Ptr[A] =
       val segment = segAlloc.allocate(layout.layout)
       into(a, segment, 0)
+      layout.layout match
+         case gl: GroupLayout =>
+            gl.memberLayouts // TODO: generate Map from here
       Ptr[A](segment, 0)
    def into(a: A, memorySegment: MemorySegment, offset: Long): Unit
 
@@ -100,5 +104,13 @@ object Serializer:
             }
             Expr.block(memberSelect.toList, '{}).tap(_.show.tap(report.info))
 
-         //pointer handling is exactly the same as primitive handling here.
-         case PtrInfo(name, _, t) => fromTypeInfo(a, memorySegment, offset, layout, path, PrimitiveInfo(name, t))
+         // pointer handling is exactly the same as primitive handling here.
+         case PtrInfo(name, _, t) =>
+            fromTypeInfo(
+              a,
+              memorySegment,
+              offset,
+              layout,
+              path,
+              PrimitiveInfo(name, t)
+            )

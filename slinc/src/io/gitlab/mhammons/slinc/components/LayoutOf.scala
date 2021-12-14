@@ -55,7 +55,7 @@ object LayoutOf:
       val layout = C_POINTER
       val carrierType = classOf[MemoryAddress]
 
-   object PtrLayout extends LayoutOf[Ptr[?]]:
+   object PtrLayout extends LayoutOf[Ptr[Any]]:
       val layout = C_POINTER
       val carrierType = classOf[MemoryAddress]
 

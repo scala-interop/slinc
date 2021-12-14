@@ -5,10 +5,10 @@ MemoryLayout.PathElement
 import scala.quoted.*
 import scala.util.chaining.*
 import scala.deriving.Mirror
+import io.gitlab.mhammons.slinc.Ptr
 //todo: rename to decoder
 trait Deserializer[A]:
    def from(memorySegment: MemorySegment, offset: Long): A
-
 object Deserializer:
    def primitive[A: Type](
        memorySegmentExpr: Expr[MemorySegment],
@@ -23,7 +23,6 @@ object Deserializer:
    given Deserializer[Int] with
       def from(memorySegment: MemorySegment, offset: Long) =
          MemoryAccess.getIntAtOffset(memorySegment, offset)
-
    given Deserializer[Float] with
       def from(memorySegment: MemorySegment, offset: Long) =
          MemoryAccess.getFloatAtOffset(memorySegment, offset)
@@ -42,6 +41,12 @@ object Deserializer:
 
    // todo: deserialize pointers into memory segments without grabbing the layout
    // val ptrDeserializer
+
+   given [A](using underlying: LayoutOf[A]): Deserializer[Ptr[A]] with
+      def from(memorySegment: MemorySegment, offset: Long) =
+         val address = MemoryAccess.getAddressAtOffset(memorySegment, offset)
+
+         Ptr(address.asSegment(underlying.layout.byteSize, address.scope), 0)
 
    def fromTypeInfo(
        memorySegmentExpr: Expr[MemorySegment],
@@ -82,4 +87,4 @@ object Deserializer:
                  .toList
             )
 
-         case PtrInfo(name, underlying, _) => ???
+         case PtrInfo(name, _, t) => fromTypeInfo(memorySegmentExpr, layout, path, PrimitiveInfo(name, t))
