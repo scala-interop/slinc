@@ -11,7 +11,7 @@ object MethodHandleMacros:
 
       val methodTypes = args.map { case '[p] =>
          Expr
-            .summon[LayoutOf[p]]
+            .summon[NativeInfo[p]]
             .getOrElse(missingLayout[p])
             .pipe(exp => '{ $exp.carrierType })
       }
@@ -27,7 +27,7 @@ object MethodHandleMacros:
                }
          case '[r] =>
             val returnMethodType = Expr
-               .summonOrError[LayoutOf[Ret]]
+               .summonOrError[NativeInfo[Ret]]
                .pipe(exp => '{ $exp.carrierType })
             if args.isEmpty then '{ MethodType.methodType($returnMethodType) }
             else
@@ -45,7 +45,7 @@ object MethodHandleMacros:
          paramTypes
             .map { case '[p] =>
                Expr
-                  .summon[LayoutOf[p]]
+                  .summon[NativeInfo[p]]
                   .getOrElse(missingLayout[p])
                   .pipe(exp => '{ $exp.layout })
             }
@@ -58,7 +58,7 @@ object MethodHandleMacros:
             '{
                FunctionDescriptor.of(
                  ${
-                    Expr.summonOrError[LayoutOf[r]]
+                    Expr.summonOrError[NativeInfo[r]]
                  }.layout,
                  $paramLayouts*
                )

@@ -6,74 +6,173 @@ import jdk.incubator.foreign.{
    MemoryAccess,
    MemorySegment,
    MemoryLayout,
-   GroupLayout
+   GroupLayout,
+   MemoryAddress,
+   ValueLayout
 }, CLinker.C_INT, MemoryLayout.PathElement
 
 import io.gitlab.mhammons.slinc.Ptr
 
 import scala.quoted.*
 import scala.util.chaining.*
+import scala.jdk.CollectionConverters.*
+import io.gitlab.mhammons.slinc.StaticArray
 
+type Serializable[A] = Serializer[A] ?=> A
+type SerializeFrom[A] = Serializer[A] ?=> Unit
+object SerializeFrom:
+   def apply[A](
+       a: A,
+       memoryAddress: MemoryAddress,
+       offset: Long
+   ): SerializeFrom[A] = summon[Serializer[A]].into(a, memoryAddress, offset)
 //todo: rename to encoder
 trait Serializer[A]:
+   private def genPtr(
+       memoryAddress: MemoryAddress,
+       memoryLayout: MemoryLayout,
+       offset: Long
+   ): Ptr[Any] =
+      memoryLayout match
+         case gl: GroupLayout =>
+            Ptr(
+              memoryAddress,
+              offset,
+              gl.memberLayouts.asScala
+                 .map(ml =>
+                    ml.name.get.pipe(n =>
+                       n -> genPtr(
+                         memoryAddress,
+                         ml,
+                         gl.byteOffset(PathElement.groupElement(n))
+                       )
+                    )
+                 )
+                 .toMap
+            )
+         case vl: ValueLayout => Ptr(memoryAddress, offset)
    def to(a: A)(using
        segAlloc: SegmentAllocator,
-       layout: LayoutOf[A]
+       layoutOf: NativeInfo[A]
    ): Ptr[A] =
-      val segment = segAlloc.allocate(layout.layout)
-      into(a, segment, 0)
-      layout.layout match
-         case gl: GroupLayout =>
-            gl.memberLayouts // TODO: generate Map from here
-      Ptr[A](segment, 0)
-   def into(a: A, memorySegment: MemorySegment, offset: Long): Unit
+      val segment =
+         segAlloc.allocate(summon[NativeInfo[A]].layout)
+      into(a, segment.address, 0)
+      val l: MemoryLayout = summon[NativeInfo[A]].layout
+      genPtr(segment.address, l, 0).asInstanceOf[Ptr[A]]
+   def into(a: A, memoryAddress: MemoryAddress, offset: Long): Unit
 
 object Serializer:
    given Serializer[Int] with
-      def into(a: Int, memorySegment: MemorySegment, offset: Long) =
-         MemoryAccess.setIntAtOffset(memorySegment, offset, a)
+      def into(a: Int, memoryAddress: MemoryAddress, offset: Long) =
+         MemoryAccess.setIntAtOffset(
+           MemorySegment.globalNativeSegment,
+           memoryAddress.toRawLongValue + offset,
+           a
+         )
 
    given Serializer[Long] with
-      def into(a: Long, memorySegment: MemorySegment, offset: Long) =
-         MemoryAccess.setLongAtOffset(memorySegment, offset, a)
+      def into(a: Long, memoryAddress: MemoryAddress, offset: Long) =
+         MemoryAccess.setLongAtOffset(
+           MemorySegment.globalNativeSegment,
+           memoryAddress.toRawLongValue + offset,
+           a
+         )
 
    given Serializer[Float] with
-      def into(a: Float, memorySegment: MemorySegment, offset: Long) =
-         MemoryAccess.setFloatAtOffset(memorySegment, offset, a)
+      def into(a: Float, memoryAddress: MemoryAddress, offset: Long) =
+         MemoryAccess.setFloatAtOffset(
+           MemorySegment.globalNativeSegment,
+           memoryAddress.toRawLongValue + offset,
+           a
+         )
 
    given Serializer[Double] with
-      def into(a: Double, memorySegment: MemorySegment, offset: Long) =
-         MemoryAccess.setDoubleAtOffset(memorySegment, offset, a)
+      def into(a: Double, memoryAddress: MemoryAddress, offset: Long) =
+         MemoryAccess.setDoubleAtOffset(
+           MemorySegment.globalNativeSegment,
+           memoryAddress.toRawLongValue + offset,
+           a
+         )
 
    given Serializer[Short] with
-      def into(a: Short, memorySegment: MemorySegment, offset: Long) =
-         MemoryAccess.setShortAtOffset(memorySegment, offset, a)
+      def into(a: Short, memoryAddress: MemoryAddress, offset: Long) =
+         MemoryAccess.setShortAtOffset(
+           MemorySegment.globalNativeSegment,
+           memoryAddress.toRawLongValue + offset,
+           a
+         )
 
    given Serializer[Boolean] with
-      def into(a: Boolean, memorySegment: MemorySegment, offset: Long) =
-         MemoryAccess.setByteAtOffset(memorySegment, offset, if a then 1 else 0)
+      def into(a: Boolean, memoryAddress: MemoryAddress, offset: Long) =
+         MemoryAccess.setByteAtOffset(
+           MemorySegment.globalNativeSegment,
+           memoryAddress.toRawLongValue + offset,
+           if a then 1 else 0
+         )
 
    given Serializer[Char] with
-      def into(a: Char, memorySegment: MemorySegment, offset: Long) =
-         MemoryAccess.setCharAtOffset(memorySegment, offset, a)
+      def into(a: Char, memoryAddress: MemoryAddress, offset: Long) =
+         MemoryAccess.setCharAtOffset(
+           MemorySegment.globalNativeSegment,
+           memoryAddress.toRawLongValue + offset,
+           a
+         )
    given Serializer[Byte] with
-      def into(a: Byte, memorySegment: MemorySegment, offset: Long) =
-         MemoryAccess.setByteAtOffset(memorySegment, offset, a)
+      def into(a: Byte, memoryAddress: MemoryAddress, offset: Long) =
+         MemoryAccess.setByteAtOffset(
+           MemorySegment.globalNativeSegment,
+           memoryAddress.toRawLongValue + offset,
+           a
+         )
 
    private val ptrSerializer = new Serializer[Ptr[Any]]:
-      def into(ptr: Ptr[Any], memorySegment: MemorySegment, offset: Long) =
+      def into(ptr: Ptr[Any], memoryAddress: MemoryAddress, offset: Long) =
          MemoryAccess.setAddressAtOffset(
-           memorySegment,
-           offset,
+           MemorySegment.globalNativeSegment,
+           memoryAddress.toRawLongValue + offset,
            ptr.asMemoryAddress
          )
 
    given [A]: Serializer[Ptr[A]] =
       ptrSerializer.asInstanceOf[Serializer[Ptr[A]]]
 
+   given [A](using Serializer[A], NativeInfo[A]): Serializer[Array[A]] with
+      def into(array: Array[A], memoryAddress: MemoryAddress, offset: Long) =
+         var i = 0
+         while i < array.length do
+            SerializeFrom(
+              array(i),
+              memoryAddress,
+              offset + (NativeInfo[A].layout.byteSize * i)
+            )
+            i += 1
+
+   given [A, B <: Singleton & Int](using
+       Serializer[A],
+       NativeInfo[A],
+       ValueOf[B]
+   ): Serializer[StaticArray[A, B]] =
+      new Serializer[StaticArray[A, B]]:
+         def into(
+             staticArray: StaticArray[A, B],
+             memoryAddress: MemoryAddress,
+             offset: Long
+         ) =
+            val nativeInfo = NativeInfo[A]
+            val len = valueOf[B]
+            var i = 0
+            while i < staticArray.size do
+               SerializeFrom(
+                 staticArray(i),
+                 memoryAddress,
+                 offset + (nativeInfo.layout.byteSize * i)
+               )
+               i += 1
+
    def fromTypeInfo(
        a: Expr[?],
-       memorySegment: Expr[MemorySegment],
+       memoryAddress: Expr[MemoryAddress],
        offset: Expr[Long],
        layout: Expr[MemoryLayout],
        path: Expr[Seq[PathElement]],
@@ -86,7 +185,7 @@ object Serializer:
             '{
                $to.into(
                  ${ a.asExprOf[a] },
-                 $memorySegment,
+                 $memoryAddress,
                  $layout.byteOffset($path*) + $offset
                )
             }
@@ -99,7 +198,7 @@ object Serializer:
                   $path :+ PathElement.groupElement(${ Expr(m.name) })
                }
                Select(aTerm, aMembers(m.name)).asExpr.pipe(
-                 fromTypeInfo(_, memorySegment, offset, layout, updatedPath, m)
+                 fromTypeInfo(_, memoryAddress, offset, layout, updatedPath, m)
                )
             }
             Expr.block(memberSelect.toList, '{}).tap(_.show.tap(report.info))
@@ -108,7 +207,7 @@ object Serializer:
          case PtrInfo(name, _, t) =>
             fromTypeInfo(
               a,
-              memorySegment,
+              memoryAddress,
               offset,
               layout,
               path,

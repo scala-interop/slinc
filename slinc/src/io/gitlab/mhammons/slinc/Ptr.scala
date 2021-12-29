@@ -2,47 +2,64 @@ package io.gitlab.mhammons.slinc
 
 import scala.quoted.*
 import scala.util.chaining.*
-import jdk.incubator.foreign.{MemorySegment, MemoryLayout, MemoryAddress},
-MemoryLayout.PathElement
+import jdk.incubator.foreign.{
+   MemorySegment,
+   MemoryLayout,
+   MemoryAddress,
+   CLinker
+}, MemoryLayout.PathElement, CLinker.C_POINTER
 import components.{
    Deserializer,
    Serializer,
    TypeInfo,
-   LayoutOf,
+   NativeInfo,
    summonOrError,
    ProductInfo,
    PrimitiveInfo,
-   PtrInfo
+   PtrInfo,
+   Deserializable,
+   SerializeFrom
 }
-import io.gitlab.mhammons.slinc.components.PtrEnrichment
+import scala.reflect.ClassTag
 
-class Ptr[A](
-    memorySegment: MemorySegment,
+class Ptr[A: ClassTag](
+    memoryAddress: MemoryAddress,
     offset: Long,
-    map: Map[String, Any] = Map.empty
+    map: => Map[String, Any] = Map.empty
 ) extends Selectable:
-   def `unary_!`(using from: Deserializer[A]): A =
-      from.from(memorySegment, offset)
-   def `unary_!_=`(a: A)(using to: Serializer[A]): Unit =
-      to.into(a, memorySegment, offset)
+   lazy val myMap = map
+   def `unary_!` : Deserializable[A] =
+      Deserializer.from(
+        memoryAddress,
+        offset
+      )
+   def `unary_!_=`(a: A): SerializeFrom[A] =
+      SerializeFrom(a, memoryAddress, offset)
 
-   def +(plus: Long) = Ptr[A](memorySegment, offset + plus, map)
-   def asMemorySegment = memorySegment
-   def asMemoryAddress = memorySegment.address
-   // lazy val pt = PtrEnrichment.PartialCapable[A](this)
-   // transparent inline def partial = ${ Ptr.selectableImpl[A]('this) }
-   def selectDynamic(key: String) = map(key)
+   def +(plus: Long)(using layoutOf: NativeInfo[A]) = Ptr[A](
+     memoryAddress.addOffset(layoutOf.layout.byteSize * plus),
+     offset,
+     map
+   )
+   def asMemoryAddress = memoryAddress
+   def selectDynamic(key: String) = myMap(key)
+   def toArray(size: Int)(using Deserializer[A], NativeInfo[A]) =
+      val l = NativeInfo[A].layout
+      val elemSize = l.byteSize
+      var i = 0
+      val arr = Array.ofDim[A](size)
+      while i < size do
+         arr(i) = Deserializer.from(memoryAddress, i * elemSize + offset)
+         i += 1
+      arr
 
 object Ptr:
-   class Null[A] extends Ptr[A](null, 0, Map.empty):
-      override def `unary_!`(using from: Deserializer[A]) =
+   class Null[A: NativeInfo: ClassTag] extends Ptr[A](MemoryAddress.NULL, 0):
+      override def `unary_!` =
          throw NullPointerException("SLinC Null Ptr attempted dereference")
-      override def `unary_!_=`(a: A)(using to: Serializer[A]) =
+      override def `unary_!_=`(a: A) =
          throw NullPointerException("SLinC Null Ptr attempted value update")
       override def asMemoryAddress = MemoryAddress.NULL
-      override def asMemorySegment = throw NullPointerException(
-        "SLinC Null Ptr cannot be made into a MemorySegment"
-      )
    extension [A](a: Ptr[A])
       transparent inline def partial = ${ selectableImpl[A]('a) }
 
@@ -56,15 +73,11 @@ object Ptr:
       produceDualRefinement(typeInfo) match
          case '[refinement] =>
             report.warning(Type.show[refinement])
-            val layout = Expr.summonOrError[LayoutOf[A]]
+            val layout = Expr.summonOrError[NativeInfo[A]]
             '{
                val l = $layout.layout
-               val memSegmnt = $nptr.asMemorySegment
-               ${
-                  getNPtrs(typeInfo, 'memSegmnt, 'l, Nil).tap(
-                    _.show.tap(report.warning)
-                  )
-               }.asInstanceOf[refinement]
+               val memSegmnt = $nptr.asMemoryAddress
+               $nptr.asInstanceOf[refinement]
             }
 
    def produceDualRefinement(typeInfo: TypeInfo)(using Quotes): Type[?] =
@@ -88,12 +101,12 @@ object Ptr:
 
    def getNPtrs(
        typeInfo: TypeInfo,
-       segment: Expr[MemorySegment],
+       segment: Expr[MemoryAddress],
        layout: Expr[MemoryLayout],
        path: Seq[Expr[PathElement]]
    )(using Quotes): Expr[Ptr[?]] =
-      typeInfo match
-         case ProductInfo(name, members, '[a]) =>
+      val (modifiedPath, membersMap, typ) = typeInfo match
+         case ProductInfo(name, members, typ) =>
             val modifiedPath =
                if name.isEmpty then path
                else
@@ -107,20 +120,25 @@ object Ptr:
                   )
                )
                .pipe(Expr.ofSeq)
+               .pipe(expr => '{ $expr.toMap })
+
+            (modifiedPath, membersMap, typ)
+         case PrimitiveInfo(name, typ) =>
+            val modifiedPath = path :+ '{
+               PathElement.groupElement(${ Expr(name) })
+            }
+            (modifiedPath, '{ Map.empty }, typ)
+
+      typ match
+         case '[a] =>
+            val ct = Expr.summonOrError[ClassTag[a]]
             '{
                Ptr[a](
                  $segment,
                  $layout.byteOffset(${ Expr.ofSeq(modifiedPath) }*),
                  $membersMap.toMap
-               )
+               )(using $ct)
             }
-         case PrimitiveInfo(name, '[a]) =>
-            val modifiedPath = path :+ '{
-               PathElement.groupElement(${ Expr(name) })
-            }
-            '{
-               Ptr[a](
-                 $segment,
-                 $layout.byteOffset(${ Expr.ofSeq(modifiedPath) }*)
-               )
-            }
+
+   given gen[A]: NativeInfo[Ptr[A]] =
+      summon[NativeInfo[String]].asInstanceOf[NativeInfo[Ptr[A]]]

@@ -3,6 +3,7 @@ package io.gitlab.mhammons.slinc.components
 import scala.quoted.*
 import scala.util.chaining.*
 import io.gitlab.mhammons.slinc.Ptr
+import io.gitlab.mhammons.slinc.StaticArray
 
 sealed trait TypeInfo:
    def rename(name: String): TypeInfo
@@ -38,5 +39,8 @@ object TypeInfo:
          case '[Int] | '[Float] | '[Long] | '[Short] | '[Byte] | '[Char] |
              '[Boolean] =>
             PrimitiveInfo("", Type.of[A])
+
+         case '[StaticArray[a, b]] =>
+            PrimitiveInfo("", Type.of[StaticArray[a, b]])
          case '[Ptr[a]] =>
             PtrInfo("", TypeInfo[a], Type.of[A])

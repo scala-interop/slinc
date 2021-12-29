@@ -11,7 +11,7 @@ import io.gitlab.mhammons.slinc.components.{
    summonOrError,
    BoundaryCrossing,
    Serializer,
-   LayoutOf
+   NativeInfo
 }
 
 transparent inline def bind = ${
@@ -78,12 +78,23 @@ private def bindImpl(using q: Quotes) =
       }
       .pipe(segAllocArg ++ _)
       .pipe(callFn(_))
-      // .tap(_.show.tap(report.error))
+// .tap(_.show.tap(report.error))
 end bindImpl
+
+type Allocatable[A] = SegmentAllocator ?=> A
+type Quoted[A] = Quotes ?=> Expr[A]
 
 def scope[A](fn: (SegmentAllocator) ?=> A) =
    val resourceScope = ResourceScope.newConfinedScope
    given SegmentAllocator = SegmentAllocator.arenaAllocator(resourceScope)
+   T(fn).fold(
+     t => throw t.tap(_ => resourceScope.close),
+     _.tap(_ => resourceScope.close)
+   )
+
+def allocScope[A](fn: SegmentAllocator ?=> A) =
+   val resourceScope = ResourceScope.newConfinedScope
+   given SegmentAllocator = SegmentAllocator.ofScope(resourceScope)
    T(fn).fold(
      t => throw t.tap(_ => resourceScope.close),
      _.tap(_ => resourceScope.close)
@@ -106,5 +117,5 @@ def call[Ret: Type](mh: Expr[MethodHandle], ps: List[Expr[Any]])(using
 
    BoundaryCrossing.from[Ret](callFn(mh, ps))
 
-extension [A](a: A)(using to: Serializer[A], layoutOf: LayoutOf[A])
+extension [A](a: A)(using to: Serializer[A], layoutOf: NativeInfo[A])
    def serialize(using SegmentAllocator) = to.to(a)

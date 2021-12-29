@@ -1,55 +1,95 @@
 package io.gitlab.mhammons.slinc.components
 
-import jdk.incubator.foreign.{MemorySegment, MemoryAccess, MemoryLayout},
-MemoryLayout.PathElement
+import jdk.incubator.foreign.{
+   MemorySegment,
+   MemoryAccess,
+   MemoryLayout,
+   MemoryAddress
+}, MemoryLayout.PathElement
 import scala.quoted.*
 import scala.util.chaining.*
 import scala.deriving.Mirror
 import io.gitlab.mhammons.slinc.Ptr
+import io.gitlab.mhammons.slinc.StaticArray
+import scala.reflect.ClassTag
+type Id[A] = A
+type Deserializable[A] = Deserializer[A] ?=> A
 //todo: rename to decoder
 trait Deserializer[A]:
-   def from(memorySegment: MemorySegment, offset: Long): A
+   def from(memoryAddress: MemoryAddress, offset: Long): A
 object Deserializer:
-   def primitive[A: Type](
-       memorySegmentExpr: Expr[MemorySegment],
-       byteOffsetExpr: Expr[Long]
-   )(using Quotes): quotes.reflect.Term =
-      import quotes.reflect.*
-      Type.of[A] match
-         case '[Int] =>
-            '{
-               MemAccess.getIntAtOffset(null, 0)
-            }.asTerm
+   def from[A](memoryAddress: MemoryAddress, offset: Long): Deserializable[A] =
+      summon[Deserializer[A]].from(memoryAddress, offset)
+
+   // type Deserializable[A] = (d: Deserializer[A, ?]) ?=> d.Cont[A]
    given Deserializer[Int] with
-      def from(memorySegment: MemorySegment, offset: Long) =
-         MemoryAccess.getIntAtOffset(memorySegment, offset)
+      def from(memoryAddress: MemoryAddress, offset: Long) =
+         MemoryAccess.getIntAtOffset(
+           MemorySegment.globalNativeSegment,
+           memoryAddress.toRawLongValue + offset
+         )
    given Deserializer[Float] with
-      def from(memorySegment: MemorySegment, offset: Long) =
-         MemoryAccess.getFloatAtOffset(memorySegment, offset)
+      def from(memoryAddress: MemoryAddress, offset: Long) =
+         MemoryAccess.getFloatAtOffset(
+           MemorySegment.globalNativeSegment,
+           memoryAddress.toRawLongValue + offset
+         )
 
    given Deserializer[Long] with
-      def from(memorySegment: MemorySegment, offset: Long) =
-         MemoryAccess.getLongAtOffset(memorySegment, offset)
+      def from(memoryAddress: MemoryAddress, offset: Long) =
+         MemoryAccess.getLongAtOffset(
+           MemorySegment.globalNativeSegment,
+           memoryAddress.toRawLongValue + offset
+         )
 
    given Deserializer[Short] with
-      def from(memorySegment: MemorySegment, offset: Long) =
-         MemoryAccess.getShortAtOffset(memorySegment, offset)
+      def from(memoryAddress: MemoryAddress, offset: Long) =
+         MemoryAccess.getShortAtOffset(
+           MemorySegment.globalNativeSegment,
+           memoryAddress.toRawLongValue + offset
+         )
 
    given Deserializer[Byte] with
-      def from(memorySegment: MemorySegment, offset: Long) =
-         MemoryAccess.getByteAtOffset(memorySegment, offset)
+      def from(memoryAddress: MemoryAddress, offset: Long) =
+         MemoryAccess.getByteAtOffset(
+           MemorySegment.globalNativeSegment,
+           memoryAddress.toRawLongValue + offset
+         )
 
    // todo: deserialize pointers into memory segments without grabbing the layout
    // val ptrDeserializer
 
-   given [A](using underlying: LayoutOf[A]): Deserializer[Ptr[A]] with
-      def from(memorySegment: MemorySegment, offset: Long) =
-         val address = MemoryAccess.getAddressAtOffset(memorySegment, offset)
+   given Deserializer[Ptr[Any]] with
+      def from(
+          memoryAddress: MemoryAddress,
+          offset: Long
+      ): Ptr[Any] =
+         val address = MemoryAccess.getAddressAtOffset(
+           MemorySegment.globalNativeSegment,
+           memoryAddress.toRawLongValue + offset
+         )
 
-         Ptr(address.asSegment(underlying.layout.byteSize, address.scope), 0)
+         Ptr[Any](address, 0)
+
+   given [A: ClassTag: NativeInfo: Deserializer, B <: Singleton & Int: ValueOf]
+       : Deserializer[StaticArray[A, B]] =
+      new Deserializer[StaticArray[A, B]]:
+         def from(
+             memoryAddress: MemoryAddress,
+             offset: Long
+         ): StaticArray[A, B] =
+            val s = StaticArray[A, B]
+            val len = valueOf[B]
+            var i = 0
+            val ni = NativeInfo[A]
+            while i < len do
+               s(i) = Deserializer
+                  .from[A](memoryAddress, offset + (i * ni.layout.byteSize))
+               i += 1
+            s
 
    def fromTypeInfo(
-       memorySegmentExpr: Expr[MemorySegment],
+       memorySegmentExpr: Expr[MemoryAddress],
        layout: Expr[MemoryLayout],
        path: Seq[Expr[PathElement]],
        typeInfo: TypeInfo
@@ -87,4 +127,10 @@ object Deserializer:
                  .toList
             )
 
-         case PtrInfo(name, _, t) => fromTypeInfo(memorySegmentExpr, layout, path, PrimitiveInfo(name, t))
+         case PtrInfo(name, _, t) =>
+            fromTypeInfo(
+              memorySegmentExpr,
+              layout,
+              path,
+              PrimitiveInfo(name, t)
+            )

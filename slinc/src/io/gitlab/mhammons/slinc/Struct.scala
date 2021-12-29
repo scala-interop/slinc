@@ -2,16 +2,26 @@ package io.gitlab.mhammons.slinc
 
 import scala.compiletime.summonFrom
 import scala.quoted.*
-import jdk.incubator.foreign.{SegmentAllocator, MemorySegment}
-import io.gitlab.mhammons.slinc.components.{LayoutOf, Serializer, Deserializer}
+import jdk.incubator.foreign.{
+   SegmentAllocator,
+   MemoryAddress,
+   MemorySegment,
+   MemoryLayout
+}
+import io.gitlab.mhammons.slinc.components.{NativeInfo, Serializer, Deserializer}
 import scala.CanEqual.derived
 import components.summonOrError
-import io.gitlab.mhammons.slinc.components.TypeInfo
+import io.gitlab.mhammons.slinc.components.{
+   TypeInfo,
+   PrimitiveInfo,
+   ProductInfo,
+   PtrInfo
+}
 import scala.deriving.Mirror
 import io.gitlab.mhammons.slinc.components.BoundaryCrossing
 import scala.util.chaining.*
 
-trait Struct[A <: Product] extends LayoutOf[A], Serializer[A], Deserializer[A]
+trait Struct[A <: Product] extends NativeInfo[A], Serializer[A], Deserializer[A]
 
 object Struct:
    inline given derived[A <: Product]: Struct[A] = ${
@@ -24,14 +34,19 @@ object Struct:
       val mirror = Expr.summonOrError[Mirror.ProductOf[A]]
 
       '{
+         // helps prevent recursion issues on Struct instantiation
+         given l: NativeInfo[A] with
+            val layout = ${ fromTypeInfo(typeInfo) }
+            val carrierType = classOf[MemorySegment]
+
          new Struct[A]:
             val carrierType = classOf[MemorySegment]
-            val layout = ${ LayoutOf.fromTypeInfo(typeInfo) }
-            def from(memorySegment: MemorySegment, offset: Long) =
+            val layout = l.layout
+            def from(memoryAddress: MemoryAddress, offset: Long) =
                ${
                   Deserializer
                      .fromTypeInfo(
-                       'memorySegment,
+                       'memoryAddress,
                        'layout,
                        Nil,
                        typeInfo
@@ -39,23 +54,47 @@ object Struct:
                      .asExpr
                }.asInstanceOf[A]
 
-            def into(a: A, memorySegment: MemorySegment, offset: Long): Unit =
+            def into(a: A, memoryAddress: MemoryAddress, offset: Long): Unit =
                ${
                   Serializer
                      .fromTypeInfo(
                        'a,
-                       'memorySegment,
+                       'memoryAddress,
                        'offset,
                        'layout,
                        'Nil,
                        typeInfo
                      )
-
                }
-            def to(a: A)(using segAlloc: SegmentAllocator) =
-               val segment = segAlloc.allocate(layout)
-               into(a, segment, 0)
-               Ptr[A](segment, 0)
-
-            def toNative(a: A)(using SegmentAllocator) = to(a).asMemorySegment
       }
+
+   def fromTypeInfo(typeInfo: TypeInfo)(using
+       Quotes
+   ): Expr[MemoryLayout] =
+      typeInfo match
+         case PrimitiveInfo(name, '[a]) =>
+            '{
+               ${ Expr.summonOrError[NativeInfo[a]] }.layout.withName(${
+                  Expr(name)
+               })
+            }
+         case PtrInfo(name, _, '[a]) =>
+            '{
+               ${ Expr.summonOrError[NativeInfo[a]] }.layout.withName(${
+                  Expr(name)
+               })
+            }
+         case ProductInfo(name, members, _) =>
+            '{
+               MemoryLayout
+                  .structLayout(${
+                     members.map(fromTypeInfo).pipe(Expr.ofSeq)
+                  }*)
+                  .withName(${ Expr(name) })
+            }
+
+// }
+// def to(a: A)(using segAlloc: SegmentAllocator) =
+//    val segment = segAlloc.allocate(layout)
+//    into(a, segment.address, 0)
+//    Ptr[A](segment.address, 0)

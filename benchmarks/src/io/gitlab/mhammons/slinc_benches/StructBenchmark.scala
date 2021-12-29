@@ -28,6 +28,7 @@ class StructBenchmark:
 
    var rs: ResourceScope = _
    var segAlloc: SegmentAllocator = _
+   var memAlloc: SegmentAllocator = _
    // var divNested: Ptr[div_nested] = _
    var divRo: div_t = _
 
@@ -39,6 +40,7 @@ class StructBenchmark:
    def setup() =
       rs = ResourceScope.newConfinedScope
       segAlloc = SegmentAllocator.arenaAllocator(rs)
+      memAlloc = SegmentAllocator.ofScope(rs)
       given SegmentAllocator = segAlloc
       divRo = div_t(5, 3)
       // divN = div_nested(divRo, divRo)
@@ -52,7 +54,12 @@ class StructBenchmark:
    @Benchmark
    def allocate2Simple =
       given SegmentAllocator = segAlloc
-      repeat(divRo.serialize, reps)
+      repeatInl(divRo.serialize, reps)
+
+   @Benchmark
+   def allocateSimple =
+      given SegmentAllocator = memAlloc
+      repeatInl(divRo.serialize, reps)
 
    // @Benchmark
    // def allocate2Nested =
@@ -61,11 +68,11 @@ class StructBenchmark:
 
    @Benchmark
    def access2Simple =
-      repeat(!divSimple.partial.a, reps)
+      repeatInl(!divSimple.partial.a, reps)
    // @Benchmark
    // def access2Nested =
    //    repeat(!divNested.partial.a, reps)
 
    @Benchmark
    def accessROSimple =
-      repeat(divRo.a, reps)
+      repeatInl(divRo.a, reps)
