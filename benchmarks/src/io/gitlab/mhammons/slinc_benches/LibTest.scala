@@ -9,4 +9,4 @@ case class b_t(c: Int, d: a_t) derives Struct
 object LibTest
     extends Library(Location.Local("../../../../slinc/test/native/libtest.so")):
 
-   def slinc_test_modify(b_t: Ptr[b_t])(using SegmentAllocator): Unit = bind
+   def slinc_test_modify(b_t: b_t)(using SegmentAllocator): b_t = bind

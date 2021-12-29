@@ -52,9 +52,8 @@ trait Serializer[A]:
             )
          case vl: ValueLayout => Ptr(memoryAddress, offset)
    def to(a: A)(using
-       segAlloc: SegmentAllocator,
        layoutOf: NativeInfo[A]
-   ): Ptr[A] =
+   ): Allocates[Ptr[A]] =
       val segment =
          segAlloc.allocate(summon[NativeInfo[A]].layout)
       into(a, segment.address, 0)

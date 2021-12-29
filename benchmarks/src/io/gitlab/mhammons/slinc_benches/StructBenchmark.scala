@@ -32,7 +32,12 @@ class StructBenchmark:
    // var divNested: Ptr[div_nested] = _
    var divRo: div_t = _
 
+   val b = b_t(4, a_t(3, 2))
+
    var divSimple: Ptr[div_t] = _
+
+   def div(numerator: Int, denominator: Int)(using SegmentAllocator): div_t =
+      bind
 
    // var divN: div_nested = _
 
@@ -76,3 +81,8 @@ class StructBenchmark:
    @Benchmark
    def accessROSimple =
       repeatInl(divRo.a, reps)
+
+   @Benchmark
+   def passInto =
+      given SegmentAllocator = segAlloc
+      repeatInl(LibTest.slinc_test_modify(b), reps)

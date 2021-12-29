@@ -2,7 +2,12 @@ package io.gitlab.mhammons.slinc.components
 
 import scala.quoted.*
 
-import jdk.incubator.foreign.{CLinker, SymbolLookup, MemoryAddress}
+import jdk.incubator.foreign.{
+   CLinker,
+   SymbolLookup,
+   MemoryAddress,
+   SegmentAllocator
+}
 import scala.jdk.OptionConverters.*
 import scala.compiletime.ops.boolean.!
 
@@ -43,4 +48,10 @@ extension (expr: Expr.type)
       import quotes.reflect.{report}
       Expr
          .summon[A]
-         .getOrElse(report.errorAndAbort(s"Could not summon ${Type.show[A]} in macro"))
+         .getOrElse(
+           report.errorAndAbort(s"Could not summon ${Type.show[A]} in macro")
+         )
+
+type Allocates[A] = SegmentAllocator ?=> A
+
+val segAlloc: Allocates[SegmentAllocator] = summon[SegmentAllocator]
