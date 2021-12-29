@@ -8,7 +8,11 @@ import jdk.incubator.foreign.{
    MemorySegment,
    MemoryLayout
 }
-import io.gitlab.mhammons.slinc.components.{NativeInfo, Serializer, Deserializer}
+import io.gitlab.mhammons.slinc.components.{
+   NativeInfo,
+   Serializer,
+   Deserializer
+}
 import scala.CanEqual.derived
 import components.summonOrError
 import io.gitlab.mhammons.slinc.components.{
@@ -62,7 +66,7 @@ object Struct:
                        'memoryAddress,
                        'offset,
                        'layout,
-                       'Nil,
+                       Nil,
                        typeInfo
                      )
                }

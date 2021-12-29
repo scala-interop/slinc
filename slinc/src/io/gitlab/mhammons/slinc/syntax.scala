@@ -11,7 +11,8 @@ import io.gitlab.mhammons.slinc.components.{
    summonOrError,
    BoundaryCrossing,
    Serializer,
-   NativeInfo
+   NativeInfo,
+   localAllocator
 }
 
 transparent inline def bind = ${
@@ -59,7 +60,7 @@ private def bindImpl(using q: Quotes) =
 
    val segAllocArg =
       if ret.pipe { case '[r] => needsAllocator[r](true) } then
-         List(Expr.summonOrError[SegmentAllocator])
+         List('{localAllocator})
       else Nil
 
    val methodHandle = ret.pipe { case '[r] =>

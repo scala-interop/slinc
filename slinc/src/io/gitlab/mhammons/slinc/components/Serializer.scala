@@ -174,18 +174,19 @@ object Serializer:
        memoryAddress: Expr[MemoryAddress],
        offset: Expr[Long],
        layout: Expr[MemoryLayout],
-       path: Expr[Seq[PathElement]],
+       path: Seq[Expr[PathElement]],
        typeInfo: TypeInfo
    )(using Quotes): Expr[Unit] =
       import quotes.reflect.*
       typeInfo match
          case PrimitiveInfo(name, '[a]) =>
             val to = Expr.summonOrError[Serializer[a]]
+            val pathExpr = Expr.ofSeq(path)
             '{
                $to.into(
                  ${ a.asExprOf[a] },
                  $memoryAddress,
-                 $layout.byteOffset($path*) + $offset
+                 $layout.byteOffset($pathExpr*) + $offset
                )
             }
          case ProductInfo(name, members, '[a]) =>
@@ -193,8 +194,8 @@ object Serializer:
             val aMembers =
                TypeRepr.of[a].typeSymbol.caseFields.map(s => s.name -> s).toMap
             val memberSelect = members.map { m =>
-               val updatedPath = '{
-                  $path :+ PathElement.groupElement(${ Expr(m.name) })
+               val updatedPath = path :+ '{
+                  PathElement.groupElement(${ Expr(m.name) })
                }
                Select(aTerm, aMembers(m.name)).asExpr.pipe(
                  fromTypeInfo(_, memoryAddress, offset, layout, updatedPath, m)

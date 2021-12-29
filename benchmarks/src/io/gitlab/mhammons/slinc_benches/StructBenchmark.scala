@@ -84,5 +84,4 @@ class StructBenchmark:
 
    @Benchmark
    def passInto =
-      given SegmentAllocator = segAlloc
       repeatInl(LibTest.slinc_test_modify(b), reps)

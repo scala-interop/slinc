@@ -16,7 +16,7 @@ object BoundaryCrossing:
       a match
          case '{ $b: Product } =>
             val struckt = Expr.summonOrError[Struct[Product & A]]
-            val segAlloc = Expr.summonOrError[SegmentAllocator]
+            val segAlloc = '{ localAllocator }
 
             '{
                val segment = $segAlloc.allocate($struckt.layout)
@@ -31,7 +31,7 @@ object BoundaryCrossing:
          case '{ $b: String } =>
             '{
                CLinker
-                  .toCString($b, ${ Expr.summonOrError[SegmentAllocator] })
+                  .toCString($b, localAllocator)
                   .address
             }
 
@@ -41,7 +41,7 @@ object BoundaryCrossing:
             }
 
          case '{ $b: StaticArray[a, b] } =>
-            val segAlloc = Expr.summonOrError[SegmentAllocator]
+            val segAlloc = '{ localAllocator }
             val nativeInfo = Expr.summonOrError[NativeInfo[StaticArray[a, b]]]
             '{ $segAlloc.allocate($nativeInfo.layout) }
 

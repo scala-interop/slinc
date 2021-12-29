@@ -41,7 +41,7 @@ class StdlibSuite extends munit.FunSuite:
    }
 
    test("atof") {
-      def atof(s: String)(using SegmentAllocator): Double = bind
+      def atof(s: String): Double = bind
       assertEquals(
         scope(atof("5.0")),
         5.0
@@ -49,7 +49,7 @@ class StdlibSuite extends munit.FunSuite:
    }
 
    test("getenv") {
-      def getenv(name: String)(using SegmentAllocator): String =
+      def getenv(name: String): String =
          bind
       assertEquals(
         scope(getenv("PATH")),
@@ -58,7 +58,7 @@ class StdlibSuite extends munit.FunSuite:
    }
 
    test("strlen") {
-      def strlen(string: String)(using SegmentAllocator): Int =
+      def strlen(string: String): Int =
          bind
       assertEquals(
         scope(strlen("hello")),
@@ -69,7 +69,7 @@ class StdlibSuite extends munit.FunSuite:
    test("div") {
       case class div_t(quot: Int, rem: Int) derives Struct
 
-      def div(a: Int, b: Int)(using SegmentAllocator): div_t = bind
+      def div(a: Int, b: Int): div_t = bind
 
       val result = scope {
          div(5, 2)
@@ -85,7 +85,7 @@ class StdlibSuite extends munit.FunSuite:
 
       def localtime(timer: Ptr[Long]): Ptr[tm] = bind
 
-      def asctime(timePtr: Ptr[tm])(using SegmentAllocator): String = bind
+      def asctime(timePtr: Ptr[tm]): String = bind
 
       val result = scope {
          val timerPtr = t.serialize
