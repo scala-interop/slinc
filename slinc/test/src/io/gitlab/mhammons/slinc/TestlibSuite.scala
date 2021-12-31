@@ -24,4 +24,28 @@ class TestlibSuite extends munit.FunSuite {
          .foreach((o, r) => assertEquals(r, o + 1))
    }
 
+   test("get static arr") {
+
+      val result = scope {
+         Testlib.slinc_test_getstaticarr().rescope.toArray(3)
+      }
+      assertEquals(result(0), 1)
+      assertEquals(result(1), 2)
+      assertEquals(result(2), 3)
+   }
+
+   test("pass in as static arr") {
+      scope {
+         Testlib.slinc_test_getstaticarr1(Array(1, 2, 3).serialize)
+      }
+   }
+
+   test("should be able to pass in two structs") {
+      val res = Testlib.slinc_two_structs(
+        Testlib.a_t(1, 3),
+        Testlib.a_t(4, 2)
+      )
+
+      assertEquals(res, 4)
+   }
 }

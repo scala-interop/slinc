@@ -12,8 +12,11 @@ import io.gitlab.mhammons.slinc.components.{
    BoundaryCrossing,
    Serializer,
    NativeInfo,
-   localAllocator
+   localAllocator,
+   Allocates,
+   segAlloc
 }
+import scala.reflect.ClassTag
 
 transparent inline def bind = ${
    bindImpl
@@ -60,7 +63,7 @@ private def bindImpl(using q: Quotes) =
 
    val segAllocArg =
       if ret.pipe { case '[r] => needsAllocator[r](true) } then
-         List('{localAllocator})
+         List('{ localAllocator(0) })
       else Nil
 
    val methodHandle = ret.pipe { case '[r] =>
@@ -72,34 +75,32 @@ private def bindImpl(using q: Quotes) =
    params
       .map { case (expr, '[a]) =>
          val aExpr = expr.asExprOf[a]
-         // Expr
-         //    .summonOrError[BoundaryCrossing[a, ?]]
-         //    .pipe(bc => '{ $bc.toNative($aExpr) })
          BoundaryCrossing.to(aExpr)
       }
       .pipe(segAllocArg ++ _)
       .pipe(callFn(_))
-// .tap(_.show.tap(report.error))
 end bindImpl
 
 type Allocatable[A] = SegmentAllocator ?=> A
 type Quoted[A] = Quotes ?=> Expr[A]
 
-def scope[A](fn: (SegmentAllocator) ?=> A) =
-   val resourceScope = ResourceScope.newConfinedScope
+def scope[A](fn: ResourceScope ?=> (SegmentAllocator) ?=> A) =
+   given resourceScope: ResourceScope = ResourceScope.newConfinedScope
    given SegmentAllocator = SegmentAllocator.arenaAllocator(resourceScope)
-   T(fn).fold(
-     t => throw t.tap(_ => resourceScope.close),
-     _.tap(_ => resourceScope.close)
-   )
+   try {
+      fn
+   } finally {
+      resourceScope.close
+   }
 
-def allocScope[A](fn: SegmentAllocator ?=> A) =
-   val resourceScope = ResourceScope.newConfinedScope
+def allocScope[A](fn: ResourceScope ?=> SegmentAllocator ?=> A) =
+   given resourceScope: ResourceScope = ResourceScope.newConfinedScope
    given SegmentAllocator = SegmentAllocator.ofScope(resourceScope)
-   T(fn).fold(
-     t => throw t.tap(_ => resourceScope.close),
-     _.tap(_ => resourceScope.close)
-   )
+   try {
+      fn
+   } finally {
+      resourceScope.close
+   }
 
 def lazyScope[A](fn: (SegmentAllocator) ?=> A) =
    val resourceScope = ResourceScope.newImplicitScope
@@ -120,3 +121,14 @@ def call[Ret: Type](mh: Expr[MethodHandle], ps: List[Expr[Any]])(using
 
 extension [A](a: A)(using to: Serializer[A], layoutOf: NativeInfo[A])
    def serialize(using SegmentAllocator) = to.to(a)
+
+extension [A: ClassTag](
+    a: Array[A]
+)(using to: Serializer[A], layoutOf: NativeInfo[A])
+   def serialize: Allocates[Ptr[A]] =
+      val addr = segAlloc.allocateArray(layoutOf.layout, a.size).address
+      var i = 0
+      while i < a.length do
+         to.into(a(i), addr, i * layoutOf.layout.byteSize)
+         i += 1
+      Ptr[A](addr, 0, Map.empty)

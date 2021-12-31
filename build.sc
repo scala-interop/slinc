@@ -13,12 +13,12 @@ object slinc extends ScalaModule with PublishModule {
    def moduleDeps = Seq(polymorphics)
    def scalaVersion = "3.1.0"
    def scalacOptions = Seq(
-        "-deprecation",
-        "-Wunused:all",
-        "-unchecked",
-        "-Xcheck-macros",
-        "-Xprint-suspension"
-    )
+     "-deprecation",
+     "-Wunused:all",
+     "-unchecked",
+     "-Xcheck-macros",
+     "-Xprint-suspension"
+   )
    def publishVersion = "0.0.1"
    def pomSettings = PomSettings(
      description = "SLinC - Scala <-> C Interop",
@@ -64,6 +64,7 @@ object slinc extends ScalaModule with PublishModule {
                os.proc(
                  "gcc",
                  "-shared",
+                 "-fPIC",
                  "-o",
                  p / os.up / s"lib${p.last.stripSuffix(".c")}.so",
                  p
@@ -102,13 +103,12 @@ object benchmarks extends ScalaModule {
    def moduleDeps = Seq(slinc)
    def scalaVersion = "3.1.0"
 
-
    def scalacOptions = Seq(
-        "-deprecation",
-        "-Wunused:all",
-        "-unchecked",
-        "-Xcheck-macros",
-        "-Xprint-suspension"
+     "-deprecation",
+     "-Wunused:all",
+     "-unchecked",
+     "-Xcheck-macros",
+     "-Xprint-suspension"
    )
 
    def forkArgs = Seq(

@@ -9,7 +9,7 @@ import jdk.incubator.foreign.{
 
 private val allocationLocal = ThreadLocal[MemorySegment]()
 
-def reallocateSts(bytesNeeded: Long, old: MemorySegment) =
+private def reallocateSts(bytesNeeded: Long, old: MemorySegment) =
    val size = powersOf2.dropWhile(_ < bytesNeeded).head
    val address = CLinker
       .allocateMemory(size)
@@ -18,20 +18,20 @@ def reallocateSts(bytesNeeded: Long, old: MemorySegment) =
    allocationLocal.set(address)
    address
 
+private val powersOf2 = LazyList.iterate(1)(_ << 1)
 
-val powersOf2 = LazyList.iterate(1)(_ << 1)
+val localAllocator: (id: Int) => SegmentAllocator = (id: Int) =>
+   (bytesNeeded, alignment) =>
+      println(s"allocating for $id")
+      val maybeSts = allocationLocal.get
 
+      val sts =
+         if maybeSts == null then reallocateSts(bytesNeeded, null)
+         else maybeSts
 
-val localAllocator: SegmentAllocator = (bytesNeeded, alignment) =>
-   val maybeSts = allocationLocal.get
+      val usableAddress = if sts.byteSize < bytesNeeded then
+         println(s"reallocating to $bytesNeeded")
+         reallocateSts(bytesNeeded, sts)
+      else sts
 
-   val sts =
-      if maybeSts == null then reallocateSts(bytesNeeded, null)
-      else maybeSts
-
-   val usableAddress = if sts.byteSize < bytesNeeded then
-      println(s"reallocating to $bytesNeeded")
-      reallocateSts(bytesNeeded, sts)
-   else sts
-
-   usableAddress
+      usableAddress

@@ -6,7 +6,8 @@ import jdk.incubator.foreign.{
    MemorySegment,
    MemoryLayout,
    MemoryAddress,
-   CLinker
+   CLinker,
+   ResourceScope
 }, MemoryLayout.PathElement, CLinker.C_POINTER
 import components.{
    Deserializer,
@@ -22,7 +23,7 @@ import components.{
 }
 import scala.reflect.ClassTag
 
-class Ptr[A: ClassTag](
+class Ptr[A](
     memoryAddress: MemoryAddress,
     offset: Long,
     map: => Map[String, Any] = Map.empty
@@ -43,15 +44,28 @@ class Ptr[A: ClassTag](
    )
    def asMemoryAddress = memoryAddress
    def selectDynamic(key: String) = myMap(key)
-   def toArray(size: Int)(using Deserializer[A], NativeInfo[A]) =
+   def toArray(size: Int)(using Deserializer[A], NativeInfo[A], ClassTag[A]) =
       val l = NativeInfo[A].layout
       val elemSize = l.byteSize
       var i = 0
       val arr = Array.ofDim[A](size)
       while i < size do
-         arr(i) = Deserializer.from(memoryAddress, i * elemSize + offset)
+         arr(i) =
+            Deserializer.from(memoryAddress.addOffset(i * elemSize), offset)
          i += 1
       arr
+
+   def rescope(using ResourceScope) =
+      if memoryAddress.scope == ResourceScope.globalScope then
+         Ptr[A](
+           memoryAddress.asSegment(1, summon[ResourceScope]).address,
+           offset,
+           map
+         )
+      else
+         throw new IllegalStateException(
+           "This pointer already belongs to another scope, cannot be moved"
+         )
 
 object Ptr:
    class Null[A: NativeInfo: ClassTag] extends Ptr[A](MemoryAddress.NULL, 0):
@@ -131,13 +145,12 @@ object Ptr:
 
       typ match
          case '[a] =>
-            val ct = Expr.summonOrError[ClassTag[a]]
             '{
                Ptr[a](
                  $segment,
                  $layout.byteOffset(${ Expr.ofSeq(modifiedPath) }*),
                  $membersMap.toMap
-               )(using $ct)
+               )
             }
 
    given gen[A]: NativeInfo[Ptr[A]] =

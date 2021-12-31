@@ -19,18 +19,6 @@ val clookup: String => MemoryAddress =
          .orElse(SymbolLookup.loaderLookup.lookup(s).toScala)
          .getOrElse(throw new Exception(s"Couldn't find $s anywhere"))
 
-def missingSegmentAllocator(using Quotes) =
-   import quotes.reflect.report
-   report.errorAndAbort(
-     "A segment allocator is needed. If you're defining a bind, try making sure there is a `(using SegmentAllocator...` clause in the parameters."
-   )
-
-def missingBoundaryCrossing[A: Type](using Quotes) =
-   import quotes.reflect.report
-   report.errorAndAbort(
-     s"A boundary crossing is missing for type ${Type.show[A]}"
-   )
-
 def missingLayout[A: Type](using Quotes) =
    import quotes.reflect.report
    report.errorAndAbort(

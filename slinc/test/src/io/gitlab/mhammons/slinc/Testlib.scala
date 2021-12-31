@@ -9,5 +9,8 @@ object Testlib extends Library(Location.Local("slinc/test/native/libtest.so")):
    case class c_t(a: StaticArray[Int, 3], b: StaticArray[Float, 3])
        derives Struct
 
-   def slinc_test_modify(b_t: b_t)(using SegmentAllocator): b_t = bind
-   def slinc_test_addone(c_t: c_t)(using SegmentAllocator): c_t = bind
+   def slinc_test_modify(b_t: b_t): b_t = bind
+   def slinc_test_addone(c_t: c_t): c_t = bind
+   def slinc_test_getstaticarr(): Ptr[Int] = bind
+   def slinc_test_getstaticarr1(res: Ptr[Int]): Unit = bind
+   def slinc_two_structs(a: a_t, b: a_t): Int = bind

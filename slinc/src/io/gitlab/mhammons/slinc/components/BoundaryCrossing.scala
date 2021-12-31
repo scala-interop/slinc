@@ -13,10 +13,11 @@ import scala.reflect.ClassTag
 
 object BoundaryCrossing:
    def to[A: Type](a: Expr[A])(using Quotes): Expr[Any] =
+      val quotes = Expr(summon[Quotes].hashCode)
       a match
          case '{ $b: Product } =>
             val struckt = Expr.summonOrError[Struct[Product & A]]
-            val segAlloc = '{ localAllocator }
+            val segAlloc = '{ localAllocator($quotes) }
 
             '{
                val segment = $segAlloc.allocate($struckt.layout)
@@ -31,7 +32,7 @@ object BoundaryCrossing:
          case '{ $b: String } =>
             '{
                CLinker
-                  .toCString($b, localAllocator)
+                  .toCString($b, localAllocator($quotes))
                   .address
             }
 
@@ -39,11 +40,6 @@ object BoundaryCrossing:
             '{
                $b.asMemoryAddress
             }
-
-         case '{ $b: StaticArray[a, b] } =>
-            val segAlloc = '{ localAllocator }
-            val nativeInfo = Expr.summonOrError[NativeInfo[StaticArray[a, b]]]
-            '{ $segAlloc.allocate($nativeInfo.layout) }
 
    def from[A: Type](a: Expr[?])(using Quotes): Expr[A] =
       Type.of[A] match
@@ -60,21 +56,11 @@ object BoundaryCrossing:
             '{ CLinker.toJavaString($a.asInstanceOf[MemoryAddress]) }
                .asExprOf[A]
          case '[Ptr[a]] =>
-            val layoutOf = Expr.summonOrError[NativeInfo[a]]
-            val ct = Expr.summonOrError[ClassTag[a]]
             '{
                val address = $a.asInstanceOf[MemoryAddress]
                Ptr[a](
                  address,
                  0,
                  Map.empty
-               )(using $ct)
+               )
             }.asExprOf[A]
-
-         case '[StaticArray[a, b]] =>
-            val layoutOf = Expr.summonOrError[NativeInfo[StaticArray[a, b]]]
-
-            '{
-               val address = $a.asInstanceOf[MemorySegment]
-               ???
-            }

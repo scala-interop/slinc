@@ -4,11 +4,15 @@ S     Lin     C
 Scala Link to C
 ```
 
-Slinc is a Scala 3 library that allows users to interoperate with C code via Java 17's [foreign api incubator](https://docs.oracle.com/en/java/javase/17/docs/api/jdk.incubator.foreign/jdk/incubator/foreign/package-summary.html).
+SLinC is a Scala 3 library that allows users to interoperate with C code via Java 17's [foreign api incubator](https://docs.oracle.com/en/java/javase/17/docs/api/jdk.incubator.foreign/jdk/incubator/foreign/package-summary.html).
 
 It's designed to make use of Scala's type system and macros to handle most of the work of making bindings to C from Scala.
 
+This library has a set of helper syntax and extension methods, accesible via the following import `import io.gitlab.mhammons.slinc.*`
+
 ## Binding to C functions
+
+Binding to a C function involves using the `bind` macro. The macro looks at the attached method name, method parameter types, and method return type in order to generate the binding glue.
 
 The binding to the `abs` function looks like
 ```scala
@@ -18,42 +22,71 @@ def abs(i: Int): Int = bind
 The binding to the strlen function looks like
 
 ```scala
-def strlen(string: String)(using SegmentAllocator): Int = bind
+def strlen(string: String): Int = bind
 ```
-As you can see, some function bindings have a dependency on a `SegmentAllocator` being in scope. This is because said functions allocate native memory (in the above case, `String` must be made into a C String via native allocation). At the moment, the cases where this happens is if there's a `String` in the function parameters, or if the function returns a `Struct`
 
-## Scopes
+### Basic types mapping (pass by value)
 
-C interop naturally entails allocation of native memory. This memory is managed via `scope(...)`. The scope provides a `SegmentAllocator`, and frees memory associated with said allocator at the end of the `scope` block.
+|C      |Scala  |
+|-------|-------|
+|int    |Int    |
+|float  |Float  |
+|double |Double |
+|long   |Long   |
+|void   |Unit   |
+|char   |Char   |
+|char   |Boolean|
+|char   |Byte   |
+|short  |Short  |
+|struct |Product|
 
-## Defining Structs
+## Structs
 
-Creating struct descriptions are fairly simple in SLinC
+In SLinC, structs are represented by `Product` types who have a `Struct` typeclass instanced for them. The easy way to do this is while defining a case class.
 
 ```scala
 case class div_t(quot: Int, rem: Int) derives Struct
 ```
 
-is the equivalent of 
-
-```C
-struct {
-    int quot;
-    int rem;
-} div_t;
-```
+One can also derive the typeclass for other product types like so:
 
 ```scala
-def div(num: Int, denom: Int)(using SegmentAllocator): div_t = bind
-val result = scope{
-    div(5,2)
-}
-
-assertEquals(result.quot, 2)
-assertEquals(result.rem, 1)
+given Struct[(Int, Int)] = Struct.derived
 ```
 
-Please note that case classes sent to/received from a function are pass by value. These values are immutable and copied into the JVM heap from the native world.
+Once this typeclass is defined for a type, it can be used in method bindings.
+
+```scala
+def div(num: Int, denom: Int): div_t = bind
+```
+
+### Static Arrays
+
+Static arrays are typically defined in C like thus: 
+
+```c
+int primes[4] = {2,3,5,7};
+```
+
+These arrays are really only usable within `Struct`s in SLinC. Since they can only be passed by reference in C, they aren't supported as input parameters or returns for bindings. 
+
+Static arrays are declared via the following code:
+
+```scala
+StaticArray[Int, 5]
+```
+
+This indicated an array of size 5 of integers.
+
+## Pass by Value vs Pass by Reference
+
+In general, C methods have two ways to pass data: by reference and by value. The type signatures shown above are all pass by value. That is, the data they represent is copied into the native world, and modifications to said data by the C world are not reflected back in Scala. Likewise, a pass by value return will be copied from the native heap into the java heap, and any changes made on the native heap will not be reflected in the JVM.
+
+In order to properly share data between a scala program and C, one must use pass by reference. These inputs are represented by standard native compatible types wrapped in the `Ptr` higher kinded type (ie: `Ptr[Int]` for a pass by reference `Int`)
+
+### Scopes
+
+Creation of Ptr types involves allocating space in the native heap, and possibly copying data into said space. Both allocation and freeing of native heap space is managed by the `scope` function. This function takes a block of code that needs to allocate native heap space, provides the methods to do so, and frees allocated space once the block ends.
 
 ## Pointers
 
@@ -76,21 +109,7 @@ Please note that this dereferencing operation involves copying data to and from 
 !ptr.partial.quot //copies only quot into the jvm
 !ptr = div_t(5,6) //updating ptr normally requires copying in an entire new div_n
 !ptr.partial.quot = 5 //only copies 5 from the jvm, and only writes it to the memory for quot
-
-## C types to Scala Types
-
-The following table shows how C types map to Scala types in function bindings
-
-|C   | Scala|
-|----|------|
-|int | Int or int  |
-|float| Float or float|
-|double | Double or double |
-|long | Long or long |
-| const char * | String or string |
-| void | Unit |
-| struct | see struct section |
-
+```
 
 ## Unsupported at present
 
