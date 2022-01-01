@@ -114,7 +114,4 @@ Please note that this dereferencing operation involves copying data to and from 
 ## Unsupported at present
 
 * Union types
-* Static arrays
-* non-constant strings
-* Structs within structs
 * Callbacks

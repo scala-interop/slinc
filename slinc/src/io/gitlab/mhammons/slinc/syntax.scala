@@ -12,11 +12,12 @@ import io.gitlab.mhammons.slinc.components.{
    BoundaryCrossing,
    Serializer,
    NativeInfo,
-   localAllocator,
    Allocates,
-   segAlloc
+   segAlloc,
+   TempAllocator
 }
 import scala.reflect.ClassTag
+import io.gitlab.mhammons.slinc.components
 
 transparent inline def bind = ${
    bindImpl
@@ -61,9 +62,8 @@ private def bindImpl(using q: Quotes) =
                   )
       else report.errorAndAbort("didn't get defdef")
 
-   val segAllocArg =
-      if ret.pipe { case '[r] => needsAllocator[r](true) } then
-         List('{ localAllocator(0) })
+   def segAllocArg(expr: Expr[SegmentAllocator]) =
+      if ret.pipe { case '[r] => needsAllocator[r](true) } then List(expr)
       else Nil
 
    val methodHandle = ret.pipe { case '[r] =>
@@ -72,13 +72,23 @@ private def bindImpl(using q: Quotes) =
 
    val callFn = ret.pipe { case '[r] => call[r](methodHandle, _) }
 
-   params
-      .map { case (expr, '[a]) =>
-         val aExpr = expr.asExprOf[a]
-         BoundaryCrossing.to(aExpr)
+   '{
+      val tempAllocator = TempAllocator()
+      val segAlloc = tempAllocator.localAllocator
+      try {
+         ${
+            params
+               .map { case (expr, '[a]) =>
+                  val aExpr = expr.asExprOf[a]
+                  BoundaryCrossing.to(aExpr, 'tempAllocator)
+               }
+               .pipe(segAllocArg('segAlloc) ++ _)
+               .pipe(callFn(_))
+         }
+      } finally {
+         tempAllocator.close()
       }
-      .pipe(segAllocArg ++ _)
-      .pipe(callFn(_))
+   }
 end bindImpl
 
 type Allocatable[A] = SegmentAllocator ?=> A

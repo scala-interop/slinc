@@ -12,12 +12,14 @@ import io.gitlab.mhammons.slinc.StaticArray
 import scala.reflect.ClassTag
 
 object BoundaryCrossing:
-   def to[A: Type](a: Expr[A])(using Quotes): Expr[Any] =
+   def to[A: Type](a: Expr[A], tempAllocator: Expr[TempAllocator])(using
+       Quotes
+   ): Expr[Any] =
       val quotes = Expr(summon[Quotes].hashCode)
       a match
          case '{ $b: Product } =>
             val struckt = Expr.summonOrError[Struct[Product & A]]
-            val segAlloc = '{ localAllocator($quotes) }
+            val segAlloc = '{ $tempAllocator.localAllocator }
 
             '{
                val segment = $segAlloc.allocate($struckt.layout)
@@ -32,7 +34,7 @@ object BoundaryCrossing:
          case '{ $b: String } =>
             '{
                CLinker
-                  .toCString($b, localAllocator($quotes))
+                  .toCString($b, $tempAllocator.localAllocator)
                   .address
             }
 
