@@ -13,4 +13,4 @@ test:
   script:
     # Execute your project's tests
     - mill clean
-    - mill core.test
+    - mill slinc.test

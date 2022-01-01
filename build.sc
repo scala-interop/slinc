@@ -1,19 +1,37 @@
 import mill.define.Target
-import mill._, scalalib._, modules._
+import mill._, scalalib._, modules._, scalalib.publish._
 
 object v {
-   val cats = "2.6.1"
    val munit = "1.0.0-M1"
    val jmh = "1.33"
    val jnr = "2.2.3"
    val jna = "5.9.0"
 }
 
-object core extends ScalaModule {
+object slinc extends ScalaModule with PublishModule {
 
-   def moduleDeps = Seq(jworkaround, polymorphics)
+   def moduleDeps = Seq(polymorphics)
    def scalaVersion = "3.1.0"
+   def scalacOptions = Seq(
+     "-deprecation",
+     "-Wunused:all",
+     "-unchecked",
+     "-Xcheck-macros",
+     "-Xprint-suspension"
+   )
    def publishVersion = "0.0.1"
+   def pomSettings = PomSettings(
+     description = "SLinC - Scala <-> C Interop",
+     organization = "io.gitlab.mhammons",
+     url = "https://gitlab.io/mhammons/slinc",
+     licenses = Seq(License.`Apache-2.0`),
+     versionControl = VersionControl.gitlab("mhammons", "slinc"),
+     developers = Seq(
+       Developer("mhammons", "Mark Hammons", "https://gitlab.io/mhammons")
+     )
+   )
+
+   def sonatypeUri = "https://s01.oss.sonatype.org/"
 
    def forkArgs = Seq(
      "--add-modules",
@@ -23,11 +41,6 @@ object core extends ScalaModule {
    )
 
    import v._
-   def ivyDeps = Agg(
-     ivy"org.typelevel::cats-core:$cats",
-     ivy"org.typelevel::cats-free:$cats"
-   )
-
    object test extends Tests {
       def ivyDeps = Agg(ivy"org.scalameta::munit::$munit")
 
@@ -39,20 +52,64 @@ object core extends ScalaModule {
         "--enable-native-access",
         "ALL-UNNAMED"
       )
+
+      def nativeSource = T.sources { millSourcePath / "native" }
+      def compileNative = T {
+         val nativeFiles = nativeSource().head.path
+         os.list(nativeFiles)
+            .filter(_.last.endsWith(".c"))
+            .flatMap { p =>
+               val soLocation =
+                  p / os.up / s"lib${p.last.stripSuffix(".c")}.so"
+               os.proc(
+                 "gcc",
+                 "-shared",
+                 "-fPIC",
+                 "-o",
+                 p / os.up / s"lib${p.last.stripSuffix(".c")}.so",
+                 p
+               ).call()
+               List(PathRef(soLocation))
+            }
+         nativeFiles
+      }
+
+      override def compile = T {
+         compileNative()
+         super.compile()
+      }
    }
-
-   override def scalacOptions = Seq("-Xsemanticdb")
 }
-
-object jworkaround extends JavaModule {}
-
-object polymorphics extends ScalaModule {
+object polymorphics extends ScalaModule with PublishModule {
    def scalaVersion = "2.13.6"
+   def publishVersion = "0.0.1"
+   def pomSettings = PomSettings(
+     description =
+        "Shim to use polymorphic methods from scala 3 <DON'T DEPEND ON ME>",
+     organization = "io.gitlab.mhammons",
+     url = "https://gitlab.io/mhammons/slinc",
+     licenses = Seq(License.`Apache-2.0`),
+     versionControl = VersionControl.gitlab("mhammons", "slinc"),
+     developers = Seq(
+       Developer("mhammons", "Mark Hammons", "https://gitlab.io/mhammons")
+     )
+   )
+
+   def sonatypeUri = "https://gitlab.io/api/v4/projects/28891787/packages/maven"
+
 }
 
 object benchmarks extends ScalaModule {
-   def moduleDeps = Seq(core)
+   def moduleDeps = Seq(slinc)
    def scalaVersion = "3.1.0"
+
+   def scalacOptions = Seq(
+     "-deprecation",
+     "-Wunused:all",
+     "-unchecked",
+     "-Xcheck-macros",
+     "-Xprint-suspension"
+   )
 
    def forkArgs = Seq(
      "--add-modules",

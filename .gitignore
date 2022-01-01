@@ -3,3 +3,7 @@
 .vscode
 out
 .attach*
+*.log
+*.so
+slinc/src/io/gitlab/mhammons/slinc/test.worksheet.sc
+*.bench

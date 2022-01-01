@@ -3,6 +3,8 @@ package io.gitlab.mhammons.polymorphics
 import java.lang.invoke.MethodHandle
 
 object MethodHandleHandler {
+   def exCallI(mh: MethodHandle, a: Int) = mh.invokeExact(a)
+   def excallL(mh: MethodHandle): Long = mh.invokeExact()
    def call0(mh: MethodHandle) = mh.invoke()
    def call1(mh: MethodHandle, a: Any) = mh.invoke(a)
    def call2(mh: MethodHandle, a: Any, b: Any) = mh.invoke(a, b)
