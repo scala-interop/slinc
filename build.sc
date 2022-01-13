@@ -1,3 +1,6 @@
+import os.Path
+import $file.benchmark
+import $file.publishable
 import mill.define.Target
 import mill._, scalalib._, modules._, scalalib.publish._
 
@@ -8,30 +11,22 @@ object v {
    val jna = "5.9.0"
 }
 
-object slinc extends ScalaModule with PublishModule {
-
+object slinc
+    extends ScalaModule
+    with publishable.PublishableModule
+    with benchmark.BenchmarksModule {
    def moduleDeps = Seq(polymorphics)
    def scalaVersion = "3.1.0"
+   def pomSettings = pomTemplate("SLinC - Scala <-> C Interop")
+
    def scalacOptions = Seq(
      "-deprecation",
      "-Wunused:all",
      "-unchecked",
      "-Xcheck-macros",
-     "-Xprint-suspension"
+     "-Xprint-suspension",
+     "-Xsemanticdb"
    )
-   def publishVersion = "0.0.1"
-   def pomSettings = PomSettings(
-     description = "SLinC - Scala <-> C Interop",
-     organization = "io.gitlab.mhammons",
-     url = "https://gitlab.io/mhammons/slinc",
-     licenses = Seq(License.`Apache-2.0`),
-     versionControl = VersionControl.gitlab("mhammons", "slinc"),
-     developers = Seq(
-       Developer("mhammons", "Mark Hammons", "https://gitlab.io/mhammons")
-     )
-   )
-
-   def sonatypeUri = "https://s01.oss.sonatype.org/"
 
    def forkArgs = Seq(
      "--add-modules",
@@ -40,11 +35,15 @@ object slinc extends ScalaModule with PublishModule {
      "ALL-UNNAMED"
    )
 
-   import v._
-   object test extends Tests {
-      def ivyDeps = Agg(ivy"org.scalameta::munit::$munit")
-
-      def testFramework = T("munit.Framework")
+   object test extends Tests with TestModule.Munit {
+      def scalacOptions = Seq(
+        "-deprecation",
+        "-Wunused:all",
+        "-unchecked",
+        "-Xcheck-macros",
+        "-Xprint-suspension",
+        "-Xsemanticdb"
+      )
 
       def forkArgs = Seq(
         "--add-modules",
@@ -53,11 +52,12 @@ object slinc extends ScalaModule with PublishModule {
         "ALL-UNNAMED"
       )
 
+      def ivyDeps = Agg(ivy"org.scalameta::munit::${v.munit}")
       def nativeSource = T.sources { millSourcePath / "native" }
       def compileNative = T {
          val nativeFiles = nativeSource().head.path
-         os.list(nativeFiles)
-            .filter(_.last.endsWith(".c"))
+         val cFiles = os.list(nativeFiles).filter(_.last.endsWith(".c"))
+         cFiles
             .flatMap { p =>
                val soLocation =
                   p / os.up / s"lib${p.last.stripSuffix(".c")}.so"
@@ -71,7 +71,7 @@ object slinc extends ScalaModule with PublishModule {
                ).call()
                List(PathRef(soLocation))
             }
-         nativeFiles
+         cFiles.map(PathRef(_))
       }
 
       override def compile = T {
@@ -79,105 +79,21 @@ object slinc extends ScalaModule with PublishModule {
          super.compile()
       }
    }
+
+   object bench extends Benchmark {
+      def jmhVersion = "1.33"
+      override def ivyDeps = super.ivyDeps() ++ Seq(
+        ivy"com.github.jnr:jnr-ffi:${v.jnr}",
+        ivy"net.java.dev.jna:jna:${v.jna}"
+      )
+   }
 }
-object polymorphics extends ScalaModule with PublishModule {
-   def scalaVersion = "2.13.6"
+object polymorphics extends ScalaModule with publishable.PublishableModule {
+   def scalaVersion = "2.13.7"
    def publishVersion = "0.0.1"
-   def pomSettings = PomSettings(
-     description =
-        "Shim to use polymorphic methods from scala 3 <DON'T DEPEND ON ME>",
-     organization = "io.gitlab.mhammons",
-     url = "https://gitlab.io/mhammons/slinc",
-     licenses = Seq(License.`Apache-2.0`),
-     versionControl = VersionControl.gitlab("mhammons", "slinc"),
-     developers = Seq(
-       Developer("mhammons", "Mark Hammons", "https://gitlab.io/mhammons")
-     )
+   def pomSettings = pomTemplate(
+     "Shim to use polymorphic methods from scala 3 <DON'T DEPEND ON ME>"
    )
-
-   def sonatypeUri = "https://gitlab.io/api/v4/projects/28891787/packages/maven"
-
-}
-
-object benchmarks extends ScalaModule {
-   def moduleDeps = Seq(slinc)
-   def scalaVersion = "3.1.0"
-
-   def scalacOptions = Seq(
-     "-deprecation",
-     "-Wunused:all",
-     "-unchecked",
-     "-Xcheck-macros",
-     "-Xprint-suspension"
-   )
-
-   def forkArgs = Seq(
-     "--add-modules",
-     "jdk.incubator.foreign",
-     "--enable-native-access",
-     "ALL-UNNAMED"
-   )
-
-   import v._
-   def ivyDeps =
-      Agg(
-        ivy"org.openjdk.jmh:jmh-core:$jmh",
-        ivy"com.github.jnr:jnr-ffi:$jnr",
-        ivy"net.java.dev.jna:jna:$jna"
-      )
-
-   def jmhRun(args: String*) = T.command {
-      val (_, resources) = generateBenchmarkSources()
-      Jvm.runSubprocess(
-        "org.openjdk.jmh.Main",
-        classPath = (runClasspath() ++ generatorDeps())
-           .map(_.path) ++ Seq(compileGeneratedSources().path, resources),
-        mainArgs = args,
-        workingDir = T.ctx.dest
-      )
-   }
-
-   def compileGeneratedSources = T {
-      val dest = T.ctx.dest
-      val (sourcesDir, _) = generateBenchmarkSources()
-      val sources = os.walk(sourcesDir).filter(os.isFile)
-      os.proc(
-        "javac",
-        sources.map(_.toString),
-        "-cp",
-        (runClasspath() ++ generatorDeps()).map(_.path.toString).mkString(":"),
-        "-d",
-        dest
-      ).call(dest)
-      PathRef(dest)
-   }
-
-   def generateBenchmarkSources = T {
-      val dest = T.ctx.dest
-
-      val sourcesDir = dest / "jmh_sources"
-      val resourcesDir = dest / "jmh_resources"
-
-      os.remove.all(sourcesDir)
-      os.makeDir.all(sourcesDir)
-      os.remove.all(resourcesDir)
-      os.makeDir.all(resourcesDir)
-
-      Jvm.runSubprocess(
-        "org.openjdk.jmh.generators.bytecode.JmhBytecodeGenerator",
-        (runClasspath() ++ generatorDeps()).map(_.path),
-        jvmArgs = forkArgs(),
-        mainArgs = Array(
-          compile().classes.path,
-          sourcesDir,
-          resourcesDir,
-          "default"
-        ).map(_.toString)
-      )
-      (sourcesDir, resourcesDir)
-   }
-
-   def generatorDeps = resolveDeps(
-     T { Agg(ivy"org.openjdk.jmh:jmh-generator-bytecode:$jmh") }
-   )
+   def scalacPluginIvyDeps = Agg(ivy"org.scalameta:::semanticdb-scalac:4.4.32")
+   def scalacOptions = Seq("-Yrangepos")
 }

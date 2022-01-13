@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 struct a_t
 {
    int a;
