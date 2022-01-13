@@ -3,7 +3,7 @@ package io.gitlab.mhammons.slinc.components
 import scala.quoted.*
 import scala.util.chaining.*
 import jdk.incubator.foreign.{FunctionDescriptor, CLinker, SegmentAllocator}
-import io.gitlab.mhammons.polymorphics.MethodHandleHandler
+import io.gitlab.mhammons.polymorphics.{MethodHandleHandler, VoidHelper}
 import java.lang.invoke.MethodHandle
 
 object MethodHandleMacros:

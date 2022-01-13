@@ -12,5 +12,5 @@ image: registry.gitlab.com/mhammons/slinc:latest
 test:
   script:
     # Execute your project's tests
-    - mill clean
-    - mill slinc.test
+    - /usr/local/bin/mill clean
+    - /usr/local/bin/mill slinc.test
