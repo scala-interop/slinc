@@ -1,8 +1,9 @@
 import os.Path
 import $file.benchmark
 import $file.publishable
-import mill.define.Target
-import mill._, scalalib._, modules._, scalalib.publish._
+import mill._, scalalib._
+import $ivy.`com.lihaoyi::mill-contrib-buildinfo:`
+import mill.contrib.buildinfo.BuildInfo
 
 object v {
    val munit = "1.0.0-M1"
@@ -35,7 +36,7 @@ object slinc
      "ALL-UNNAMED"
    )
 
-   object test extends Tests with TestModule.Munit {
+   object test extends Tests with TestModule.Munit with BuildInfo {
       def scalacOptions = Seq(
         "-deprecation",
         "-Wunused:all",
@@ -54,24 +55,31 @@ object slinc
 
       def ivyDeps = Agg(ivy"org.scalameta::munit::${v.munit}")
       def nativeSource = T.sources { millSourcePath / "native" }
+      def buildInfoMembers = T {
+         compileNative()
+            .map(p => p.path.last.stripSuffix(".so") -> p.path.toString())
+            .toMap
+      }
+
+      def buildInfoPackageName = Some("io.gitlab.mhammons.slinc")
       def compileNative = T {
          val nativeFiles = nativeSource().head.path
          val cFiles = os.list(nativeFiles).filter(_.last.endsWith(".c"))
          cFiles
             .flatMap { p =>
                val soLocation =
-                  p / os.up / s"lib${p.last.stripSuffix(".c")}.so"
+                  T.dest / s"lib${p.last.stripSuffix(".c")}.so"
                os.proc(
                  "gcc",
                  "-shared",
                  "-fPIC",
                  "-o",
-                 p / os.up / s"lib${p.last.stripSuffix(".c")}.so",
+                 T.dest / s"lib${p.last.stripSuffix(".c")}.so",
                  p
                ).call()
                List(PathRef(soLocation))
             }
-         cFiles.map(PathRef(_))
+
       }
 
       override def compile = T {
