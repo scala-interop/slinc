@@ -1,4 +1,4 @@
-[![pipeline status](https://gitlab.com/mhammons/slinc/badges/master/pipeline.svg)](https://gitlab.com/mhammons/slinc/-/commits/master)![Maven Central](https://img.shields.io/maven-central/v/io.gitlab.markehammons/slinc)
+[![pipeline status](https://gitlab.com/mhammons/slinc/badges/master/pipeline.svg)](https://gitlab.com/mhammons/slinc/-/commits/master)![Maven Central](https://img.shields.io/maven-central/v/io.gitlab.mhammons/slinc_3)
 ```
 S     Lin     C
 Scala Link to C

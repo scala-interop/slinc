@@ -1,6 +1,15 @@
 import mill._, scalalib._, scalalib.publish._
+import $ivy.`de.tototec::de.tobiasroeser.mill.vcs.version::0.1.2-6-e3df5d`
+import de.tobiasroeser.mill.vcs.version.VcsVersion
 
-trait PublishableModule extends PublishModule {
+import $ivy.`com.github.lolgab:mill-mima_mill0.10.0-M5_2.13:0.0.8`
+import com.github.lolgab.mill.mima._
+
+trait PublishableModule extends PublishModule with Mima {
+
+   def mimaPreviousVersions = Seq("0.0.0-45-0647f5-DIRTY50d251bf")
+   override def mimaCheckDirection = CheckDirection.Both
+
    def pomTemplate(description: String) = PomSettings(
      description = description,
      organization = "io.gitlab.mhammons",
@@ -12,7 +21,8 @@ trait PublishableModule extends PublishModule {
      )
    )
 
-   override def sonatypeUri: String = "https://ss01.oss.sonatype.org/"
+   override def sonatypeUri: String =
+      "https://ss01.oss.sonatype.org/service/local"
    override def sonatypeSnapshotUri: String = sonatypeUri
-   def publishVersion: T[String] = "0.0.1"
+   def publishVersion: T[String] = VcsVersion.vcsState().format()
 }

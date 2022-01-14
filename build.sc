@@ -5,6 +5,8 @@ import mill._, scalalib._
 import $ivy.`com.lihaoyi::mill-contrib-buildinfo:`
 import mill.contrib.buildinfo.BuildInfo
 
+import com.github.lolgab.mill.mima._
+
 object v {
    val munit = "1.0.0-M1"
    val jmh = "1.33"
@@ -16,6 +18,9 @@ object slinc
     extends ScalaModule
     with publishable.PublishableModule
     with benchmark.BenchmarksModule {
+   def mimaPreviousVersions = Seq("0.0.0-45-0647f5-DIRTY50d251bf")
+   override def mimaCheckDirection = CheckDirection.Both
+
    def moduleDeps = Seq(polymorphics)
    def scalaVersion = "3.1.0"
    def pomSettings = pomTemplate("SLinC - Scala <-> C Interop")
@@ -98,7 +103,6 @@ object slinc
 }
 object polymorphics extends ScalaModule with publishable.PublishableModule {
    def scalaVersion = "2.13.7"
-   def publishVersion = "0.0.1"
    def pomSettings = pomTemplate(
      "Shim to use polymorphic methods from scala 3 <DON'T DEPEND ON ME>"
    )
