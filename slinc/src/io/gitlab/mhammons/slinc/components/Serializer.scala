@@ -9,6 +9,11 @@ import jdk.incubator.foreign.{
 
 type Serializee[A, B] = Serializer[A] ?=> B
 def serializerOf[A]: Serializee[A, Serializer[A]] = summon[Serializer[A]]
+def serialize[A](
+    a: A,
+    memoryAddress: MemoryAddress,
+    offset: Long
+): Serializee[A, Unit] = serializerOf[A].into(a, memoryAddress, offset)
 
 //todo: rename to encoder
 trait Serializer[A]:

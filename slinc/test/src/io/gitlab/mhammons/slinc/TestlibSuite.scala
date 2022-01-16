@@ -48,3 +48,33 @@ class TestlibSuite extends munit.FunSuite:
 
       assertEquals(res, 4)
    }
+
+   test("basic upcalls should be possible") {
+      val res = scope {
+         val fnPtr = (() => 3).serialize
+         Testlib.slinc_upcall(fnPtr)
+      }
+
+      assertEquals(res, 3)
+   }
+
+   test("struct returning upcalls should work") {
+      val res = scope {
+         val fnPtr = (() => Testlib.a_t(1, 3)).serialize
+         Testlib.slinc_upcall_a_t(fnPtr)
+      }
+
+      assertEquals(res, 4)
+   }
+
+   test("can call simple function pointers that come from C") {
+      val res = Testlib.slinc_fptr_ret().deref
+
+      assertEquals(res(), Testlib.a_t(3, 2))
+   }
+
+   test("can call slightly more complex function pointers that come from C") {
+      val res = Testlib.slinc_fptr_ret2().deref
+
+      assertEquals(res(1, 2), 3)
+   }

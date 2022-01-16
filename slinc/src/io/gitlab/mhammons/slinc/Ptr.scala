@@ -2,6 +2,7 @@ package io.gitlab.mhammons.slinc
 
 import scala.quoted.*
 import scala.util.chaining.*
+import scala.compiletime.summonFrom
 import jdk.incubator.foreign.{
    MemorySegment,
    MemoryLayout,
@@ -56,6 +57,9 @@ class Ptr[A](
      offset,
      map
    )
+
+   inline def castTo[A] =
+      Ptr[A](memoryAddress, offset)
    def asMemoryAddress = memoryAddress
    def selectDynamic(key: String) = myMap(key)
    def toArray(size: Int)(using Deserializer[A], NativeInfo[A], ClassTag[A]) =
@@ -84,11 +88,16 @@ class Ptr[A](
          )
 
 object Ptr:
-   def apply[A](
+   inline def apply[A](
        memoryAddress: MemoryAddress,
        offset: Long
-   ): Informee[A, Ptr[A]] =
-      genPtr(memoryAddress, offset, infoOf[A].layout).asInstanceOf[Ptr[A]]
+   ): Ptr[A] =
+      summonFrom {
+         case _: NativeInfo[A] =>
+            genPtr(memoryAddress, offset, infoOf[A].layout).asInstanceOf[Ptr[A]]
+         case _ =>
+            new Ptr[A](memoryAddress, offset, Map.empty)
+      }
 
    private def genPtr(
        memoryAddress: MemoryAddress,
@@ -159,11 +168,10 @@ object Ptr:
    given gen[A <: Ptr[?]]: NativeInfo[A] =
       summon[NativeInfo[String]].asInstanceOf[NativeInfo[A]]
 
-   given [A](using NativeInfo[A]): Emigrator[Ptr[A]] with
+   given [A]: Emigrator[Ptr[A]] with
       def apply(a: Ptr[A]): Allocatee[Any] = a.asMemoryAddress
 
-   given [A]: Informee[A, Immigrator[Ptr[A]]] = a =>
-      Ptr[A](a.asInstanceOf[MemoryAddress], 0)
+   given [A]: Immigrator[Ptr[A]] = a => Ptr[A](a.asInstanceOf[MemoryAddress], 0)
 
    given [A, P <: Ptr[A]](using NativeInfo[A]): Deserializer[P] with
       def from(

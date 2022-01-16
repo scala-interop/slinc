@@ -22,7 +22,7 @@ trait PublishableModule extends PublishModule with Mima {
    )
 
    override def sonatypeUri: String =
-      "https://ss01.oss.sonatype.org/service/local"
+      "https://s01.oss.sonatype.org/service/local"
    override def sonatypeSnapshotUri: String = sonatypeUri
    def publishVersion: T[String] = VcsVersion.vcsState().format()
 }

@@ -11,6 +11,8 @@ import io.gitlab.mhammons.slinc.components.{
    NativeInfo,
    Serializer,
    Deserializer,
+   Exporter,
+   Allocatee,
    segAlloc,
    summonOrError
 }
@@ -23,7 +25,8 @@ trait Struct[A <: Product]
       Immigrator[A],
       Emigrator[A],
       Serializer[A],
-      Deserializer[A]
+      Deserializer[A],
+      Exporter[A]
 
 object Struct:
    inline given derived[A <: Product]: Struct[A] = ${
@@ -72,10 +75,15 @@ object Struct:
             def from(memoryAddress: MemoryAddress, offset: Long) =
                d.from(memoryAddress, offset)
 
-            def apply(a: A) =
+            def apply(a: A): Allocatee[Any] =
                val segment = segAlloc.allocate(layout)
                into(a, segment.address, 0)
                segment
+
+            def exportValue(a: A) =
+               val segment = segAlloc.allocate(layout)
+               into(a, segment.address, 0)
+               segment.address
 
             def apply(a: Any) =
                from(a.asInstanceOf[MemorySegment].address, 0)
@@ -190,7 +198,7 @@ object Struct:
                  )
                )
             }
-            Expr.block(memberSelect.toList, '{}).tap(_.show.tap(report.info))
+            Expr.block(memberSelect.toList, '{})
 
          // pointer handling is exactly the same as primitive handling here.
          case PtrInfo(name, _, t) =>

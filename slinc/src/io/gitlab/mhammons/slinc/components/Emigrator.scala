@@ -2,9 +2,10 @@ package io.gitlab.mhammons.slinc.components
 
 import jdk.incubator.foreign.{CLinker, SegmentAllocator}
 
-type Emigaratee[A, B] = Emigrator[A] ?=> B
+type Emigratee[A, B] = Emigrator[A] ?=> B
 
-def emigrator[A]: Emigaratee[A, Emigrator[A]] = summon[Emigrator[A]]
+def emigrator[A]: Emigratee[A, Emigrator[A]] = summon[Emigrator[A]]
+def emigrate[A](a: A): Allocatee[Emigratee[A, Any]] = emigrator[A](a)
 
 trait Emigrator[A]:
    def apply(a: A): Allocatee[Any]
@@ -23,3 +24,4 @@ object Emigrator:
 
    given Emigrator[Float] with
       def apply(a: Float) = a
+

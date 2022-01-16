@@ -56,4 +56,3 @@ private val localAllocator: SegmentAllocator = (bytesNeeded, alignment) =>
    allocator.get.allocate(bytesNeeded)
 
 private val powersOf2 = LazyList.iterate(1L)(_ << 1)
-private val nextSizeLocal = ThreadLocal.withInitial(() => powersOf2.iterator)
