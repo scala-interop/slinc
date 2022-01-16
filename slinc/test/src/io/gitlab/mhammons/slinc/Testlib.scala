@@ -26,3 +26,7 @@ object Testlib extends Library(Location.Absolute(BuildInfo.libtest)):
    def slinc_test_getstaticarr(): Ptr[Int] = bind
    def slinc_test_passstaticarr(res: Ptr[Int]): Unit = bind
    def slinc_two_structs(a: a_t, b: a_t): Int = bind
+   def slinc_upcall(zptr: Ptr[() => Int]): Int = bind
+   def slinc_upcall_a_t(zptr: Ptr[() => a_t]): Int = bind
+   def slinc_fptr_ret(): Ptr[() => a_t] = bind
+   def slinc_fptr_ret2(): Ptr[(Int, Int) => Int] = bind

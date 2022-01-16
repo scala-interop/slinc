@@ -55,3 +55,39 @@ int slinc_two_structs(struct a_t a, struct a_t b)
 {
    return a.a * b.a;
 }
+
+int slinc_upcall(int (*zptr)())
+{
+   return zptr();
+}
+
+int slinc_upcall_a_t(struct a_t (*zptr)())
+{
+   struct a_t a = zptr();
+   return a.a + a.b;
+}
+
+struct a_t get_a_struct()
+{
+   struct a_t a;
+   a.a = 3;
+   a.b = 2;
+   return a;
+}
+
+typedef struct a_t (*a_fn_ptr)();
+a_fn_ptr slinc_fptr_ret()
+{
+   return get_a_struct;
+}
+
+int adder(int a, int b)
+{
+   return a + b;
+}
+
+typedef int (*adderfn)(int, int);
+adderfn slinc_fptr_ret2()
+{
+   return adder;
+}

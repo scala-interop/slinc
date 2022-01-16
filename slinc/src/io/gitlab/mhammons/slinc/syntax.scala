@@ -11,18 +11,28 @@ import io.gitlab.mhammons.slinc.components.{
    MethodHandleMacros,
    Informee,
    Serializee,
+   Exportee,
+   Scopee,
+   SymbolLookup,
    segAlloc,
    serializerOf,
-   infoOf
+   infoOf,
+   exportValue,
+   summonOrError
 }
 import scala.reflect.ClassTag
 
 transparent inline def bind = ${
-   bindImpl
+   bindImpl('false)
+}
+transparent inline def bind(debug: Boolean = false) = ${
+   bindImpl('debug)
 }
 
-private def bindImpl(using q: Quotes) =
+private def bindImpl(debugExpr: Expr[Boolean])(using q: Quotes) =
    import quotes.reflect.*
+
+   val debug = debugExpr.valueOrAbort
 
    val owner = Symbol.spliceOwner.owner
 
@@ -56,7 +66,17 @@ private def bindImpl(using q: Quotes) =
                   )
       else report.errorAndAbort("didn't get defdef")
 
-   ret.pipe { case '[r] => MethodHandleMacros.binding[r](name, params) }
+   val memoryAddress = '{
+      val symbolLookup = ${ Expr.summonOrError[SymbolLookup] }
+      val fnName = ${ Expr(name) }
+      symbolLookup.lookup(fnName)
+   }
+
+   ret.pipe { case '[r] =>
+      MethodHandleMacros.binding[r](memoryAddress, params)
+   }.tap { exp =>
+      if debug then report.info(exp.show)
+   }
 
 end bindImpl
 
@@ -84,20 +104,15 @@ def lazyScope[A](fn: (SegmentAllocator) ?=> A) =
    fn
 
 extension [A](a: A)
-   def serialize: Serializee[A, Informee[A, Allocatee[Ptr[A]]]] =
-      val addr = segAlloc.allocate(infoOf[A].layout).address
-      serializerOf[A].into(a, addr, 0)
+   def serialize: Allocatee[Scopee[Informee[A, Exportee[A, Ptr[A]]]]] =
+      val addr = exportValue(a)
       Ptr[A](addr, 0)
 
 extension [A: ClassTag](
     a: Array[A]
 )
-   def serialize: Informee[A, Serializee[A, Allocatee[Ptr[A]]]] =
-      val addr = segAlloc.allocateArray(infoOf[A].layout, a.size).address
-      var i = 0
-      while i < a.length do
-         serializerOf[A].into(a(i), addr, i * infoOf[A].layout.byteSize)
-         i += 1
+   def serialize: Allocatee[Scopee[Informee[A, Exportee[Array[A], Ptr[A]]]]] =
+      val addr = exportValue(a)
       Ptr[A](addr, 0)
 
 extension [A, S <: Iterable[A]](s: S)

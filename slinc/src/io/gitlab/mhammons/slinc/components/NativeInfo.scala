@@ -5,6 +5,8 @@ CLinker.{C_INT, C_FLOAT, C_DOUBLE, C_LONG, C_POINTER, C_SHORT, C_CHAR}
 
 type Informee[A, B] = NativeInfo[A] ?=> B
 def infoOf[A]: Informee[A, NativeInfo[A]] = summon[NativeInfo[A]]
+def layoutOf[A]: Informee[A, MemoryLayout] = infoOf[A].layout
+def carrierOf[A]: Informee[A, Class[?]] = infoOf[A].carrierType
 trait NativeInfo[A]:
    val layout: MemoryLayout
    val carrierType: Class[?]
@@ -50,3 +52,7 @@ object NativeInfo:
 
    given [A]: NativeInfo[Array[A]] =
       summon[NativeInfo[String]].asInstanceOf[NativeInfo[Array[A]]]
+
+   given [A](using Fn[A]): NativeInfo[A] with
+      val layout = C_POINTER
+      val carrierType = classOf[MemoryAddress]

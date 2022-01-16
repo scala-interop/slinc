@@ -49,7 +49,7 @@ class StructBenchmark:
 
    @Setup(Level.Iteration)
    def setup() =
-      rs = ResourceScope.newConfinedScope
+      given rs: ResourceScope = ResourceScope.newConfinedScope
       segAlloc = SegmentAllocator.arenaAllocator(rs)
       memAlloc = SegmentAllocator.ofScope(rs)
       given SegmentAllocator = segAlloc

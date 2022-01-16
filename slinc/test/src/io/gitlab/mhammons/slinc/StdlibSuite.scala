@@ -1,6 +1,7 @@
 package io.gitlab.mhammons.slinc
 
 import jdk.incubator.foreign.SegmentAllocator
+import components.layoutOf
 
 class StdlibSuite extends munit.FunSuite:
    case class tm(
@@ -100,6 +101,28 @@ class StdlibSuite extends munit.FunSuite:
       def localtime(timer: Ptr[Long]): Ptr[tm] = bind
    }
 
-// test("getpie".fail) {
-//    NativeIO.function[() => Long]("getpie")().foldMap(NativeIO.impureCompiler)
-// }
+   test("qsort") {
+      def qsort(
+          arr: Ptr[Any],
+          numElements: Long,
+          elementSize: Long,
+          fn: Ptr[(Ptr[Any], Ptr[Any]) => Int]
+      ): Unit = bind
+
+      val arr = Array(2, 1, 5, 8, -1)
+      val result = scope {
+         val ptr = Array(2, 1, 5, 8, -1).serialize.castTo[Any]
+         val fn =
+            (a1: Ptr[Any], a2: Ptr[Any]) => !a1.castTo[Int] - !a2.castTo[Int]
+         qsort(
+           ptr,
+           arr.size,
+           layoutOf[Int].byteSize(),
+           fn.serialize
+         )
+
+         ptr.castTo[Int].toArray(5)
+      }
+
+      assertEquals(result.toSeq, arr.sorted.toSeq)
+   }

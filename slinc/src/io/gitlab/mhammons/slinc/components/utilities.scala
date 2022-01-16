@@ -6,7 +6,9 @@ import jdk.incubator.foreign.{
    CLinker,
    SymbolLookup,
    MemoryAddress,
-   SegmentAllocator
+   MemorySegment,
+   SegmentAllocator,
+   ResourceScope
 }
 import scala.jdk.OptionConverters.*
 import scala.compiletime.ops.boolean.!
@@ -31,3 +33,10 @@ extension (expr: Expr.type)
 type Allocatee[A] = SegmentAllocator ?=> A
 
 val segAlloc: Allocatee[SegmentAllocator] = summon[SegmentAllocator]
+
+def allocate[A]: Allocatee[Informee[A, MemorySegment]] =
+   segAlloc.allocate(layoutOf[A])
+
+type Scopee[A] = ResourceScope ?=> A
+
+val currentScope: Scopee[ResourceScope] = summon[ResourceScope]

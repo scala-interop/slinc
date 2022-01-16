@@ -6,6 +6,8 @@ type Immigratee[A, B] = Immigrator[A] ?=> B
 
 def immigrator[A]: Immigratee[A, Immigrator[A]] = summon[Immigrator[A]]
 
+def immigrate[A](a: Any): Immigratee[A, A] = immigrator[A](a)
+
 trait Immigrator[A]:
    def apply(a: Any): A
 

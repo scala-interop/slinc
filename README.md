@@ -113,6 +113,58 @@ Please note that this dereferencing operation involves copying data to and from 
 !ptr.partial.quot = 5 //only copies 5 from the jvm, and only writes it to the memory for quot
 ```
 
+## Function Pointers
+
+Function pointers can be sent and received in SLinC as Ptrs to Scala Function types. To send a function to C, you need to call `serialize` on the function.
+
+```scala
+def qsort(
+   arr: Ptr[Any],
+   numElements: Long,
+   elementSize: Long,
+   fn: Ptr[(Ptr[Any], Ptr[Any]) => Int]
+): Unit = bind
+
+val arr = Array(2, 1, 5, 8, -1)
+val result = scope {
+   val ptr = Array(2, 1, 5, 8, -1).serialize.castTo[Any]
+   val fn = (a1: Ptr[Any], a2: Ptr[Any]) => !a1.castTo[Int] - !a2.castTo[Int]
+   qsort(
+   ptr,
+   arr.size,
+   layoutOf[Int].byteSize(),
+   fn.serialize
+   )
+
+   ptr.castTo[Int].toArray(5)
+}
+
+assertEquals(result.toSeq, arr.sorted.toSeq)
+```
+
+In the above example, the scala sorting function `fn` is passed to qsort via serialization, and it is used by C to sort the array passed in. 
+
+You can also dereference function pointers from C...
+
+```C
+int adder(int a, int b)
+{
+   return a + b;
+}
+
+typedef int (*adderfn)(int, int);
+adderfn slinc_fptr_ret2()
+{
+   return adder;
+}
+```
+
+```scala
+def slinc_fptr_ret2(): Ptr[(Int, Int) => Int] = bind
+
+val fn = !slinc_fptr_ret2()
+assertEquals(fn(1,2), 3)
+```
 ## Non-standard lib bindings
 
 The bind macro will search in the standard lib by default for methods to bind to. If you want to bind to a lib you wrote, or one on your system, create a singleton object that extends the Library trait. An example follows:
@@ -195,4 +247,4 @@ The library trait takes a `Location`:
 ## Unsupported at present
 
 * Union types
-* Callbacks
+* Padding
