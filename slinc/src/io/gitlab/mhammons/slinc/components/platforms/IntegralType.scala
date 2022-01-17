@@ -1,4 +1,4 @@
-package io.gitlab.mhammons.slinc.platform
+package io.gitlab.mhammons.slinc.platforms
 
 import io.gitlab.mhammons.slinc.components.Immigrator
 import io.gitlab.mhammons.slinc.components.NativeInfo

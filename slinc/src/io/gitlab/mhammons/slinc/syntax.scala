@@ -18,9 +18,12 @@ import io.gitlab.mhammons.slinc.components.{
    serializerOf,
    infoOf,
    exportValue,
-   summonOrError
+   summonOrError,
+   selectPlatform,
+   Platform
 }
 import scala.reflect.ClassTag
+import io.gitlab.mhammons.slinc.components.PlatformX64Linux
 
 transparent inline def bind = ${
    bindImpl('false)
@@ -122,3 +125,5 @@ extension [A, S <: Iterable[A]](s: S)
          serializerOf[A].into(a, addr, i * infoOf[A].layout.byteSize)
       )
       Ptr[A](addr, 0)
+
+val platform: Platform = selectPlatform

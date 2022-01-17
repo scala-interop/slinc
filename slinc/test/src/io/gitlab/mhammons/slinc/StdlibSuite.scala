@@ -79,11 +79,13 @@ class StdlibSuite extends munit.FunSuite:
    }
 
    test("asctime") {
-      import myp.time_t
+      import platform.time_t
 
       def time(timer: Ptr[Long]): time_t = bind
 
       val t = time(Ptr.Null())
+
+      val y = t + t
 
       def localtime(timer: Ptr[time_t]): Ptr[tm] = bind
 
@@ -97,7 +99,7 @@ class StdlibSuite extends munit.FunSuite:
    }
 
    test("localtime") {
-      def time(timer: Ptr[Long]): myp.time_t = bind
+      def time(timer: Ptr[Long]): platform.time_t = bind
 
       def localtime(timer: Ptr[Long]): Ptr[tm] = bind
    }

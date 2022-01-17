@@ -40,3 +40,5 @@ def allocate[A]: Allocatee[Informee[A, MemorySegment]] =
 type Scopee[A] = ResourceScope ?=> A
 
 val currentScope: Scopee[ResourceScope] = summon[ResourceScope]
+
+val platform = 5

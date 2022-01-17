@@ -1,6 +1,7 @@
 import os.Path
 import $file.benchmark
 import $file.publishable
+import $file.platform
 import mill._, scalalib._
 import $ivy.`com.lihaoyi::mill-contrib-buildinfo:`
 import mill.contrib.buildinfo.BuildInfo
@@ -16,6 +17,7 @@ object v {
 
 object slinc
     extends ScalaModule
+    with platform.PlatformTypegen
     with publishable.PublishableModule
     with benchmark.BenchmarksModule {
    def mimaPreviousVersions = Seq("0.0.0-45-0647f5-DIRTY50d251bf")
@@ -40,7 +42,6 @@ object slinc
      "--enable-native-access",
      "ALL-UNNAMED"
    )
-
    object test extends Tests with TestModule.Munit with BuildInfo {
       def scalacOptions = Seq(
         "-deprecation",
