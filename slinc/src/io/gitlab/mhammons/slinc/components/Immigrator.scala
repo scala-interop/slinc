@@ -26,3 +26,10 @@ object Immigrator:
    given Immigrator[Int] = _.asInstanceOf[Int]
 
    given Immigrator[Char] = _.asInstanceOf[Char]
+
+   given Immigrator[Byte] = _.asInstanceOf[Byte]
+
+   given Immigrator[Short] = _.asInstanceOf[Short]
+
+   given Immigrator[Boolean] = a =>
+      if a.asInstanceOf[Byte] == 1 then true else false

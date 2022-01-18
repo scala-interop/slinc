@@ -25,3 +25,11 @@ object Emigrator:
    given Emigrator[Float] with
       def apply(a: Float) = a
 
+   given Emigrator[Byte] with
+      def apply(a: Byte) = a
+
+   given Emigrator[Short] with
+      def apply(a: Short) = a
+
+   given Emigrator[Boolean] with
+      def apply(a: Boolean) = if a then 1.toByte else 0.toByte
