@@ -9,8 +9,52 @@
 # but an image with a JVM speeds up the build a bit.
 image: registry.gitlab.com/mhammons/slinc:latest
 
+stages:
+  - build
+  - test
+  - pages
+
+compile: 
+  stage: build
+  cache:
+    - key: mill
+      paths: 
+        - .cache/*
+    - key: $CI_PIPELINE_ID
+      paths:
+        - out/*
+  script:    
+    - XDG_CACHE_HOME=$CI_BUILDS_DIR/$CI_PROJECT_PATH/.cache mill -D user.home=$CI_BUILDS_DIR/$CI_PROJECT_PATH/ clean
+    - XDG_CACHE_HOME=$CI_BUILDS_DIR/$CI_PROJECT_PATH/.cache mill -D user.home=$CI_BUILDS_DIR/$CI_PROJECT_PATH/ slinc.compile
+
 test:
+  stage: test
+  cache:
+    - key: mill
+      paths: 
+        - .cache/*
+    - key: $CI_PIPELINE_ID
+      paths:
+        - out/*
+
   script:
     # Execute your project's tests
-    - /usr/local/bin/mill clean
-    - /usr/local/bin/mill slinc.test
+    - XDG_CACHE_HOME=$CI_BUILDS_DIR/$CI_PROJECT_PATH/.cache mill -D user.home=$CI_BUILDS_DIR/$CI_PROJECT_PATH/ slinc.test
+
+pages: 
+  stage: pages
+  cache:
+    - key: mill
+      paths: 
+        - .cache/*
+    - key: $CI_PIPELINE_ID
+      paths:
+        - out/*
+  needs: [test]
+  script: 
+    - XDG_CACHE_HOME=$CI_BUILDS_DIR/$CI_PROJECT_PATH/.cache mill -D user.home=$CI_BUILDS_DIR/$CI_PROJECT_PATH/ slinc.docJar
+    - cp -rv out/slinc/docJar.dest/javadoc .
+    - mv javadoc public
+  artifacts:
+    paths:
+      - public

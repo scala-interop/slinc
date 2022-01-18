@@ -26,6 +26,8 @@ object slinc
    def moduleDeps = Seq(polymorphics)
    def scalaVersion = "3.1.0"
    def pomSettings = pomTemplate("SLinC - Scala <-> C Interop")
+   println("home")
+   println(System.getProperty("user.home"))
 
    def scalacOptions = Seq(
      "-deprecation",
@@ -42,6 +44,10 @@ object slinc
      "--enable-native-access",
      "ALL-UNNAMED"
    )
+
+   def docSources = T.sources {
+      super.docSources() :+ PathRef(millSourcePath / "docs")
+   }
    object test extends Tests with TestModule.Munit with BuildInfo {
       def scalacOptions = Seq(
         "-deprecation",
