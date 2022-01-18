@@ -8,14 +8,14 @@ def infoOf[A]: Informee[A, NativeInfo[A]] = summon[NativeInfo[A]]
 def layoutOf[A]: Informee[A, MemoryLayout] = infoOf[A].layout
 def carrierOf[A]: Informee[A, Class[?]] = infoOf[A].carrierType
 trait NativeInfo[A]:
-   val layout: MemoryLayout
-   val carrierType: Class[?]
+   def layout: MemoryLayout
+   def carrierType: Class[?]
 
 object NativeInfo:
 
    def apply[A](using NativeInfo[A]) = summon[NativeInfo[A]]
    given NativeInfo[Int] with
-      val layout = C_INT
+      def layout = C_INT
       val carrierType = classOf[Int]
 
    given NativeInfo[Float] with
@@ -27,7 +27,7 @@ object NativeInfo:
       val carrierType = classOf[Double]
 
    given NativeInfo[Long] with
-      val layout = C_LONG
+      def layout = C_LONG
       val carrierType = classOf[Long]
 
    given NativeInfo[String] with
@@ -35,7 +35,7 @@ object NativeInfo:
       val carrierType = classOf[MemoryAddress]
 
    given NativeInfo[Short] with
-      val layout = C_SHORT
+      def layout = C_SHORT
       val carrierType = classOf[Short]
 
    given NativeInfo[Boolean] with
@@ -43,7 +43,7 @@ object NativeInfo:
       val carrierType = classOf[Boolean]
 
    given NativeInfo[Byte] with
-      val layout = C_CHAR
+      def layout = C_CHAR
       val carrierType = classOf[Byte]
 
    given NativeInfo[Char] with

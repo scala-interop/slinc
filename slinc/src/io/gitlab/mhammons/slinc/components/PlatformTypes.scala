@@ -48,7 +48,7 @@ trait Platform
    type Int64T = int64_t
    type UInt64T = u_int64_t
 
-object PlatformX64Linux
+case object PlatformX64Linux
     extends Platform,
       IntptrTImpl[Platform#Int64T],
       UintptrTImpl[Platform#UInt64T],
@@ -81,6 +81,6 @@ object PlatformX64Linux
       SpeedTImpl[Platform#UInt32T],
       TcflagTImpl[Platform#UInt32T]
 
-def selectPlatform = (arch, os) match
+val platform = (arch, os) match
    case (Arch.X86_64, OS.Linux) => PlatformX64Linux
    case _ => throw new Error("Platform isn't supported...")

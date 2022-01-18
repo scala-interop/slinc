@@ -19,7 +19,6 @@ import io.gitlab.mhammons.slinc.components.{
    infoOf,
    exportValue,
    summonOrError,
-   selectPlatform,
    Platform
 }
 import scala.reflect.ClassTag
@@ -126,4 +125,4 @@ extension [A, S <: Iterable[A]](s: S)
       )
       Ptr[A](addr, 0)
 
-val platform: Platform = selectPlatform
+val platform: Platform = components.platform
