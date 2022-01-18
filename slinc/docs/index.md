@@ -1,11 +1,11 @@
 ---
-title: SLinC
+title: slinc
 layout: main
 ---
 
-# slinc - Scala Link to C
+# **sl**in**c** - **S**cala **L**ink to **C**
 
-SLinC is a Scala 3 library that allows users to interoperate with C code via Java 17's [foreign api incubator](https://docs.oracle.com/en/java/javase/17/docs/api/jdk.incubator.foreign/jdk/incubator/foreign/package-summary.html).
+slinc is a Scala 3 library that allows users to interoperate with C code via Java 17's [foreign api incubator](https://docs.oracle.com/en/java/javase/17/docs/api/jdk.incubator.foreign/jdk/incubator/foreign/package-summary.html).
 
 It's designed to make use of Scala's type system and macros to handle most of the work of making bindings to C from Scala.
 
@@ -235,11 +235,11 @@ object Testlib extends Library(Location.Local("slinc/test/native/libtest.so")):
    def slinc_two_structs(a: a_t, b: a_t): Int = bind
 ```
 
-The library trait takes a `Location`: 
+The library trait takes a [Location](io/gitlab/mhammons/slinc/Location.html): 
 
-* Local: a location that is relative to your running program
-* Absolute: a location that is an absolute path to a library on your system
-* System: the name of a library in the standard path of your system
+* [Local](io/gitlab/mhammons/slinc/Location$$Local.html): a location that is relative to your running program
+* [Absolute](io/gitlab/mhammons/slinc/Location$$Absolute.html): a location that is an absolute path to a library on your system
+* [System](io/gitlab/mhammons/slinc/Location$$System.html): the name of a library in the standard path of your system
 
 
 

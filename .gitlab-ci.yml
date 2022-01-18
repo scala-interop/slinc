@@ -43,6 +43,7 @@ test:
 
 pages: 
   stage: pages
+  only: [tags]
   cache:
     - key: mill
       paths: 
