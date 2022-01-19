@@ -126,7 +126,9 @@ extension [A, S <: Iterable[A]](s: S)
       Ptr[A](addr, 0)
 
 extension (s: String)
-   def serialize: Allocatee[Ptr[Char]] =
-      Ptr[Char](CLinker.toCString(s, segAlloc).address, 0)
+   def serialize: Allocatee[Ptr[Byte]] =
+      Ptr[Byte](CLinker.toCString(s, segAlloc).address, 0)
 
 val platform: Platform = components.platform
+
+export components.HelperTypes.*

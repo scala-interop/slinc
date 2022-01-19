@@ -29,28 +29,25 @@ object Exporter:
       serialize(a, address, 0)
       address
 
-   given Exporter[Int] with
-      def exportValue(a: Int) = allocatingSerialize(a)
-   given Exporter[Long] with
-      def exportValue(a: Long) = allocatingSerialize(a)
+   def derive[A]: Informee[A, Serializee[A, Exporter[A]]] =
+      new Exporter[A]:
+         def exportValue(a: A) = allocatingSerialize(a)
 
-   given Exporter[Float] with
-      def exportValue(a: Float) = allocatingSerialize(a)
+   given Exporter[Int] = derive[Int]
+   given Exporter[Long] = derive[Long]
+   given Exporter[Float] = derive[Float]
 
-   given Exporter[Double] with
-      def exportValue(a: Double) = allocatingSerialize(a)
+   given Exporter[Double] = derive[Double]
 
-   given Exporter[Short] with
-      def exportValue(a: Short) = allocatingSerialize(a)
+   given Exporter[Short] = derive[Short]
 
-   given Exporter[Boolean] with
-      def exportValue(a: Boolean) = allocatingSerialize(a)
+   given Exporter[Boolean] = derive[Boolean]
 
-   given Exporter[Char] with
-      def exportValue(a: Char) = allocatingSerialize(a)
+   // given Exporter[Char] with
+   //    def exportValue(a: Char) = allocatingSerialize(a)
 
-   given Exporter[Byte] with
-      def exportValue(a: Byte) = allocatingSerialize(a)
+   given Exporter[Byte] = derive[Byte]
+
    given [A](using Serializer[A], NativeInfo[A]): Exporter[Array[A]] with
       def exportValue(a: Array[A]) =
          val address = segAlloc.allocate(layoutOf[A].byteSize * a.size).address

@@ -18,7 +18,11 @@ def serialize[A](
 //todo: rename to encoder
 trait Serializer[A]:
    def into(a: A, memoryAddress: MemoryAddress, offset: Long): Unit
-
+   def contramap[B](fn: B => A): Serializer[B] =
+      val orig = this
+      new Serializer[B]:
+         def into(a: B, memoryAddress: MemoryAddress, offset: Long) =
+            orig.into(fn(a), memoryAddress, offset)
 object Serializer:
    given Serializer[Int] with
       def into(a: Int, memoryAddress: MemoryAddress, offset: Long) =

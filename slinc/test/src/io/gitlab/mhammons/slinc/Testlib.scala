@@ -24,10 +24,10 @@ object Testlib extends Library(Location.Absolute(BuildInfo.libtest)):
    def short_test(a: Short): Short = bind
    def int_test(a: Int): Int = bind
    def long_test(a: Long): Long = bind
-   def char_test(a: Char): Char = bind
-   def string_test(str: Ptr[Char]): Char = bind
+   def char_test(a: AsciiChar): AsciiChar = bind
+   def string_test(str: Ptr[Byte]): AsciiChar = bind
    def bool_test(a: Boolean): Boolean = bind
    def float_test(f: Float): Float = bind
    def double_test(d: Double): Double = bind
-   def bad_method(str: Ptr[Char]): Unit = bind
-   def ibreak(str: Ptr[Char]): String = bind
+   def bad_method(str: Ptr[Byte]): Unit = bind
+   def ibreak(str: Ptr[Byte]): String = bind

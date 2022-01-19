@@ -42,7 +42,7 @@ class StdlibSuite extends munit.FunSuite:
    }
 
    test("atof") {
-      def atof(s: Ptr[Char]): Double = bind
+      def atof(s: Ptr[Byte]): Double = bind
       assertEquals(
         scope(atof("5.0".serialize)),
         5.0
@@ -50,7 +50,7 @@ class StdlibSuite extends munit.FunSuite:
    }
 
    test("getenv") {
-      def getenv(name: Ptr[Char]): String =
+      def getenv(name: Ptr[Byte]): String =
          bind
       assertEquals(
         scope(getenv("PATH".serialize)),
@@ -59,7 +59,7 @@ class StdlibSuite extends munit.FunSuite:
    }
 
    test("strlen") {
-      def strlen(string: Ptr[Char]): Int =
+      def strlen(string: Ptr[Byte]): Int =
          bind
       assertEquals(
         scope(strlen("hello".serialize)),

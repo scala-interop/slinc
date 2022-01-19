@@ -1,6 +1,7 @@
 package io.gitlab.mhammons.slinc.components
 
 import jdk.incubator.foreign.{CLinker, MemoryAddress}
+import scala.annotation.targetName
 
 type Immigratee[A, B] = Immigrator[A] ?=> B
 
@@ -10,6 +11,11 @@ def immigrate[A](a: Any): Immigratee[A, A] = immigrator[A](a)
 
 trait Immigrator[A]:
    def apply(a: Any): A
+   @targetName("mapImm")
+   def map[B](fn: A => B): Immigrator[B] =
+      val orig = this
+      new Immigrator[B]:
+         def apply(a: Any): B = fn(orig(a))
 
 object Immigrator:
    given Immigrator[Unit] = _ => ()

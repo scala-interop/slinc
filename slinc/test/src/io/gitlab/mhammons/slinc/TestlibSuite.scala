@@ -81,12 +81,15 @@ class TestlibSuite extends munit.FunSuite:
    }
 
    test("char works properly") {
-      assertEquals(char_test('a'), 'A')
+      assertEquals(
+        char_test('a'.asAsciiOrFail),
+        'A'.asAsciiOrFail
+      )
    }
 
    test("string works properly") {
       scope {
-         assertEquals(string_test("hello world".serialize), 'e')
+         assertEquals(string_test("hello world".serialize).toChar, 'e')
       }
    }
 
@@ -123,5 +126,35 @@ class TestlibSuite extends munit.FunSuite:
       scope {
          bad_method("hello world".serialize)
          assertEquals(ibreak("goodbye world".serialize), "goodbye world")
+      }
+   }
+
+   test("can serialize and deserialize int") {
+      scope {
+         assertEquals(4.serialize.deref, 4)
+      }
+   }
+
+   test("can serialize and deserialize boolean") {
+      scope {
+         assertEquals(true.serialize.deref, true)
+      }
+   }
+
+   test("can serialize and deserialize float") {
+      scope {
+         assertEquals(5.0f.serialize.deref, 5.0f)
+      }
+   }
+
+   test("can serialize and deserialize char") {
+      scope {
+         assertEquals('a'.asAsciiOrFail.serialize.deref, 'a'.asAsciiOrFail)
+      }
+   }
+
+   test("can't serialize and deserialize ʯ".fail) {
+      scope {
+         assertEquals('ʯ'.asAsciiOrFail.serialize.deref, 'ʯ'.asAsciiOrFail)
       }
    }
