@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <ctype.h>
 
 struct a_t
 {
@@ -17,6 +18,71 @@ struct c_t
    int a[3];
    float b[3];
 };
+
+int int_test(int a)
+{
+   return a + 3;
+}
+
+short short_test(short a)
+{
+   return a + 2;
+}
+
+char byte_test(char a)
+{
+   return a + 1;
+}
+
+char char_test(char a)
+{
+   return toupper(a);
+}
+
+long long_test(long a)
+{
+   return a + 4;
+}
+
+float float_test(float a)
+{
+   return a + 4.0f;
+}
+
+double double_test(double a)
+{
+   return a + 3.0;
+}
+
+int bool_test(int a)
+{
+   if (a)
+   {
+      return !a;
+   }
+   else
+   {
+      return a;
+   }
+}
+
+char string_test(char *str)
+{
+   return str[1];
+}
+
+char *badval;
+
+void bad_method(const char *str)
+{
+   badval = str;
+   return;
+}
+
+char *ibreak(char *str)
+{
+   return badval;
+}
 
 struct b_t slinc_test_modify(struct b_t b)
 {

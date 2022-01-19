@@ -1,6 +1,7 @@
 package io.gitlab.mhammons.slinc.components
 
 import jdk.incubator.foreign.{CLinker, SegmentAllocator}
+import scala.annotation.targetName
 
 type Emigratee[A, B] = Emigrator[A] ?=> B
 
@@ -9,6 +10,11 @@ def emigrate[A](a: A): Allocatee[Emigratee[A, Any]] = emigrator[A](a)
 
 trait Emigrator[A]:
    def apply(a: A): Allocatee[Any]
+   @targetName("contramapEm")
+   def contramap[B](fn: B => A): Emigrator[B] =
+      val orig = this
+      new Emigrator[B]:
+         def apply(b: B) = orig(fn(b))
 
 object Emigrator:
    given Emigrator[Int] with
@@ -16,8 +22,6 @@ object Emigrator:
 
    given Emigrator[Long] with
       def apply(a: Long) = a
-   given Emigrator[String] with
-      def apply(a: String) = CLinker.toCString(a, segAlloc).address
 
    given Emigrator[Double] with
       def apply(a: Double) = a
@@ -31,5 +35,7 @@ object Emigrator:
    given Emigrator[Short] with
       def apply(a: Short) = a
 
-   given Emigrator[Boolean] with
-      def apply(a: Boolean) = if a then 1.toByte else 0.toByte
+   given Emigrator[Boolean] =
+      emigrator[Byte].contramap[Boolean](if _ then 0 else 1)
+
+// given Emigrator[Char] =

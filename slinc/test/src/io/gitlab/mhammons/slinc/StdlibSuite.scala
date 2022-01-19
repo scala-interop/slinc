@@ -42,27 +42,27 @@ class StdlibSuite extends munit.FunSuite:
    }
 
    test("atof") {
-      def atof(s: String): Double = bind
+      def atof(s: Ptr[Byte]): Double = bind
       assertEquals(
-        scope(atof("5.0")),
+        scope(atof("5.0".serialize)),
         5.0
       )
    }
 
    test("getenv") {
-      def getenv(name: String): String =
+      def getenv(name: Ptr[Byte]): String =
          bind
       assertEquals(
-        scope(getenv("PATH")),
+        scope(getenv("PATH".serialize)),
         System.getenv("PATH")
       )
    }
 
    test("strlen") {
-      def strlen(string: String): Int =
+      def strlen(string: Ptr[Byte]): Int =
          bind
       assertEquals(
-        scope(strlen("hello")),
+        scope(strlen("hello".serialize)),
         5
       )
    }

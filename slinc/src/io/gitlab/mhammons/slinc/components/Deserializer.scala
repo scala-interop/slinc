@@ -21,40 +21,55 @@ def deserializerOf[A]: Deserializee[A, Deserializer[A]] =
 //todo: rename to decoder
 trait Deserializer[A]:
    def from(memoryAddress: MemoryAddress, offset: Long): A
+
+   def map[B](fn: A => B): Deserializer[B] =
+      val orig = this
+      new Deserializer[B]:
+         def from(memoryAddress: MemoryAddress, offset: Long) = fn(
+           orig.from(memoryAddress, offset)
+         )
 object Deserializer:
+   inline def getAtOffset[A](
+       inline fn: (MemorySegment, Long) => A,
+       inline memoryAddress: MemoryAddress,
+       inline offset: Long
+   ) =
+      fn(
+        MemorySegment.globalNativeSegment,
+        memoryAddress.toRawLongValue + offset
+      )
    given Deserializer[Int] with
       def from(memoryAddress: MemoryAddress, offset: Long) =
-         MemoryAccess.getIntAtOffset(
-           MemorySegment.globalNativeSegment,
-           memoryAddress.toRawLongValue + offset
-         )
+         getAtOffset(MemoryAccess.getIntAtOffset, memoryAddress, offset)
    given Deserializer[Float] with
       def from(memoryAddress: MemoryAddress, offset: Long) =
-         MemoryAccess.getFloatAtOffset(
-           MemorySegment.globalNativeSegment,
-           memoryAddress.toRawLongValue + offset
-         )
+         getAtOffset(MemoryAccess.getFloatAtOffset, memoryAddress, offset)
 
    given Deserializer[Long] with
       def from(memoryAddress: MemoryAddress, offset: Long) =
-         MemoryAccess.getLongAtOffset(
-           MemorySegment.globalNativeSegment,
-           memoryAddress.toRawLongValue + offset
-         )
+         getAtOffset(MemoryAccess.getLongAtOffset, memoryAddress, offset)
 
    given Deserializer[Short] with
       def from(memoryAddress: MemoryAddress, offset: Long) =
-         MemoryAccess.getShortAtOffset(
-           MemorySegment.globalNativeSegment,
-           memoryAddress.toRawLongValue + offset
-         )
+         getAtOffset(MemoryAccess.getShortAtOffset, memoryAddress, offset)
 
    given Deserializer[Byte] with
       def from(memoryAddress: MemoryAddress, offset: Long) =
-         MemoryAccess.getByteAtOffset(
-           MemorySegment.globalNativeSegment,
-           memoryAddress.toRawLongValue + offset
-         )
+         getAtOffset(MemoryAccess.getByteAtOffset, memoryAddress, offset)
+
+   given Deserializer[Boolean] with
+      def from(memoryAddress: MemoryAddress, offset: Long) =
+         if getAtOffset(
+              MemoryAccess.getByteAtOffset,
+              memoryAddress,
+              offset
+            ) == 0
+         then false
+         else true
+
+   given Deserializer[Char] with
+      def from(memoryAddress: MemoryAddress, offset: Long) =
+         getAtOffset(MemoryAccess.getCharAtOffset, memoryAddress, offset)
 
    private val paramNames =
       LazyList.iterate('a', 24)(c => (c.toInt + 1).toChar).map(_.toString)

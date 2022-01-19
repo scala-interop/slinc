@@ -26,8 +26,6 @@ object slinc
    def moduleDeps = Seq(polymorphics)
    def scalaVersion = "3.1.0"
    def pomSettings = pomTemplate("SLinC - Scala <-> C Interop")
-   println("home")
-   println(System.getProperty("user.home"))
 
    def scalacOptions = Seq(
      "-deprecation",
@@ -37,6 +35,13 @@ object slinc
      "-Xprint-suspension",
      "-Xsemanticdb"
    )
+
+   def scalaDocOptions = T {
+      super.scalaDocOptions() ++ Seq(
+        "-project-logo",
+        (millSourcePath / "docs" / "logo.jpg").toString
+      )
+   }
 
    def forkArgs = Seq(
      "--add-modules",
@@ -85,6 +90,7 @@ object slinc
                  "gcc",
                  "-shared",
                  "-fPIC",
+                 "-Wall",
                  "-o",
                  T.dest / s"lib${p.last.stripSuffix(".c")}.so",
                  p
