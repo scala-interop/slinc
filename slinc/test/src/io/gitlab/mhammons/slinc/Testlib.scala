@@ -7,17 +7,6 @@ object Testlib extends Library(Location.Absolute(BuildInfo.libtest)):
    case class b_t(c: Int, d: a_t) derives Struct
 
    case class d_t(p: Ptr[a_t]) derives Struct
-
-   scope {
-      val a = a_t(3, 2).serialize
-
-      val x: Ptr[d_t] = d_t(a).serialize
-      a.partial.b
-      val r = x.partial.p
-
-      println(x.partial.p.deref.b.deref)
-   }
-
    case class c_t(a: StaticArray[Int, 3], b: StaticArray[Float, 3])
        derives Struct
 
@@ -30,3 +19,15 @@ object Testlib extends Library(Location.Absolute(BuildInfo.libtest)):
    def slinc_upcall_a_t(zptr: Ptr[() => a_t]): Int = bind
    def slinc_fptr_ret(): Ptr[() => a_t] = bind
    def slinc_fptr_ret2(): Ptr[(Int, Int) => Int] = bind
+
+   def byte_test(b: Byte): Byte = bind
+   def short_test(a: Short): Short = bind
+   def int_test(a: Int): Int = bind
+   def long_test(a: Long): Long = bind
+   def char_test(a: Char): Char = bind
+   def string_test(str: Ptr[Char]): Char = bind
+   def bool_test(a: Boolean): Boolean = bind
+   def float_test(f: Float): Float = bind
+   def double_test(d: Double): Double = bind
+   def bad_method(str: Ptr[Char]): Unit = bind
+   def ibreak(str: Ptr[Char]): String = bind

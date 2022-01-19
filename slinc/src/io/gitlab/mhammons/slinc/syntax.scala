@@ -4,8 +4,7 @@ import scala.quoted.*
 import scala.util.chaining.*
 import scala.util.{Try => T}
 
-import jdk.incubator.foreign.SegmentAllocator
-import jdk.incubator.foreign.ResourceScope
+import jdk.incubator.foreign.{SegmentAllocator, ResourceScope, CLinker}
 import io.gitlab.mhammons.slinc.components.{
    Allocatee,
    MethodHandleMacros,
@@ -21,6 +20,7 @@ import io.gitlab.mhammons.slinc.components.{
    summonOrError,
    Platform
 }
+
 import scala.reflect.ClassTag
 import io.gitlab.mhammons.slinc.components.PlatformX64Linux
 
@@ -124,5 +124,9 @@ extension [A, S <: Iterable[A]](s: S)
          serializerOf[A].into(a, addr, i * infoOf[A].layout.byteSize)
       )
       Ptr[A](addr, 0)
+
+extension (s: String)
+   def serialize: Allocatee[Ptr[Char]] =
+      Ptr[Char](CLinker.toCString(s, segAlloc).address, 0)
 
 val platform: Platform = components.platform

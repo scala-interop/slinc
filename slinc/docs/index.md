@@ -234,12 +234,12 @@ object Testlib extends Library(Location.Local("slinc/test/native/libtest.so")):
    def slinc_test_getstaticarr(): Ptr[Int] = bind
    def slinc_two_structs(a: a_t, b: a_t): Int = bind
 ```
+[[io.gitlab.mhammons.slinc.Location]]
+The library trait takes a [[io.gitlab.mhammons.slinc.Location]]: 
 
-The library trait takes a [Location](io/gitlab/mhammons/slinc/Location.html): 
-
-* [Local](io/gitlab/mhammons/slinc/Location$$Local.html): a location that is relative to your running program
-* [Absolute](io/gitlab/mhammons/slinc/Location$$Absolute.html): a location that is an absolute path to a library on your system
-* [System](io/gitlab/mhammons/slinc/Location$$System.html): the name of a library in the standard path of your system
+* [[io.gitlab.mhammons.slinc.Location.Local]]: a location that is relative to your running program
+* [[io.gitlab.mhammons.slinc.Location.Absolute]]: a location that is an absolute path to a library on your system
+* [[io.gitlab.mhammons.slinc.Location.System]]: the name of a library in the standard path of your system
 
 
 

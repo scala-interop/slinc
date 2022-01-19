@@ -16,8 +16,6 @@ object Emigrator:
 
    given Emigrator[Long] with
       def apply(a: Long) = a
-   given Emigrator[String] with
-      def apply(a: String) = CLinker.toCString(a, segAlloc).address
 
    given Emigrator[Double] with
       def apply(a: Double) = a
@@ -33,3 +31,6 @@ object Emigrator:
 
    given Emigrator[Boolean] with
       def apply(a: Boolean) = if a then 1.toByte else 0.toByte
+
+   given Emigrator[Char] with
+      def apply(a: Char) = a.toByte

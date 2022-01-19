@@ -1,6 +1,7 @@
 package io.gitlab.mhammons.slinc
 
 class TestlibSuite extends munit.FunSuite:
+   import Testlib.*
    test("modify") {
       val a = Testlib.a_t(3, 4)
       val b = Testlib.b_t(5, a)
@@ -77,4 +78,50 @@ class TestlibSuite extends munit.FunSuite:
       val res = Testlib.slinc_fptr_ret2().deref
 
       assertEquals(res(1, 2), 3)
+   }
+
+   test("char works properly") {
+      assertEquals(char_test('a'), 'A')
+   }
+
+   test("string works properly") {
+      scope {
+         assertEquals(string_test("hello world".serialize), 'e')
+      }
+   }
+
+   test("byte works properly") {
+      assertEquals(byte_test(1), 2.toByte)
+   }
+
+   test("short works properly") {
+      assertEquals(short_test(1), 3.toShort)
+   }
+
+   test("int works properly") {
+      assertEquals(int_test(1), 4)
+   }
+
+   test("long works properly") {
+      assertEquals(long_test(1), 5L)
+   }
+
+   test("boolean works properly") {
+      assertEquals(bool_test(true), false)
+      assertEquals(bool_test(false), false)
+   }
+
+   test("float works properly") {
+      assertEquals(float_test(3f), 7f)
+   }
+
+   test("double works properly") {
+      assertEquals(double_test(3d), 6d)
+   }
+
+   test("string passing via temporary allocator isn't safe".fail) {
+      scope {
+         bad_method("hello world".serialize)
+         assertEquals(ibreak("goodbye world".serialize), "goodbye world")
+      }
    }

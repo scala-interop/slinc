@@ -132,6 +132,9 @@ object Ptr:
    extension [A](a: Ptr[A])
       transparent inline def partial = ${ selectableImpl[A]('a) }
 
+   extension (a: Ptr[Char])
+      def asString = CLinker.toJavaString(a.asMemoryAddress)
+
    def selectableImpl[A: Type](nptr: Expr[Ptr[A]])(using Quotes) =
       val typeInfo = TypeInfo[A]
       produceDualRefinement(typeInfo) match

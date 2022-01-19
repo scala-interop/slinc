@@ -1,6 +1,6 @@
 package io.gitlab.mhammons.slinc.components
 
-import jdk.incubator.foreign.{MemoryAddress, FunctionDescriptor}
+import jdk.incubator.foreign.{MemoryAddress, FunctionDescriptor, CLinker}
 import scala.compiletime.erasedValue
 import io.gitlab.mhammons.polymorphics.VoidHelper
 import java.lang.invoke.{MethodType => MT, MethodHandles}
@@ -51,7 +51,6 @@ object Exporter:
 
    given Exporter[Byte] with
       def exportValue(a: Byte) = allocatingSerialize(a)
-
    given [A](using Serializer[A], NativeInfo[A]): Exporter[Array[A]] with
       def exportValue(a: Array[A]) =
          val address = segAlloc.allocate(layoutOf[A].byteSize * a.size).address
@@ -72,7 +71,6 @@ object Exporter:
          given Fn[A] = ${ Expr.summonOrError[Fn[A]] }
          new Exporter[A]:
             val typeName = ${ Expr(TypeRepr.of[A].typeSymbol.name) }
-            println(s"created exporter for $typeName")
             val methodType = MethodHandleMacros.methodTypeForFn[A]
 
             val functionDescriptor =
@@ -144,29 +142,4 @@ object Exporter:
                   )
                }
             }
-      }.tap(expr => report.info(expr.show))
-
-// inline given [A](using NativeInfo[A], Emigrator[A]): Exporter[Function0[A]] =
-//    new Exporter[Function0[A]]:
-//       val methodType = inline erasedValue[A] match
-//          case _: Unit => VoidHelper.methodTypeV
-//          case _       => MT.methodType(carrierOf[A])
-
-//       val functionDescriptor = inline erasedValue[A] match
-//          case _: Unit => FunctionDescriptor.ofVoid()
-//          case _       => FunctionDescriptor.of(layoutOf[A])
-
-//       val lambdaTemplate =
-//          MethodHandles.lookup
-//             .findVirtual(
-//               classOf[Function0[?]],
-//               "apply",
-//               MT.genericMethodType(0)
-//             )
-
-//       def exportValue(a: Function0[A]) =
-//          val lambdaMh = lambdaTemplate
-//             .bindTo(() => emigrate(a()))
-//             .asType(methodType)
-
-//          Linker.linker.upcallStub(lambdaMh, functionDescriptor, currentScope)
+      }

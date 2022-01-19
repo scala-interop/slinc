@@ -40,7 +40,7 @@ object NativeInfo:
 
    given NativeInfo[Boolean] with
       val layout = C_CHAR
-      val carrierType = classOf[Boolean]
+      val carrierType = classOf[Byte]
 
    given NativeInfo[Byte] with
       def layout = C_CHAR
@@ -48,7 +48,7 @@ object NativeInfo:
 
    given NativeInfo[Char] with
       val layout = C_CHAR
-      val carrierType = classOf[Char]
+      val carrierType = classOf[Byte]
 
    given [A]: NativeInfo[Array[A]] =
       summon[NativeInfo[String]].asInstanceOf[NativeInfo[Array[A]]]

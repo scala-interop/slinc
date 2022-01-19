@@ -26,14 +26,10 @@ sealed class TempAllocator:
 
    def allocate(bytes: Long): MemorySegment =
       if bytes + offset > currentSegment.byteSize then
-         println(
-           s"reallocating to fit cause total bytes needed is at ${offset + bytes} and current segment has size of ${currentSegment.byteSize}"
-         )
          addToRs(currentSegment.address)
          offset = 0L
          var nextSize = powersOf2.next
          while nextSize < bytes do nextSize = powersOf2.next
-         println(nextSize)
          currentSegment =
             MemorySegment.allocateNative(nextSize, ResourceScope.globalScope)
 

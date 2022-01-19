@@ -25,7 +25,7 @@ object Immigrator:
 
    given Immigrator[Int] = _.asInstanceOf[Int]
 
-   given Immigrator[Char] = _.asInstanceOf[Char]
+   given Immigrator[Char] = _.asInstanceOf[Byte].toChar
 
    given Immigrator[Byte] = _.asInstanceOf[Byte]
 
