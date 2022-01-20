@@ -137,4 +137,4 @@ extension (s: String)
 
 export components.HelperTypes.*
 export components.Variadic.variadicBind
-export components.platform
+export components.platform.*

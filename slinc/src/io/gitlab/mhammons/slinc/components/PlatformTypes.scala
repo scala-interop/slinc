@@ -47,6 +47,10 @@ trait Platform
    type UInt32T = u_int32_t
    type Int64T = int64_t
    type UInt64T = u_int64_t
+   type UByte = UInt8T
+   type UShort = UInt16T
+   type UInt = UInt32T
+   type ULong = UInt64T
 
 case object PlatformX64Linux
     extends Platform,
