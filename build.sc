@@ -2,6 +2,7 @@ import os.Path
 import $file.benchmark
 import $file.publishable
 import $file.platform
+import $file.variadic
 import mill._, scalalib._
 import $ivy.`com.lihaoyi::mill-contrib-buildinfo:`
 import mill.contrib.buildinfo.BuildInfo
@@ -19,9 +20,10 @@ object slinc
     extends ScalaModule
     with platform.PlatformTypegen
     with publishable.PublishableModule
-    with benchmark.BenchmarksModule {
+    with benchmark.BenchmarksModule
+    with variadic.VariadicGen {
    def mimaPreviousVersions = Seq("0.0.0-45-0647f5-DIRTY50d251bf")
-   override def mimaCheckDirection = CheckDirection.Both
+   override def mimaCheckDirection = CheckDirection.Backward
 
    def moduleDeps = Seq(polymorphics)
    def scalaVersion = "3.1.0"

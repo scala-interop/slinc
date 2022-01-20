@@ -102,7 +102,7 @@ object Deserializer:
                           MethodHandleMacros
                              .binding[r](
                                'memoryAddress,
-                               params.map(_.asExpr).zip(inputTypes)
+                               params.map(_.asExpr)
                              )
                              .asTerm
                              .changeOwner(meth)

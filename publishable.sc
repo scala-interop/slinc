@@ -8,7 +8,7 @@ import com.github.lolgab.mill.mima._
 trait PublishableModule extends PublishModule with Mima {
 
    def mimaPreviousVersions = Seq("0.0.0-45-0647f5-DIRTY50d251bf")
-   override def mimaCheckDirection = CheckDirection.Both
+   override def mimaCheckDirection: T[CheckDirection] = CheckDirection.Both
 
    def pomTemplate(description: String) = PomSettings(
      description = description,

@@ -158,3 +158,7 @@ class TestlibSuite extends munit.FunSuite:
          assertEquals('ʯ'.asAsciiOrFail.serialize.deref, 'ʯ'.asAsciiOrFail)
       }
    }
+
+   test("variadic function bindings") {
+      assertEquals(sum(5)(34, 2, 3, 4, 5), 34 + 2 + 3 + 4 + 5)
+   }
