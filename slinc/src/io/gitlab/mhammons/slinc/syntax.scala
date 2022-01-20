@@ -2,9 +2,12 @@ package io.gitlab.mhammons.slinc
 
 import scala.quoted.*
 import scala.util.chaining.*
-import scala.util.{Try => T}
+import scala.reflect.ClassTag
+import scala.util.NotGiven
+import scala.annotation.implicitNotFound
 
 import jdk.incubator.foreign.{SegmentAllocator, ResourceScope, CLinker}
+
 import io.gitlab.mhammons.slinc.components.{
    Allocatee,
    MethodHandleMacros,
@@ -15,40 +18,42 @@ import io.gitlab.mhammons.slinc.components.{
    SymbolLookup,
    segAlloc,
    serializerOf,
-   infoOf,
+   layoutOf,
    exportValue,
    summonOrError,
-   Platform
+   Platform,
+   widen
 }
 
-import scala.reflect.ClassTag
-import io.gitlab.mhammons.slinc.components.PlatformX64Linux
-
-transparent inline def bind = ${
-   bindImpl('false)
+inline def bind[R](using
+    @implicitNotFound(
+      "You must provide a return type for bind"
+    ) n: NotGiven[R =:= Nothing]
+): R = ${
+   bindImpl[R]('false)
 }
-transparent inline def bind(debug: Boolean = false) = ${
-   bindImpl('debug)
+inline def bind[R](debug: Boolean = false)(using
+    @implicitNotFound(
+      "You must provide a return type for bind"
+    ) n: NotGiven[R =:= Nothing]
+): R = ${
+   bindImpl[R]('debug)
 }
 
-private def bindImpl(debugExpr: Expr[Boolean])(using q: Quotes) =
+private def bindImpl[R](debugExpr: Expr[Boolean])(using q: Quotes)(using
+    Type[R]
+): Expr[R] =
    import quotes.reflect.*
 
    val debug = debugExpr.valueOrAbort
 
    val owner = Symbol.spliceOwner.owner
 
-   val (name, params, ret) =
+   val (name, params) =
       if owner.isDefDef then
 
-         T(owner.tree).fold(
-           _ =>
-              report.errorAndAbort(
-                "Could not properly analyze this method definition because the return type is missing. Please add one"
-              ),
-           identity
-         ) match
-            case d @ DefDef(name, parameters, dt, _) =>
+         owner.tree match
+            case d @ DefDef(name, parameters, _, _) =>
                parameters
                   .collectFirst {
                      case TypeParamClause(_) =>
@@ -56,17 +61,17 @@ private def bindImpl(debugExpr: Expr[Boolean])(using q: Quotes) =
                           "Cannot generate C bind from generic method"
                         )
                      case t @ TermParamClause(valDefs) =>
-                        val params = valDefs.map(t =>
-                           t.tpt.tpe.asType.pipe { case '[p] =>
-                              Ref(t.symbol).asExprOf[p]
-                           } -> t.tpt.tpe.asType
-                        )
-                        (name, params, dt.tpe.asType)
+                        val params =
+                           valDefs.map(t => Ref(t.symbol).asExpr.widen)
+                        (name, params)
                   }
                   .getOrElse(
-                    (name, Nil, dt.tpe.asType)
+                    (name, Nil)
                   )
-      else report.errorAndAbort("didn't get defdef")
+      else
+         report.errorAndAbort(
+           s"didn't get defdef ${owner.tree.show(using Printer.TreeAnsiCode)}"
+         )
 
    val memoryAddress = '{
       val symbolLookup = ${ Expr.summonOrError[SymbolLookup] }
@@ -74,11 +79,12 @@ private def bindImpl(debugExpr: Expr[Boolean])(using q: Quotes) =
       symbolLookup.lookup(fnName)
    }
 
-   ret.pipe { case '[r] =>
-      MethodHandleMacros.binding[r](memoryAddress, params)
-   }.tap { exp =>
-      if debug then report.info(exp.show)
-   }
+   MethodHandleMacros
+      .binding[R](memoryAddress, params)
+      .tap { exp =>
+         if debug then report.info(exp.show)
+      }
+      .asExprOf[R]
 
 end bindImpl
 
@@ -119,9 +125,9 @@ extension [A: ClassTag](
 
 extension [A, S <: Iterable[A]](s: S)
    def serialize: Informee[A, Serializee[A, Allocatee[Ptr[A]]]] =
-      val addr = segAlloc.allocateArray(infoOf[A].layout, s.size).address
+      val addr = segAlloc.allocateArray(layoutOf[A], s.size).address
       s.zipWithIndex.foreach((a, i) =>
-         serializerOf[A].into(a, addr, i * infoOf[A].layout.byteSize)
+         serializerOf[A].into(a, addr, i * layoutOf[A].byteSize)
       )
       Ptr[A](addr, 0)
 
@@ -129,6 +135,6 @@ extension (s: String)
    def serialize: Allocatee[Ptr[Byte]] =
       Ptr[Byte](CLinker.toCString(s, segAlloc).address, 0)
 
-val platform: Platform = components.platform
-
 export components.HelperTypes.*
+export components.Variadic.variadicBind
+export components.platform

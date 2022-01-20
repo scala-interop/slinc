@@ -40,3 +40,17 @@ def allocate[A]: Allocatee[Informee[A, MemorySegment]] =
 type Scopee[A] = ResourceScope ?=> A
 
 val currentScope: Scopee[ResourceScope] = summon[ResourceScope]
+
+extension [A](t: Type[A])(using Quotes)
+   def widen =
+      given Type[A] = t
+      import quotes.reflect.*
+      TypeRepr.of[A].widen.asType
+
+extension [A](t: Expr[?])(using Quotes)
+   def widen: Expr[?] =
+      import quotes.reflect.*
+      t match
+         case '{ $a: a } =>
+            TypeRepr.of[a].widen.asType match
+               case '[b] => '{ ${ a.asExprOf[b] }: b }

@@ -17,7 +17,7 @@ class StdlibSuite extends munit.FunSuite:
    ) derives Struct
 
    test("getpid") {
-      def getpid: Long = bind
+      def getpid: Long = bind[Long]
 
       assertEquals(
         getpid,
@@ -26,7 +26,7 @@ class StdlibSuite extends munit.FunSuite:
    }
 
    test("abs") {
-      def abs(i: Int): Int = bind
+      def abs(i: Int): Int = bind[Int]
       assertEquals(
         abs(5),
         Math.abs(5)
@@ -34,7 +34,7 @@ class StdlibSuite extends munit.FunSuite:
    }
 
    test("labs") {
-      def labs(l: Long): Long = bind
+      def labs(l: Long): Long = bind[Long]
       assertEquals(
         labs(-5L),
         5L
@@ -42,7 +42,7 @@ class StdlibSuite extends munit.FunSuite:
    }
 
    test("atof") {
-      def atof(s: Ptr[Byte]): Double = bind
+      def atof(s: Ptr[Byte]): Double = bind[Double]
       assertEquals(
         scope(atof("5.0".serialize)),
         5.0
@@ -51,7 +51,7 @@ class StdlibSuite extends munit.FunSuite:
 
    test("getenv") {
       def getenv(name: Ptr[Byte]): String =
-         bind
+         bind[String]
       assertEquals(
         scope(getenv("PATH".serialize)),
         System.getenv("PATH")
@@ -60,7 +60,7 @@ class StdlibSuite extends munit.FunSuite:
 
    test("strlen") {
       def strlen(string: Ptr[Byte]): Int =
-         bind
+         bind[Int]
       assertEquals(
         scope(strlen("hello".serialize)),
         5
@@ -70,7 +70,7 @@ class StdlibSuite extends munit.FunSuite:
    test("div") {
       case class div_t(quot: Int, rem: Int) derives Struct
 
-      def div(a: Int, b: Int): div_t = bind
+      def div(a: Int, b: Int): div_t = bind[div_t]
 
       val result = scope {
          div(5, 2)
@@ -81,15 +81,15 @@ class StdlibSuite extends munit.FunSuite:
    test("asctime") {
       import platform.time_t
 
-      def time(timer: Ptr[Long]): time_t = bind
+      def time(timer: Ptr[Long]): time_t = bind[time_t]
 
       val t = time(Ptr.Null())
 
       val y = t + t
 
-      def localtime(timer: Ptr[time_t]): Ptr[tm] = bind
+      def localtime(timer: Ptr[time_t]): Ptr[tm] = bind[Ptr[tm]]
 
-      def asctime(timePtr: Ptr[tm]): String = bind
+      def asctime(timePtr: Ptr[tm]): String = bind[String]
 
       val result = scope {
          val timerPtr = t.serialize
@@ -99,9 +99,9 @@ class StdlibSuite extends munit.FunSuite:
    }
 
    test("localtime") {
-      def time(timer: Ptr[Long]): platform.time_t = bind
+      def time(timer: Ptr[Long]): platform.time_t = bind[platform.time_t]
 
-      def localtime(timer: Ptr[Long]): Ptr[tm] = bind
+      def localtime(timer: Ptr[Long]): Ptr[tm] = bind[Ptr[tm]]
    }
 
    test("qsort") {
@@ -110,7 +110,7 @@ class StdlibSuite extends munit.FunSuite:
           numElements: Long,
           elementSize: Long,
           fn: Ptr[(Ptr[Any], Ptr[Any]) => Int]
-      ): Unit = bind
+      ): Unit = bind[Unit]
 
       val arr = Array(2, 1, 5, 8, -1)
       val result = scope {

@@ -1,5 +1,7 @@
 #include <stdlib.h>
 #include <ctype.h>
+#include <stdarg.h>
+#include <stdio.h>
 
 struct a_t
 {
@@ -82,6 +84,19 @@ void bad_method(const char *str)
 char *ibreak(char *str)
 {
    return badval;
+}
+
+int sum(int n, ...)
+{
+   int Sum = 0;
+   va_list ptr;
+   va_start(ptr, n);
+   for (int i = 0; i < n; i++)
+      Sum += va_arg(ptr, int);
+
+   va_end(ptr);
+
+   return Sum;
 }
 
 struct b_t slinc_test_modify(struct b_t b)
