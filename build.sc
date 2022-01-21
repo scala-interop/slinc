@@ -116,6 +116,32 @@ object slinc
       )
    }
 }
+
+object cstd extends ScalaModule with benchmark.BenchmarksModule {
+   def scalaVersion = "3.1.0"
+   def moduleDeps = Seq(slinc)
+
+   object test extends Tests with TestModule.Munit {
+      def scalacOptions = Seq(
+        "-deprecation",
+        "-Wunused:all",
+        "-unchecked",
+        "-Xcheck-macros",
+        "-Xprint-suspension",
+        "-Xsemanticdb"
+      )
+
+      def forkArgs = Seq(
+        "--add-modules",
+        "jdk.incubator.foreign",
+        "--enable-native-access",
+        "ALL-UNNAMED"
+      )
+
+      def ivyDeps = Agg(ivy"org.scalameta::munit::${v.munit}")
+   }
+}
+
 object polymorphics extends ScalaModule with publishable.PublishableModule {
    def scalaVersion = "2.13.7"
    def pomSettings = pomTemplate(

@@ -50,6 +50,9 @@ trait PlatformTypegen extends ScalaModule {
           | given ${typeName}Deserializer: Deserializer[$typeName]
           | given ${typeName}Serializer: Serializer[$typeName]
           | given ${typeName}Exporter: Exporter[$typeName]
+          | val ${typeName}Initializer: Initializer[$typeName]
+          | object $typeName:
+          |   export ${typeName}Initializer.*
           |
           |trait ${typeName}Impl[U](using 
           | val ${typeName}Integral: Integral[U], 
@@ -58,7 +61,8 @@ trait PlatformTypegen extends ScalaModule {
           | val ${typeName}Emigrator: Emigrator[U],
           | val ${typeName}Deserializer: Deserializer[U],
           | val ${typeName}Serializer: Serializer[U],
-          | val ${typeName}Exporter: Exporter[U]
+          | val ${typeName}Exporter: Exporter[U],
+          | val ${typeName}Initializer: Initializer[U]
           |) extends ${typeName}Proto:
           | type $typeName = U""".stripMargin
 

@@ -30,6 +30,7 @@ import components.{
 import scala.reflect.ClassTag
 import scala.jdk.CollectionConverters.*
 import io.gitlab.mhammons.slinc.components.Immigrator
+import io.gitlab.mhammons.slinc.components.Exporter
 
 class Ptr[A](
     memoryAddress: MemoryAddress,
@@ -198,3 +199,5 @@ object Ptr:
 
    given [A]: Serializer[Ptr[A]] =
       ptrSerializer.asInstanceOf[Serializer[Ptr[A]]]
+
+   given [A]: Exporter[Ptr[A]] = Exporter.derive[Ptr[A]]
