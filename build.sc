@@ -108,7 +108,7 @@ object slinc
       }
    }
 
-   object bench extends Benchmark {
+   object bench extends Benchmarks {
       def jmhVersion = "1.33"
       override def ivyDeps = super.ivyDeps() ++ Seq(
         ivy"com.github.jnr:jnr-ffi:${v.jnr}",
@@ -139,6 +139,18 @@ object cstd extends ScalaModule with benchmark.BenchmarksModule {
       )
 
       def ivyDeps = Agg(ivy"org.scalameta::munit::${v.munit}")
+   }
+
+   object bench extends Benchmarks {
+      def jmhVersion = "1.33"
+
+      def forkArgs = Seq(
+        "--add-modules",
+        "jdk.incubator.foreign",
+        "--enable-native-access",
+        "ALL-UNNAMED"
+      )
+
    }
 }
 

@@ -5,7 +5,7 @@ import os.Path
 trait BenchmarksModule extends Module with ScalaModule {
    private def self = this
 
-   trait Benchmark extends ScalaModule {
+   trait Benchmarks extends ScalaModule {
       override def scalaVersion: T[String] = self.scalaVersion
       override def moduleDeps = Seq(self)
       override def scalacOptions: Target[Seq[String]] = self.scalacOptions
