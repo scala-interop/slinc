@@ -34,8 +34,9 @@ type Allocatee[A] = SegmentAllocator ?=> A
 
 val segAlloc: Allocatee[SegmentAllocator] = summon[SegmentAllocator]
 
-def allocate[A]: Allocatee[Informee[A, MemorySegment]] =
-   segAlloc.allocate(layoutOf[A])
+def allocate[A]: Allocatee[Informee[A, MemorySegment]] = allocate(1)
+def allocate[A](num: Long): Allocatee[Informee[A, MemorySegment]] =
+   segAlloc.allocate(layoutOf[A].byteSize * num)
 
 type Scopee[A] = ResourceScope ?=> A
 

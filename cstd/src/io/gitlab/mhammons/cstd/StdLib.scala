@@ -5,7 +5,6 @@ import io.gitlab.mhammons.slinc.*
 object StdLib:
    case class DivT(quot: Int, rem: Int) derives Struct
    case class LdivT(quot: Long, rem: Long) derives Struct
-   type div_t = DivT
    def atof(str: Ptr[Byte]) = bind[Double]
    def atoi(str: Ptr[Byte]) = bind[Int]
    def atol(str: Ptr[Byte]) = bind[Long]
@@ -29,8 +28,8 @@ object StdLib:
    ) = bind[Ptr[Any]]
    def qsort(
        base: Ptr[Any],
-       nitems: SizeT,
-       size: SizeT,
+       nitems: Long,
+       size: Long,
        compar: Ptr[(Ptr[Any], Ptr[Any]) => Int]
    ) = bind[Unit]
    def abs(x: Int) = bind[Int]

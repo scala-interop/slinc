@@ -88,7 +88,7 @@ private def bindImpl[R](debugExpr: Expr[Boolean])(using q: Quotes)(using
 
 end bindImpl
 
-def scope[A](fn: ResourceScope ?=> Allocatee[A]) =
+def scope[A](fn: ResourceScope ?=> Allocatee[A])(using NotGiven[A <:< Ptr[?]]) =
    given resourceScope: ResourceScope = ResourceScope.newConfinedScope
    given SegmentAllocator = SegmentAllocator.arenaAllocator(resourceScope)
    try {
@@ -96,6 +96,11 @@ def scope[A](fn: ResourceScope ?=> Allocatee[A]) =
    } finally {
       resourceScope.close
    }
+
+def globalScope[A](fn: Scopee[Allocatee[A]]) =
+   given resourceScope: ResourceScope = ResourceScope.globalScope
+   given SegmentAllocator = SegmentAllocator.arenaAllocator(resourceScope)
+   fn
 
 def allocScope[A](fn: ResourceScope ?=> SegmentAllocator ?=> A) =
    given resourceScope: ResourceScope = ResourceScope.newConfinedScope
@@ -110,11 +115,6 @@ def lazyScope[A](fn: (SegmentAllocator) ?=> A) =
    val resourceScope = ResourceScope.newImplicitScope
    given SegmentAllocator = SegmentAllocator.arenaAllocator(resourceScope)
    fn
-
-extension [A](a: A)
-   def serialize: Allocatee[Scopee[Informee[A, Exportee[A, Ptr[A]]]]] =
-      val addr = exportValue(a)
-      Ptr[A](addr, 0)
 
 extension [A: ClassTag](
     a: Array[A]
@@ -131,9 +131,19 @@ extension [A, S <: Iterable[A]](s: S)
       )
       Ptr[A](addr, 0)
 
+extension [A](a: A)
+   def serialize: Allocatee[Scopee[Informee[A, Exportee[A, Ptr[A]]]]] =
+      val addr = exportValue(a)
+      Ptr[A](addr, 0)
+
+def sizeOf[A]: Informee[A, SizeT] = SizeT.fromLongOrFail(layoutOf[A].byteSize)
+
 extension (s: String)
    def serialize: Allocatee[Ptr[Byte]] =
       Ptr[Byte](CLinker.toCString(s, segAlloc).address, 0)
+
+def allocate[A](long: Long): Informee[A, Allocatee[Ptr[A]]] =
+   Ptr[A](segAlloc.allocate(long * layoutOf[A].byteSize).address, 0)
 
 export components.HelperTypes.*
 export components.Variadic.variadicBind

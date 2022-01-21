@@ -7,20 +7,6 @@ import java.nio.file.Paths
 
 class StructSuite extends munit.FunSuite:
    test(
-     "trying to fetch the layouts for c-incompatible types results in compiletime error".fail
-   ) {
-      assertNoDiff(
-        compileErrors(
-          "NativeIO.layout[Object].foldMap(NativeIO.impureCompiler)"
-        ),
-        """|error: Cannot derive a layout for non-struct type java.lang.Object
-           |        compileErrors(
-           |                    ^
-           |""".stripMargin
-      )
-   }
-
-   test(
      "Can serialize and deserialize simple structs"
    ) {
       case class div_t(quot: Int, rem: Int) derives Struct

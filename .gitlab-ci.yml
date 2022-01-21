@@ -25,7 +25,8 @@ compile:
         - out/*
   script:    
     - XDG_CACHE_HOME=$CI_BUILDS_DIR/$CI_PROJECT_PATH/.cache mill -D user.home=$CI_BUILDS_DIR/$CI_PROJECT_PATH/ clean
-    - XDG_CACHE_HOME=$CI_BUILDS_DIR/$CI_PROJECT_PATH/.cache mill -D user.home=$CI_BUILDS_DIR/$CI_PROJECT_PATH/ slinc.compile
+    - XDG_CACHE_HOME=$CI_BUILDS_DIR/$CI_PROJECT_PATH/.cache mill -D user.home=$CI_BUILDS_DIR/$CI_PROJECT_PATH/ cstd.compile
+
 
 test:
   stage: test
@@ -38,8 +39,7 @@ test:
         - out/*
 
   script:
-    # Execute your project's tests
-    - XDG_CACHE_HOME=$CI_BUILDS_DIR/$CI_PROJECT_PATH/.cache mill -D user.home=$CI_BUILDS_DIR/$CI_PROJECT_PATH/ slinc.test
+    - XDG_CACHE_HOME=$CI_BUILDS_DIR/$CI_PROJECT_PATH/.cache mill -D user.home=$CI_BUILDS_DIR/$CI_PROJECT_PATH/ _.test
 
 pages: 
   stage: pages
