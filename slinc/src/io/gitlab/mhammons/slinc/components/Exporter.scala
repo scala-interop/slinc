@@ -24,12 +24,12 @@ def exportValue[A](a: A): Scopee[Allocatee[Exportee[A, MemoryAddress]]] =
 object Exporter:
    private inline def allocatingSerialize[A](
        a: A
-   ): Allocatee[Informee[A, Serializee[A, MemoryAddress]]] =
+   ): Allocatee[Informee[A, Encodee[A, MemoryAddress]]] =
       val address = allocate[A].address
-      serialize(a, address, 0)
+      encode(a, address, 0)
       address
 
-   def derive[A]: Informee[A, Serializee[A, Exporter[A]]] =
+   def derive[A]: Informee[A, Encodee[A, Exporter[A]]] =
       new Exporter[A]:
          def exportValue(a: A) = allocatingSerialize(a)
 
@@ -48,10 +48,10 @@ object Exporter:
 
    given Exporter[Byte] = derive[Byte]
 
-   given [A](using Serializer[A], NativeInfo[A]): Exporter[Array[A]] with
+   given [A](using Encoder[A], NativeInfo[A]): Exporter[Array[A]] with
       def exportValue(a: Array[A]) =
          val address = segAlloc.allocate(layoutOf[A].byteSize * a.size).address
-         serialize(a, address, 0)
+         encode(a, address, 0)
          address
 
    inline given fnExporter[A](using Fn[A]): Exporter[A] = ${

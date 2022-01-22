@@ -14,16 +14,16 @@ import jdk.incubator.foreign.{
    ValueLayout
 }, MemoryLayout.PathElement
 import components.{
-   Deserializer,
-   Serializer,
+   Decoder,
+   Encoder,
    NativeInfo,
    summonOrError,
-   deserializerOf,
+   decoderOf,
    infoOf,
    Informee,
-   Deserializee,
-   Serializee,
-   serializerOf,
+   Decodee,
+   Encodee,
+   encoderOf,
    Emigrator,
    Allocatee
 }
@@ -32,44 +32,91 @@ import scala.jdk.CollectionConverters.*
 import io.gitlab.mhammons.slinc.components.Immigrator
 import io.gitlab.mhammons.slinc.components.Exporter
 
+/** Describes an address to native memory, and what it's pointing to.
+  * @tparam A
+  *   The datatype that can be extracted from this pointer
+  * @param memoryAddress
+  *   The address this pointer is wrapping
+  * @param offset
+  *   Where the data [[A]] is relative to the pointer's address
+  */
 class Ptr[A](
     memoryAddress: MemoryAddress,
     offset: Long,
     map: => Map[String, Any] = Map.empty
 ) extends Selectable:
    lazy val myMap = map
-   def `unary_!` : Deserializee[A, A] =
+
+   /** Dereferences this pointer, producing A
+     * @return
+     *   A
+     * @example
+     * ```scala
+     * val x: Ptr[Int] = ???
+     * val y: Int = !x
+     * ```
+     */
+   def `unary_!` : Decodee[A, A] =
       deref
 
-   def deref: Deserializee[A, A] =
-      deserializerOf[A].from(
+   def deref: Decodee[A, A] =
+      decoderOf[A].from(
         memoryAddress,
         offset
       )
 
-   def `unary_!_=`(a: A): Serializee[A, Unit] =
+   /** Copies data into this pointer
+     * @param a
+     *   The data you want to copy into native memory
+     * @example
+     * ```scala
+     * val x: Ptr[Int]
+     * !x = 5
+     * !x == 5 //true
+     * ```
+     */
+   def `unary_!_=`(a: A): Encodee[A, Unit] =
       deref = a
 
-   def deref_=(a: A): Serializee[A, Unit] =
-      serializerOf[A].into(a, memoryAddress, offset)
+   def deref_=(a: A): Encodee[A, Unit] =
+      encoderOf[A].into(a, memoryAddress, offset)
 
-   def +(plus: Long)(using layoutOf: NativeInfo[A]) = new Ptr[A](
-     memoryAddress.addOffset(layoutOf.layout.byteSize * plus),
+   /** Offsets this pointer by a number of elements of size A
+     * @param num
+     *   The number of elements A to offset this pointer by
+     * @return
+     *   A new, offset pointer
+     */
+   def +(num: Long)(using layoutOf: NativeInfo[A]) = new Ptr[A](
+     memoryAddress.addOffset(layoutOf.layout.byteSize * num),
      offset,
      map
    )
 
-   inline def castTo[A] =
-      Ptr[A](memoryAddress, offset)
+   /** Casts this pointer
+     * @tparam B
+     *   the new type this pointer will represent
+     * @return
+     *   A pointer to B
+     */
+   inline def castTo[B] =
+      Ptr[B](memoryAddress, offset)
    def asMemoryAddress = memoryAddress
    def selectDynamic(key: String) = myMap(key)
-   def toArray(size: Int)(using Deserializer[A], NativeInfo[A], ClassTag[A]) =
+
+   /** Transform this pointer into an array
+     * @param size
+     *   The number of elements the pointer is pointing to
+     * @return
+     *   A scala array with the aforementioned size
+     */
+   def toArray(size: Int)(using Decoder[A], NativeInfo[A], ClassTag[A]) =
       val l = NativeInfo[A].layout
       val elemSize = l.byteSize
       var i = 0
       val arr = Array.ofDim[A](size)
       while i < size do
-         arr(i) = deserializerOf[A].from(
+         arr(i) = decoderOf[A].from(
            memoryAddress.addOffset(i * elemSize),
            offset
          )
@@ -124,6 +171,8 @@ object Ptr:
             )
          case vl: ValueLayout => new Ptr(memoryAddress, offset, Map.empty)
 
+   /** Null pointer implementation
+     */
    class Null[A: NativeInfo: ClassTag] extends Ptr[A](MemoryAddress.NULL, 0):
       override def deref =
          throw NullPointerException("SLinC Null Ptr attempted dereference")
@@ -131,12 +180,29 @@ object Ptr:
          throw NullPointerException("SLinC Null Ptr attempted value update")
       override def asMemoryAddress = MemoryAddress.NULL
    extension [A](a: Ptr[A])
+      /** Enables partial dereferencing of a Pointer to a Struct type
+        * @return
+        *   a, but refined with extra struct information
+        *
+        * @example
+        * ```scala
+        * case class div_t(quot: Int, rem: Int) derives Struct
+        *
+        * val a = div_t(5, 6)
+        * val rem = scope {
+        *   val aPtr = a.serialize
+        *   aPtr.partial.quot.deref // only copies quot's data into the jvm
+        * }
+        * ```
+        */
       transparent inline def partial = ${ selectableImpl[A]('a) }
 
    extension (a: Ptr[Byte])
+      /** Transforms a Ptr[Byte] to a Scala String
+        */
       def mkString = CLinker.toJavaString(a.asMemoryAddress)
 
-   def selectableImpl[A: Type](nptr: Expr[Ptr[A]])(using Quotes) =
+   private def selectableImpl[A: Type](nptr: Expr[Ptr[A]])(using Quotes) =
       val typeInfo = TypeInfo[A]
       produceDualRefinement(typeInfo) match
          case '[refinement] =>
@@ -147,7 +213,9 @@ object Ptr:
                $nptr.asInstanceOf[refinement]
             }
 
-   def produceDualRefinement(typeInfo: TypeInfo)(using Quotes): Type[?] =
+   private def produceDualRefinement(typeInfo: TypeInfo)(using
+       Quotes
+   ): Type[?] =
       import quotes.reflect.*
       typeInfo match
          case ProductInfo(name, members, '[a]) =>
@@ -177,7 +245,7 @@ object Ptr:
 
    given [A]: Immigrator[Ptr[A]] = a => Ptr[A](a.asInstanceOf[MemoryAddress], 0)
 
-   given [A, P <: Ptr[A]](using NativeInfo[A]): Deserializer[P] with
+   given [A, P <: Ptr[A]](using NativeInfo[A]): Decoder[P] with
       def from(
           memoryAddress: MemoryAddress,
           offset: Long
@@ -189,7 +257,7 @@ object Ptr:
 
          Ptr[A](address, 0).asInstanceOf[P]
 
-   private val ptrSerializer = new Serializer[Ptr[Any]]:
+   private val ptrSerializer = new Encoder[Ptr[Any]]:
       def into(ptr: Ptr[Any], memoryAddress: MemoryAddress, offset: Long) =
          MemoryAccess.setAddressAtOffset(
            MemorySegment.globalNativeSegment,
@@ -197,7 +265,7 @@ object Ptr:
            ptr.asMemoryAddress
          )
 
-   given [A]: Serializer[Ptr[A]] =
-      ptrSerializer.asInstanceOf[Serializer[Ptr[A]]]
+   given [A]: Encoder[Ptr[A]] =
+      ptrSerializer.asInstanceOf[Encoder[Ptr[A]]]
 
    given [A]: Exporter[Ptr[A]] = Exporter.derive[Ptr[A]]

@@ -16,7 +16,7 @@ import scala.util.chaining.*
 )
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 class StdIOBench:
-   scope { CLocale.setlocale(CLocale.LCAll, "C".serialize); () }
+   scope { CLocale.setlocale(CLocale.LCAll, "C".encode); () }
 
    val (i1, i2) = globalScope {
       allocate[Int](2).pipe(p => p -> (p + 1))
@@ -27,17 +27,17 @@ class StdIOBench:
    }
 
    val data = globalScope {
-      "1 2 3.0".serialize
+      "1 2 3.0".encode
    }
 
    val (formatConstant, buffer) = globalScope {
-      "%d %d %f".serialize -> allocate[Byte](80)
+      "%d %d %f".encode -> allocate[Byte](80)
    }
 
    @Benchmark
    def sprintf =
       scope {
-         val format = "%d %d %f".serialize
+         val format = "%d %d %f".encode
          val buffer = allocate[Byte](80)
          StdIO.sprintf(buffer, format)(1, 2, 3.0f)
       }
@@ -53,8 +53,8 @@ class StdIOBench:
    @Benchmark
    def sscanf =
       scope {
-         val format = "%d %d %f".serialize
-         val data = "1 2 3.0".serialize
+         val format = "%d %d %f".encode
+         val data = "1 2 3.0".encode
          val ints = allocate[Int](2)
          val i = ints
          val i2 = ints + 1

@@ -9,8 +9,8 @@ import jdk.incubator.foreign.{
 }, MemoryLayout.PathElement
 import io.gitlab.mhammons.slinc.components.{
    NativeInfo,
-   Serializer,
-   Deserializer,
+   Encoder,
+   Decoder,
    Exporter,
    Allocatee,
    segAlloc,
@@ -20,12 +20,21 @@ import scala.util.chaining.*
 import io.gitlab.mhammons.slinc.components.Immigrator
 import io.gitlab.mhammons.slinc.components.Emigrator
 
+/** A typeclass used to allow product types to be used as parameters in C
+  * bindings
+  * @tparam A
+  *   A product type
+  * @example
+  * ```scala
+  * case class div_t(quot: Int, rem: Int) derives Struct
+  * ```
+  */
 trait Struct[A <: Product]
     extends NativeInfo[A],
       Immigrator[A],
       Emigrator[A],
-      Serializer[A],
-      Deserializer[A],
+      Encoder[A],
+      Decoder[A],
       Exporter[A]
 
 object Struct:
@@ -42,7 +51,7 @@ object Struct:
             val layout = ${ fromTypeInfo(typeInfo) }
             val carrierType = classOf[MemorySegment]
 
-         given s: Serializer[A] with
+         given s: Encoder[A] with
             def into(a: A, memoryAddress: MemoryAddress, offset: Long): Unit =
                ${
                   serializerFromTypeInfo(
@@ -55,7 +64,7 @@ object Struct:
                   )
                }
 
-         given d: Deserializer[A] with
+         given d: Decoder[A] with
             def from(memoryAddress: MemoryAddress, offset: Long) =
                ${
                   deserializerFromTypeInfo(
@@ -128,7 +137,7 @@ object Struct:
             })
             val info = Expr.summonOrError[NativeInfo[A]]
             '{
-               ${ Expr.summonOrError[Deserializer[a]] }.from(
+               ${ Expr.summonOrError[Decoder[a]] }.from(
                  $memorySegmentExpr,
                  $info.layout.byteOffset($updatedPath*)
                )
@@ -170,7 +179,7 @@ object Struct:
       import quotes.reflect.*
       typeInfo match
          case PrimitiveInfo(name, '[a]) =>
-            val to = Expr.summonOrError[Serializer[a]]
+            val to = Expr.summonOrError[Encoder[a]]
             val pathExpr = Expr.ofSeq(path)
             '{
                $to.into(

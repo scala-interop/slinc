@@ -15,20 +15,19 @@ import io.gitlab.mhammons.polymorphics.VoidHelper
 import io.gitlab.mhammons.polymorphics.MethodHandleHandler
 import scala.quoted.*
 
-type Deserializee[A, B] = Deserializer[A] ?=> B
-def deserializerOf[A]: Deserializee[A, Deserializer[A]] =
-   summon[Deserializer[A]]
-//todo: rename to decoder
-trait Deserializer[A]:
+type Decodee[A, B] = Decoder[A] ?=> B
+def decoderOf[A]: Decodee[A, Decoder[A]] =
+   summon[Decoder[A]]
+trait Decoder[A]:
    def from(memoryAddress: MemoryAddress, offset: Long): A
 
-   def map[B](fn: A => B): Deserializer[B] =
+   def map[B](fn: A => B): Decoder[B] =
       val orig = this
-      new Deserializer[B]:
+      new Decoder[B]:
          def from(memoryAddress: MemoryAddress, offset: Long) = fn(
            orig.from(memoryAddress, offset)
          )
-object Deserializer:
+object Decoder:
    inline def getAtOffset[A](
        inline fn: (MemorySegment, Long) => A,
        inline memoryAddress: MemoryAddress,
@@ -38,26 +37,26 @@ object Deserializer:
         MemorySegment.globalNativeSegment,
         memoryAddress.toRawLongValue + offset
       )
-   given Deserializer[Int] with
+   given Decoder[Int] with
       def from(memoryAddress: MemoryAddress, offset: Long) =
          getAtOffset(MemoryAccess.getIntAtOffset, memoryAddress, offset)
-   given Deserializer[Float] with
+   given Decoder[Float] with
       def from(memoryAddress: MemoryAddress, offset: Long) =
          getAtOffset(MemoryAccess.getFloatAtOffset, memoryAddress, offset)
 
-   given Deserializer[Long] with
+   given Decoder[Long] with
       def from(memoryAddress: MemoryAddress, offset: Long) =
          getAtOffset(MemoryAccess.getLongAtOffset, memoryAddress, offset)
 
-   given Deserializer[Short] with
+   given Decoder[Short] with
       def from(memoryAddress: MemoryAddress, offset: Long) =
          getAtOffset(MemoryAccess.getShortAtOffset, memoryAddress, offset)
 
-   given Deserializer[Byte] with
+   given Decoder[Byte] with
       def from(memoryAddress: MemoryAddress, offset: Long) =
          getAtOffset(MemoryAccess.getByteAtOffset, memoryAddress, offset)
 
-   given Deserializer[Boolean] with
+   given Decoder[Boolean] with
       def from(memoryAddress: MemoryAddress, offset: Long) =
          if getAtOffset(
               MemoryAccess.getByteAtOffset,
@@ -67,7 +66,7 @@ object Deserializer:
          then false
          else true
 
-   given Deserializer[Char] with
+   given Decoder[Char] with
       def from(memoryAddress: MemoryAddress, offset: Long) =
          getAtOffset(MemoryAccess.getCharAtOffset, memoryAddress, offset)
 
@@ -76,14 +75,14 @@ object Deserializer:
 
    inline given [A](using
        Fn[A]
-   ): Deserializer[A] = ${
-      genDeserializer[A]
+   ): Decoder[A] = ${
+      genDecoder[A]
    }
 
-   private def genDeserializer[A](using Quotes, Type[A]) =
+   private def genDecoder[A](using Quotes, Type[A]) =
       import quotes.reflect.*
       '{
-         new Deserializer[A]:
+         new Decoder[A]:
             def from(memoryAddress: MemoryAddress, offset: Long) =
                ${
                   val (inputTypes, retType) = TypeRepr.of[A] match
