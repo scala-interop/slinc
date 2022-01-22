@@ -16,8 +16,8 @@ class StdLibSuite extends munit.FunSuite:
 
    test("atof") {
       val r = scope {
-         setlocale(LCNumeric, "C".serialize)
-         atof("5.3".serialize)
+         setlocale(LCNumeric, "C".encode)
+         atof("5.3".encode)
       }
 
       assertEqualsDouble(r, 5.3, 0.001)
@@ -32,7 +32,7 @@ class StdLibSuite extends munit.FunSuite:
 
    test("getenv") {
       assertEquals(
-        scope(getenv("PATH".serialize)),
+        scope(getenv("PATH".encode)),
         System.getenv("PATH")
       )
    }
@@ -56,14 +56,14 @@ class StdLibSuite extends munit.FunSuite:
       val base = Array.fill(8)(Random.nextInt.toLong).toSeq
 
       val sortedBase = scope {
-         val copy = base.serialize.castTo[Any]
+         val copy = base.encode.castTo[Any]
 
          val fn =
             (a1: Ptr[Any], b: Ptr[Any]) =>
                if !a1.castTo[Long] > !b.castTo[Long] then 1
                else if !a1.castTo[Long] == !b.castTo[Long] then 0
                else -1
-         val fnPtr = fn.serialize
+         val fnPtr = fn.encode
          qsort(
            copy.castTo[Any],
            SizeT.fromShortOrFail(base.size.toShort),
@@ -79,9 +79,9 @@ class StdLibSuite extends munit.FunSuite:
 
    test("strtod") {
       val (num, string) = scope {
-         setlocale(LCNumeric, "C".serialize)
-         val str = "20.30300 This is a test".serialize
-         val strPtr = str.serialize
+         setlocale(LCNumeric, "C".encode)
+         val str = "20.30300 This is a test".encode
+         val strPtr = str.encode
          val number = strtod(str, strPtr)
          (number, strPtr.deref.mkString)
       }

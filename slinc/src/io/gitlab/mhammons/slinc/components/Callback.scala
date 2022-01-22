@@ -7,7 +7,7 @@ import io.gitlab.mhammons.polymorphics.VoidHelper
 import jdk.incubator.foreign.CLinker.C_POINTER
 import jdk.incubator.foreign.{MemoryAddress, FunctionDescriptor}
 
-trait Callback[A] extends Serializer[A], NativeInfo[A]
+trait Callback[A] extends Encoder[A], NativeInfo[A]
 
 object Callback:
    inline given [A](using NativeInfo[A]): Callback[Function0[A]] =

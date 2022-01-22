@@ -27,7 +27,7 @@ class StdLibBench:
       else if aVal == bVal then 0
       else 1
 
-   val fnPtr = globalScope { fn.serialize }
+   val fnPtr = globalScope { fn.encode }
    @Benchmark
    def abs =
       StdLib.abs(10)
@@ -40,12 +40,12 @@ class StdLibBench:
    @Benchmark
    def qsort =
       scope {
-         val arrPtr = arrayToSort.serialize
+         val arrPtr = arrayToSort.encode
          StdLib.qsort(
            arrPtr.castTo[Any],
            SizeT.fromIntOrFail(arrayToSort.length),
            sizeOf[Int],
-           fn.serialize
+           fn.encode
          )
 
          arrPtr.toArray(arrayToSort.length)

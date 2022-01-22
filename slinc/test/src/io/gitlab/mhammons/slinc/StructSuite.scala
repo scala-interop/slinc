@@ -12,7 +12,7 @@ class StructSuite extends munit.FunSuite:
       case class div_t(quot: Int, rem: Int) derives Struct
 
       val result = scope {
-         !div_t(5, 2).serialize
+         !div_t(5, 2).encode
       }
 
       assertEquals(result, div_t(5, 2))
@@ -25,7 +25,7 @@ class StructSuite extends munit.FunSuite:
       val sample = div_x(5, div_t(5, 4))
 
       val result = scope {
-         !sample.serialize
+         !sample.encode
       }
 
       assertEquals(sample, result)
@@ -35,7 +35,7 @@ class StructSuite extends munit.FunSuite:
       case class div_t(quot: Int, rem: Int) derives Struct
       val expectedResult = div_t(2, 9)
       val result = scope {
-         val ptr = div_t(3, 4).serialize
+         val ptr = div_t(3, 4).encode
          !ptr = expectedResult
          !ptr
       }
@@ -45,7 +45,7 @@ class StructSuite extends munit.FunSuite:
    test("can partially dereference pointers") {
       case class div_t(quot: Int, rem: Int) derives Struct
       val result = scope {
-         !div_t(3, 4).serialize.partial.quot
+         !div_t(3, 4).encode.partial.quot
       }
 
       assertEquals(3, result)
@@ -54,7 +54,7 @@ class StructSuite extends munit.FunSuite:
    test("can partially update pointers") {
       case class div_t(quot: Int, rem: Int) derives Struct
       val result = scope {
-         val ptr = div_t(3, 4).serialize
+         val ptr = div_t(3, 4).encode
          !ptr.partial.quot = 8
          !ptr
       }

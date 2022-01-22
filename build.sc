@@ -41,7 +41,7 @@ object slinc
    def scalaDocOptions = T {
       super.scalaDocOptions() ++ Seq(
         "-project-logo",
-        (millSourcePath / "docs" / "logo.jpg").toString
+        (millSourcePath / "docs" / "logo.png").toString
       )
    }
 

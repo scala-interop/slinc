@@ -8,7 +8,7 @@ class StdIOSuite extends FunSuite:
    test("sprintf") {
       val result = scope {
          val buf = allocate[Byte](80)
-         val format = "%d %d".serialize
+         val format = "%d %d".encode
          sprintf(buf, format)(5, 10)
 
          buf.mkString
@@ -18,8 +18,8 @@ class StdIOSuite extends FunSuite:
 
    test("sscanf") {
       val (aRes, bRes) = scope {
-         val str = "5 10".serialize
-         val format = "%d %d".serialize
+         val str = "5 10".encode
+         val format = "%d %d".encode
          val a = allocate[Int](1)
          val b = allocate[Int](1)
 

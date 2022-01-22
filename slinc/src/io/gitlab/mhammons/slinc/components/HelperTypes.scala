@@ -6,6 +6,10 @@ object HelperTypes:
    opaque type AsciiChar <: Char = Char
 
    extension (c: Char)
+      /** Converts a char into an AsciiChar (if possible)
+        * @return
+        *   An AsciiChar character
+        */
       def asAscii: Option[AsciiChar] = AsciiChar(c)
       def asAsciiOrFail: AsciiChar = AsciiChar(c).getOrElse(
         throw new Exception(s"$c is not an Ascii character")
@@ -24,10 +28,10 @@ object HelperTypes:
          val layout = C_CHAR
          val carrierType = classOf[Byte]
 
-      given Serializer[AsciiChar] =
-         serializerOf[Byte].contramap[AsciiChar](_.toByte)
+      given Encoder[AsciiChar] =
+         encoderOf[Byte].contramap[AsciiChar](_.toByte)
 
-      given Deserializer[AsciiChar] = deserializerOf[Byte].map(AsciiChar.apply)
+      given Decoder[AsciiChar] = decoderOf[Byte].map(AsciiChar.apply)
 
       given Exporter[AsciiChar] = Exporter.derive[AsciiChar]
 

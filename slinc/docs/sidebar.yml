@@ -1,2 +1,11 @@
 sidebar:
   - title: Blog
+  - title: usage
+    index: docs/usage/index
+    subsection:
+      - page: docs/usage/slinc-types
+      - page: docs/usage/binding-c-methods
+      - page: docs/usage/scopes
+      - page: docs/usage/other-helpful-functions
+      - page: docs/usage/supported-platforms
+      - page: docs/usage/unsupported-features

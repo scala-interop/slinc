@@ -37,7 +37,7 @@ class TestlibSuite extends munit.FunSuite:
 
    test("pass in as static arr") {
       scope {
-         Testlib.slinc_test_passstaticarr(Array(1, 2, 3).serialize)
+         Testlib.slinc_test_passstaticarr(Array(1, 2, 3).encode)
       }
    }
 
@@ -52,7 +52,7 @@ class TestlibSuite extends munit.FunSuite:
 
    test("basic upcalls should be possible") {
       val res = scope {
-         val fnPtr = (() => 3).serialize
+         val fnPtr = (() => 3).encode
          Testlib.slinc_upcall(fnPtr)
       }
 
@@ -61,7 +61,7 @@ class TestlibSuite extends munit.FunSuite:
 
    test("struct returning upcalls should work") {
       val res = scope {
-         val fnPtr = (() => Testlib.a_t(1, 3)).serialize
+         val fnPtr = (() => Testlib.a_t(1, 3)).encode
          Testlib.slinc_upcall_a_t(fnPtr)
       }
 
@@ -89,7 +89,7 @@ class TestlibSuite extends munit.FunSuite:
 
    test("string works properly") {
       scope {
-         assertEquals(string_test("hello world".serialize).toChar, 'e')
+         assertEquals(string_test("hello world".encode).toChar, 'e')
       }
    }
 
@@ -124,38 +124,38 @@ class TestlibSuite extends munit.FunSuite:
 
    test("string passing via temporary allocator isn't safe".fail) {
       scope {
-         bad_method("hello world".serialize)
-         assertEquals(ibreak("goodbye world".serialize), "goodbye world")
+         bad_method("hello world".encode)
+         assertEquals(ibreak("goodbye world".encode), "goodbye world")
       }
    }
 
    test("can serialize and deserialize int") {
       scope {
-         assertEquals(4.serialize.deref, 4)
+         assertEquals(4.encode.deref, 4)
       }
    }
 
    test("can serialize and deserialize boolean") {
       scope {
-         assertEquals(true.serialize.deref, true)
+         assertEquals(true.encode.deref, true)
       }
    }
 
    test("can serialize and deserialize float") {
       scope {
-         assertEquals(5.0f.serialize.deref, 5.0f)
+         assertEquals(5.0f.encode.deref, 5.0f)
       }
    }
 
    test("can serialize and deserialize char") {
       scope {
-         assertEquals('a'.asAsciiOrFail.serialize.deref, 'a'.asAsciiOrFail)
+         assertEquals('a'.asAsciiOrFail.encode.deref, 'a'.asAsciiOrFail)
       }
    }
 
    test("can't serialize and deserialize ʯ".fail) {
       scope {
-         assertEquals('ʯ'.asAsciiOrFail.serialize.deref, 'ʯ'.asAsciiOrFail)
+         assertEquals('ʯ'.asAsciiOrFail.encode.deref, 'ʯ'.asAsciiOrFail)
       }
    }
 

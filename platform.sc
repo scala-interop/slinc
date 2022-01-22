@@ -47,8 +47,8 @@ trait PlatformTypegen extends ScalaModule {
           | given ${typeName}NativeInfo: NativeInfo[$typeName]
           | given ${typeName}Immigrator: Immigrator[$typeName]
           | given ${typeName}Emigrator: Emigrator[$typeName]
-          | given ${typeName}Deserializer: Deserializer[$typeName]
-          | given ${typeName}Serializer: Serializer[$typeName]
+          | given ${typeName}Decoder: Decoder[$typeName]
+          | given ${typeName}Encoder: Encoder[$typeName]
           | given ${typeName}Exporter: Exporter[$typeName]
           | val ${typeName}Initializer: Initializer[$typeName]
           | object $typeName:
@@ -59,8 +59,8 @@ trait PlatformTypegen extends ScalaModule {
           | val ${typeName}NativeInfo: NativeInfo[U],
           | val ${typeName}Immigrator: Immigrator[U],
           | val ${typeName}Emigrator: Emigrator[U],
-          | val ${typeName}Deserializer: Deserializer[U],
-          | val ${typeName}Serializer: Serializer[U],
+          | val ${typeName}Decoder: Decoder[U],
+          | val ${typeName}Encoder: Encoder[U],
           | val ${typeName}Exporter: Exporter[U],
           | val ${typeName}Initializer: Initializer[U]
           |) extends ${typeName}Proto:

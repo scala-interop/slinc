@@ -25,7 +25,7 @@ compile:
         - out/*
   script:    
     - XDG_CACHE_HOME=$CI_BUILDS_DIR/$CI_PROJECT_PATH/.cache mill -D user.home=$CI_BUILDS_DIR/$CI_PROJECT_PATH/ clean
-    - XDG_CACHE_HOME=$CI_BUILDS_DIR/$CI_PROJECT_PATH/.cache mill -D user.home=$CI_BUILDS_DIR/$CI_PROJECT_PATH/ _.compile
+    - XDG_CACHE_HOME=$CI_BUILDS_DIR/$CI_PROJECT_PATH/.cache mill -D user.home=$CI_BUILDS_DIR/$CI_PROJECT_PATH/ __.compile
 
 
 test:
@@ -39,7 +39,7 @@ test:
         - out/*
 
   script:
-    - XDG_CACHE_HOME=$CI_BUILDS_DIR/$CI_PROJECT_PATH/.cache mill -D user.home=$CI_BUILDS_DIR/$CI_PROJECT_PATH/ _.test
+    - XDG_CACHE_HOME=$CI_BUILDS_DIR/$CI_PROJECT_PATH/.cache mill -D user.home=$CI_BUILDS_DIR/$CI_PROJECT_PATH/ __.test
 
 pages: 
   stage: pages
