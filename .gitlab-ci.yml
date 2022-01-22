@@ -10,9 +10,17 @@
 image: registry.gitlab.com/mhammons/slinc:latest
 
 stages:
+  - validate
   - build
   - test
   - pages
+
+failMR:
+  stage: validate
+  script:
+    - exit 1
+  rules: 
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "patch" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "minor" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "major"'
 
 compile: 
   stage: build

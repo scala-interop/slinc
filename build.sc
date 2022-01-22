@@ -22,8 +22,6 @@ object slinc
     with publishable.PublishableModule
     with benchmark.BenchmarksModule
     with variadic.VariadicGen {
-   def mimaPreviousVersions = Seq("0.0.0-45-0647f5-DIRTY50d251bf")
-   override def mimaCheckDirection = CheckDirection.Backward
 
    def moduleDeps = Seq(polymorphics)
    def scalaVersion = "3.1.0"
