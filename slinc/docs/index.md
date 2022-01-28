@@ -8,6 +8,9 @@ layout: main
 ![stars](https://badgen.net/gitlab/stars/mhammons/slinc)![lastcommit](https://badgen.net/gitlab/last-commit/mhammons/slinc)
 ![pipeline status](https://gitlab.com/mhammons/slinc/badges/master/pipeline.svg)![Maven Central](https://img.shields.io/maven-central/v/io.gitlab.mhammons/slinc_3)
 
+
+[![fork me](https://img.shields.io/badge/gitlab-fork%20me-orange?logo=gitlab&style=for-the-badge)](https://gitlab.com/mhammons/slinc)
+
 [Slinc](https://gitlab.com/mhammons/slinc) is a Scala 3 library that allows users to interoperate with C code via Java 17's [foreign api incubator](https://docs.oracle.com/en/java/javase/17/docs/api/jdk.incubator.foreign/jdk/incubator/foreign/package-summary.html).
 
 It's designed to make use of Scala's type system and macros to handle most of the work of making bindings to C from Scala.
