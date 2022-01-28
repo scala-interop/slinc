@@ -39,7 +39,8 @@ object slinc
    def scalaDocOptions = T {
       super.scalaDocOptions() ++ Seq(
         "-project-logo",
-        (millSourcePath / "docs" / "logo.png").toString
+        (millSourcePath / "docs" / "images" / "logo.svg").toString,
+        "-social-links:github::https://github.com/markehammons/SLInC,custom::https://gitlab.com/mhammons/slinc::gitlab-white.svg::gitlab-black.svg"
       )
    }
 
