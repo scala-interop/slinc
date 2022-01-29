@@ -20,3 +20,6 @@ enum Location:
      *   The absolute path of the .so file being bound
      */
    case Absolute(absolutePath: String)
+
+trait Location2(loc: Location):
+   val location: Location = loc

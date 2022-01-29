@@ -75,6 +75,8 @@ private def bindImpl[R](debugExpr: Expr[Boolean])(using q: Quotes)(using
 ): Expr[R] =
    import quotes.reflect.*
 
+   val obj = Symbol.spliceOwner.owner.owner
+
    val debug = debugExpr.valueOrAbort
 
    val owner = Symbol.spliceOwner.owner
@@ -214,3 +216,29 @@ def allocate[A](num: Long): Informee[A, Allocatee[Ptr[A]]] =
 export components.HelperTypes.*
 export components.Variadic.variadicBind
 export components.platform.*
+
+inline def bind2[R] = ${
+   bind2Impl[R]
+}
+
+def bind2Impl[R](using Quotes, Type[R]): Expr[R] =
+   import quotes.reflect.*
+
+   def findClass(symbol: Symbol): Symbol =
+      if symbol.isClassDef then symbol else findClass(symbol.owner)
+   def findMethod(symbol: Symbol): Symbol =
+      if symbol.isDefDef then symbol else findMethod(symbol.owner)
+
+   val foundClass = findClass(Symbol.spliceOwner)
+   val foundMethod = findMethod(Symbol.spliceOwner)
+
+   val foundIndex = foundClass.declaredMethods.indexOf(foundMethod)
+
+   TypeIdent(foundClass).tpe.asType match
+      case '[o] =>
+         val lib = Expr.summonOrError[ILibrary[o]]
+         '{
+            $lib.cache
+               .getCached[Any](${ Expr(foundIndex) })
+               .asInstanceOf[R]
+         }.tap(_.show.tap(report.error))

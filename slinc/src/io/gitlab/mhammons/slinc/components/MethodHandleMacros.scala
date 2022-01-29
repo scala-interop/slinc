@@ -7,7 +7,8 @@ import jdk.incubator.foreign.{
    CLinker,
    SegmentAllocator,
    MemoryAddress,
-   MemoryLayout
+   MemoryLayout,
+   SymbolLookup => JSymbolLookup
 }
 import io.gitlab.mhammons.polymorphics.{MethodHandleHandler, VoidHelper}
 import java.lang.invoke.MethodHandle
@@ -126,6 +127,28 @@ object MethodHandleMacros:
          Linker.linker.downcallHandle($addr, segAlloc, $methodT, $functionD)
       }
 
+   private def dc2(
+       addr: Expr[MemoryAddress],
+       paramInfo: List[Expr[NativeInfo[?]]],
+       returnInfo: Option[Expr[NativeInfo[?]]]
+   )(using Quotes): Expr[MethodHandle] =
+
+      val (layouts, carrierTypes) =
+         paramInfo.map(i => '{ $i.layout } -> '{ $i.carrierType }).unzip
+      val functionD =
+         functionDescriptor(returnInfo.map(i => '{ $i.layout }), layouts)
+      val methodT =
+         methodType(returnInfo.map(i => '{ $i.carrierType }), carrierTypes)
+
+      '{
+         Linker.linker.downcallHandle(
+           $addr,
+           localAllocator,
+           $methodT,
+           $functionD
+         )
+      }
+
    def call[Ret: Type](
        mh: Expr[MethodHandle],
        ps: List[Expr[Any]]
@@ -179,4 +202,156 @@ object MethodHandleMacros:
 
       })
 
+   def wrappedMHFromDefDef(using
+       q: Quotes
+   )(s: q.reflect.Symbol, lookup: Expr[JSymbolLookup]): Expr[Any] =
+      import quotes.reflect.{MethodType => MT, *}
+
+      val address = '{ $lookup.lookup(${ Expr(s.name) }).orElseThrow }
+
+      val addressSym = Symbol.newVal(
+        Symbol.spliceOwner,
+        "addr",
+        TypeRepr.of[MemoryAddress],
+        Flags.EmptyFlags,
+        Symbol.noSymbol
+      )
+
+      val addressVd = ValDef(addressSym, Some(address.asTerm))
+
+      val addressRef = Ref(addressSym).asExprOf[MemoryAddress]
+
+      val (inputTypes, returnType) = s.tree match
+         case DefDef(name, parameters, returnType, _) =>
+            parameters.flatMap(_.params.collect { case ValDef(a, b, _) =>
+               b.tpe.asType
+            }) -> returnType.tpe.asType
+      // val inputTypes = s.signature.paramSigs.collect { case s: String =>
+      //    TypeIdent(Symbol.requiredClass(s)).tpe.asType
+      // }
+
+      val inputNativeInfo = inputTypes.map { case '[a] =>
+         Expr.summonOrError[NativeInfo[a]]
+      }
+
+      val inputNISyms = inputNativeInfo.map(_ =>
+         Symbol.newVal(
+           Symbol.spliceOwner,
+           "ni",
+           TypeRepr.of[NativeInfo[?]],
+           Flags.EmptyFlags,
+           Symbol.noSymbol
+         )
+      )
+
+      val inputNIVds = inputNISyms
+         .zip(inputNativeInfo)
+         .map((s, rhs) => ValDef(s, Some(rhs.asTerm)))
+
+      val inputNIRefs =
+         inputNISyms.map(Ref.apply).map(_.asExprOf[NativeInfo[?]])
+
+      val (inputEmiVds, inputEmiRefs) = inputTypes.map { case '[a] =>
+         val emi = Expr.summonOrError[Emigrator[a]]
+         val sym = Symbol.newVal(
+           Symbol.spliceOwner,
+           "emi",
+           TypeRepr.of[Emigrator[a]],
+           Flags.EmptyFlags,
+           Symbol.noSymbol
+         )
+         val vd = ValDef(sym, Some(emi.asTerm))
+         val ref = Ref(sym)
+         vd -> ref
+      }.unzip
+
+      // val returnType = TypeIdent(
+      //   Symbol.requiredClass(s.signature.resultSig)
+      // ).tpe
+
+      val returnNativeInfo = returnType match
+         case '[Unit] => None
+         case '[r]    => Some(Expr.summonOrError[NativeInfo[r]])
+
+      val retSym = returnNativeInfo.map(_ =>
+         Symbol.newVal(
+           Symbol.spliceOwner,
+           "retNI",
+           TypeRepr.of[NativeInfo[?]],
+           Flags.EmptyFlags,
+           Symbol.noSymbol
+         )
+      )
+
+      val paramNames = LazyList.iterate("a")(a => s"a$a")
+      val retValDef = retSym
+         .zip(returnNativeInfo)
+         .map((s, rhs) => ValDef(s, Some(rhs.asTerm)))
+
+      val (returnImmiVD, returnImmiRef) = returnType match
+         case '[r] =>
+            val immi = Expr.summonOrError[Immigrator[r]]
+            val sym = Symbol.newVal(
+              Symbol.spliceOwner,
+              "retImmi",
+              TypeRepr.of[Immigrator[r]],
+              Flags.EmptyFlags,
+              Symbol.noSymbol
+            )
+            val vd = ValDef(sym, Some(immi.asTerm))
+            val ref = Ref(sym)
+
+            vd -> ref
+
+      val retNIRef = retSym.map(Ref.apply).map(_.asExprOf[NativeInfo[?]])
+
+      val mh = dc2(addressRef, inputNIRefs, retNIRef)
+
+      val mhSym = Symbol.newVal(
+        Symbol.spliceOwner,
+        "mh",
+        TypeRepr.of[MethodHandle],
+        Flags.EmptyFlags,
+        Symbol.noSymbol
+      )
+
+      val mhValDef = ValDef(mhSym, Some(mh.asTerm))
+
+      val mhRef = Ref(mhSym).asExprOf[MethodHandle]
+
+      val lmb = Lambda(
+        Symbol.spliceOwner,
+        MT(paramNames.take(inputTypes.size).toList)(
+          _ => inputTypes.map { case '[a] => TypeRepr.of[a] },
+          _ => returnType match { case '[r] => TypeRepr.of[r] }
+        ),
+        (owner, trees) =>
+           returnType match {
+              case '[r] =>
+                 val retImmi = returnImmiRef.asExprOf[Immigrator[r]]
+                 val callExpr = call[r](
+                   mhRef,
+                   inputTypes.zip(trees.zip(inputEmiRefs)).map {
+                      case ('[a], (t, emi)) =>
+                         '{
+                            ${ emi.asExprOf[Emigrator[a]] }(${ t.asExprOf[a] })(
+                              using localAllocator
+                            )
+                         }
+                   }
+                 )
+                 '{
+                    $retImmi($callExpr)
+                 }.asTerm.changeOwner(owner)
+           }
+      )
+
+      Block(
+        List(
+          addressVd,
+          mhValDef,
+          returnImmiVD
+        ) ++ retValDef.toList ++ inputEmiVds ++ inputNIVds,
+        lmb
+      ).asExpr.tap(_.show.tap(report.error))
 end MethodHandleMacros

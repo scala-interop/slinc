@@ -162,3 +162,7 @@ class TestlibSuite extends munit.FunSuite:
    test("variadic function bindings") {
       assertEquals(sum(5)(34, 2, 3, 4, 5), 34 + 2 + 3 + 4 + 5)
    }
+
+   test("Loading of classes") {
+      assertEquals(TestLib2.sum(5)(34, 2, 4, 5, 4), 34 + 2 + 4 + 5 + 4)
+   }

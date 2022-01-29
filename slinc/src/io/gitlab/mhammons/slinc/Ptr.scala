@@ -320,3 +320,11 @@ object Ptr:
       ptrSerializer.asInstanceOf[Encoder[Ptr[A]]]
 
    given [A]: Exporter[Ptr[A]] = Exporter.derive[Ptr[A]]
+
+   transparent inline def classNameLook = ${
+      classNameLookup
+   }
+
+   def classNameLookup(using Quotes) =
+      import quotes.reflect.*
+      Expr(Symbol.spliceOwner.owner.fullName)
