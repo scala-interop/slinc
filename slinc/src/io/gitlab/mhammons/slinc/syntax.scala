@@ -22,7 +22,8 @@ import io.gitlab.mhammons.slinc.components.{
    exportValue,
    summonOrError,
    Platform,
-   widen
+   widen,
+   Cache
 }
 
 /** Macro for generating a binding to C. Uses the method name and parameter
@@ -232,13 +233,40 @@ def bind2Impl[R](using Quotes, Type[R]): Expr[R] =
    val foundClass = findClass(Symbol.spliceOwner)
    val foundMethod = findMethod(Symbol.spliceOwner)
 
-   val foundIndex = foundClass.declaredMethods.indexOf(foundMethod)
+   val foundIndex = Cache
+      .getCachedSymbols(foundClass)
+      .indexOf(foundMethod)
+      .pipe {
+         case -1 => ???
+         case i  => i
+      }
 
-   TypeIdent(foundClass).tpe.asType match
-      case '[o] =>
+   val ((inputRefs, inputTypes), returnType) = foundMethod.tree match
+      case DefDef(_, params, retType, _) =>
+         params
+            .flatMap(_.params)
+            .collect { case v @ ValDef(r, t, _) =>
+               Ref(v.symbol) -> t
+            }
+            .unzip -> retType
+
+   val fnSymbol = Symbol.requiredClass(s"scala.Function${inputRefs.size}")
+   val fnTypeComplete = Applied(
+     TypeIdent(fnSymbol),
+     inputTypes :+ returnType
+   ).tpe.asType
+   (TypeIdent(foundClass).tpe.asType, fnTypeComplete) match
+      case ('[o], '[f]) =>
          val lib = Expr.summonOrError[ILibrary[o]]
-         '{
+         val lambda = '{
             $lib.cache
-               .getCached[Any](${ Expr(foundIndex) })
-               .asInstanceOf[R]
-         }.tap(_.show.tap(report.error))
+               .getCached[f](${ Expr(foundIndex) })
+         }.asExprOf[f]
+
+         Apply(
+           Select(
+             lambda.asTerm,
+             fnSymbol.declaredMethod("apply").head
+           ),
+           inputRefs
+         ).asExprOf[R]

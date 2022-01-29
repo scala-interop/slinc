@@ -18,7 +18,7 @@ import scala.annotation.tailrec
   * @see
   *   [[io.gitlab.mhammons.slinc.Location]]
   */
-trait Library[T](location: Location):
+trait Library(location: Location):
    location match
       case Location.Absolute(path) => System.load(path)
       case Location.Local(relPath) =>
@@ -45,5 +45,5 @@ object ILibrary:
               JSymbolLookup.loaderLookup
             )
          case _ =>
-            val c = Cache[A](JSymbolLookup.loaderLookup)
+            val c = Cache[A](CLinker.systemLookup)
             ILibrary[A](c, CLinker.systemLookup)

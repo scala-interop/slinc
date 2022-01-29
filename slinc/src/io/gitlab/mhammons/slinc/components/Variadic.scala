@@ -93,3 +93,5 @@ object Variadic extends VariadicMechanisms:
         ),
         address +: params.map(_._1.asTerm)
       ).asExpr
+
+end Variadic

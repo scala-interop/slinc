@@ -22,12 +22,15 @@ val clookup: String => MemoryAddress =
          .getOrElse(throw new Exception(s"Couldn't find $s anywhere"))
 
 extension (expr: Expr.type)
-   def summonOrError[A: Type](using Quotes): Expr[A] =
+   def summonOrError[A: Type](using Quotes): Expr[A] = summonOrError[A]("")
+   def summonOrError[A: Type](location: String)(using Quotes): Expr[A] =
       import quotes.reflect.{report}
       Expr
          .summon[A]
          .getOrElse(
-           report.errorAndAbort(s"Could not summon ${Type.show[A]} in macro")
+           report.errorAndAbort(
+             s"Could not summon ${Type.show[A]} in macro $location"
+           )
          )
 
 type Allocatee[A] = SegmentAllocator ?=> A
