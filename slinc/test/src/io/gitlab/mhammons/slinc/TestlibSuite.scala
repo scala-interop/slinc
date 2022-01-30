@@ -28,7 +28,7 @@ class TestlibSuite extends munit.FunSuite:
    test("get static arr") {
 
       val result = scope {
-         Testlib.slinc_test_getstaticarr().rescope.toArray(3)
+         Testlib.slinc_test_getstaticarr().rescope.mkArray(3)
       }
       assertEquals(result(0), 1)
       assertEquals(result(1), 2)
