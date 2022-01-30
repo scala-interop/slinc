@@ -57,3 +57,36 @@ class StdLibBench:
    @OutputTimeUnit(TimeUnit.MILLISECONDS)
    @Benchmark
    def scalaSort = arrayToSort.sorted
+
+   @Benchmark
+   def rand = StdLib.rand()
+
+   @Benchmark
+   def scalaRand = Random.nextInt()
+
+   @Benchmark
+   def div =
+      StdLib.div(14, 5)
+
+   @Benchmark
+   def scalaDiv = (14 / 5, 14 % 5)
+
+   @Benchmark
+   def getEnv =
+      scope {
+         StdLib.getenv("HOME".encode)
+      }
+
+   @Benchmark
+   def scalaGetEnv =
+      System.getenv("HOME")
+
+   @Benchmark
+   def atol =
+      scope {
+         StdLib.atol("15".encode)
+      }
+
+   @Benchmark
+   def scalaAtol =
+      "15".toLong

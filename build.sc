@@ -153,6 +153,24 @@ object cstd extends ScalaModule with benchmark.BenchmarksModule {
    }
 }
 
+object openblas extends ScalaModule with benchmark.BenchmarksModule {
+   def scalaVersion = "3.1.0"
+   def moduleDeps = Seq(slinc)
+
+   object bench extends Benchmarks {
+      def jmhVersion = "1.33"
+
+      def forkArgs = Seq(
+        "--add-modules=jdk.incubator.foreign",
+        "--enable-native-access=ALL-UNNAMED"
+      )
+
+      override def ivyDeps = super.ivyDeps() ++ Agg(
+        ivy"org.jblas:jblas:1.2.5"
+      )
+   }
+}
+
 object polymorphics extends ScalaModule with publishable.PublishableModule {
    def scalaVersion = "2.13.7"
    def pomSettings = pomTemplate(

@@ -1,6 +1,6 @@
 image: registry.gitlab.com/mhammons/slinc:latest
 
-variables: 
+variables:
   XDG_CACHE_HOME: "$CI_BUILDS_DIR/$CI_PROJECT_PATH/.cache"
   MILL_PREAMBLE: "./mill -D user.home=$XDG_CACHE_HOME"
 
@@ -14,31 +14,30 @@ failMR:
   stage: validate
   script:
     - exit 1
-  rules: 
+  rules:
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "patch" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "minor" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME != "major"'
 
-compile: 
+compile:
   stage: build
   cache:
     - key: mill
-      paths: 
+      paths:
         - .cache/*
     - key: $CI_PIPELINE_ID
       paths:
         - out/*
-  rules: 
+  rules:
     - when: always
-  script:    
+  script:
     - $MILL_PREAMBLE clean
     - $MILL_PREAMBLE __.compile
-
 
 testCode:
   stage: test
   needs: [compile]
   cache:
     - key: mill
-      paths: 
+      paths:
         - .cache/*
     - key: $CI_PIPELINE_ID
       paths:
@@ -51,36 +50,35 @@ testCode:
 mimaCheck:
   stage: test
   needs: [compile]
-  cache: 
+  cache:
     - key: mill
-      paths: 
+      paths:
         - .cache/*
     - key: $CI_PIPELINE_ID
       paths:
         - out/*
   rules:
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "patch"'
-      variables: 
+      variables:
         DIRECTION: "both"
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "minor"'
-      variables: 
+      variables:
         DIRECTION: "backward"
   script:
     - $MILL_PREAMBLE -D mima.direction=$DIRECTION __.mimaReportBinaryIssues
 
-
-pages: 
+pages:
   stage: pages
   cache:
     - key: mill
-      paths: 
+      paths:
         - .cache/*
     - key: $CI_PIPELINE_ID
       paths:
         - out/*
-  rules: 
+  rules:
     - when: manual
-  script: 
+  script:
     - $MILL_PREAMBLE slinc.docJar
     - cp -rv out/slinc/docJar.dest/javadoc .
     - mv javadoc public
