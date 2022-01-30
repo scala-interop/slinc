@@ -24,6 +24,9 @@ object slinc
     with variadic.VariadicGen {
 
    def moduleDeps = Seq(polymorphics)
+   def ivyDeps = Agg(
+     ivy"org.typelevel::cats-core:2.7.0"
+   )
    def scalaVersion = "3.1.0"
    def pomSettings = pomTemplate("SLinC - Scala <-> C Interop")
 

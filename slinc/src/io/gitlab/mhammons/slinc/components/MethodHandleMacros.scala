@@ -14,6 +14,9 @@ import io.gitlab.mhammons.polymorphics.{MethodHandleHandler, VoidHelper}
 import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodType
 
+import cats.data.Validated
+import cats.implicits.*
+
 object MethodHandleMacros:
    inline def methodTypeForFn[A](using Fn[A]) = ${
       methodTypeForFnImpl[A]
@@ -232,8 +235,24 @@ object MethodHandleMacros:
 
    def wrappedMHFromDefDef(using
        q: Quotes
-   )(s: q.reflect.Symbol, lookup: Expr[JSymbolLookup]): Expr[Any] =
+   )(
+       s: q.reflect.Symbol,
+       lookup: Expr[JSymbolLookup]
+   ): Validated[List[String], Expr[Any]] =
       import quotes.reflect.{MethodType => MT, *}
+
+      case class MHState(
+          inputNIVds: List[ValDef],
+          inputNIRefs: List[Ref],
+          inputEmiVds: List[ValDef],
+          inputEmiRefs: List[Ref],
+          retNIVd: Option[ValDef],
+          retNIRef: Option[Ref],
+          retImmiVd: ValDef,
+          retImmiRef: Ref,
+          mhVd: ValDef,
+          mhRef: Ref
+      )
 
       val paramNames =
          LazyList.iterate('a')(a => (a + 1).toChar).map(_.toString)
@@ -252,78 +271,136 @@ object MethodHandleMacros:
       val (inputTypes, returnType) = s.tree match
          case DefDef(name, parameters, returnType, _) =>
             parameters.flatMap(_.params.collect { case ValDef(a, b, _) =>
-               b.tpe.asType
+               a -> b.tpe.asType
             }) -> returnType.tpe.asType
 
-      val (inputNIVds, inputNIRefs) =
+      val inputNIs =
          inputTypes
             .zip(paramNames.map(s => s"ni$s"))
-            .map { case ('[a], name) =>
-               vdAndRefFromExpr(Expr.summonOrError[NativeInfo[a]](s.name), name)
+            .traverse { case ((inputName, '[a]), name) =>
+               Validated
+                  .fromOption(
+                    Expr.summon[NativeInfo[a]],
+                    List(
+                      s"Could not summon ${Type.show[NativeInfo[a]]} for parameter $inputName. Is it defined?"
+                    )
+                  )
+                  .map(vdAndRefFromExpr(_, name))
             }
-            .unzip
+            .map(_.unzip)
 
-      val (inputEmiVds, inputEmiRefs) = inputTypes
+      val inputEmis = inputTypes
          .zip(paramNames.map(s => s"emi$s"))
-         .map { case ('[a], name) =>
-            vdAndRefFromExpr(Expr.summonOrError[Emigrator[a]], name)
-         }
-         .unzip
-
-      val (retValDef, retNIRef) = returnType match
-         case '[Unit] => (None, None)
-         case '[r] =>
-            vdAndRefFromExpr(Expr.summonOrError[NativeInfo[r]](s.name), "retNI")
-               .pipe(t => (Some(t._1), Some(t._2)))
-
-      val (returnImmiVD, returnImmiRef) = returnType match
-         case '[r] =>
-            vdAndRefFromExpr(Expr.summonOrError[Immigrator[r]], "retImmi")
-
-      val (mhValDef, mhRef) = vdAndRefFromExpr(
-        dc2(
-          addressRef.asExprOf[MemoryAddress],
-          inputNIRefs.map(_.asExprOf[NativeInfo[?]]),
-          retNIRef.map(_.asExprOf[NativeInfo[?]])
-        ),
-        "mh"
-      )
-
-      val lmb = Lambda(
-        Symbol.spliceOwner,
-        MT(paramNames.take(inputTypes.size).toList)(
-          _ => inputTypes.map { case '[a] => TypeRepr.of[a] },
-          _ => returnType match { case '[r] => TypeRepr.of[r] }
-        ),
-        (owner, trees) =>
-           returnType match {
-              case '[r] =>
-                 val retImmi = returnImmiRef.asExprOf[Immigrator[r]]
-                 val callExpr = call2(
-                   mhRef.asExprOf[MethodHandle],
-                   inputTypes.zip(trees.zip(inputEmiRefs)).map {
-                      case ('[a], (t, emi)) =>
-                         '{
-                            ${ emi.asExprOf[Emigrator[a]] }(${ t.asExprOf[a] })(
-                              using localAllocator
-                            )
-                         }
-                   }
+         .traverse { case ((inputName, '[a]), name) =>
+            Validated
+               .fromOption(
+                 Expr.summon[Emigrator[a]],
+                 List(
+                   s"Could not summon ${Type.show[Emigrator[a]]} for parameter $inputName. Is it defined?"
                  )
-                 '{
-                    $retImmi($callExpr)
-                 }.asTerm.changeOwner(owner)
-           }
+               )
+               .map(vdAndRefFromExpr(_, name))
+         }
+         .map(_.unzip)
+
+      val retNI = returnType match
+         case '[Unit] =>
+            Validated.valid((Option.empty[ValDef], Option.empty[Ref]))
+         case '[r] =>
+            Validated
+               .fromOption(
+                 Expr.summon[NativeInfo[r]],
+                 List(
+                   s"Could not summon ${Type.show[NativeInfo[r]]} for the binding return. Is it defined?"
+                 )
+               )
+               .map(
+                 vdAndRefFromExpr(_, "retNI")
+                    .pipe(t => (Some(t._1), Some(t._2)))
+               )
+
+      val retImmi = returnType.match { case '[r] =>
+         Validated
+            .fromOption(
+              Expr.summon[Immigrator[r]],
+              List(
+                s"Could not summon ${Type.show[NativeInfo[r]]} for the binding return. Is it defined?"
+              )
+            )
+            .map(vdAndRefFromExpr(_, "retImmi"))
+      }
+
+      val state = inputNIs.andThen((inputVds, inputRefs) =>
+         inputEmis.andThen((emiVDs, emiRefs) =>
+            retNI.andThen((retNIVd, retNIRef) =>
+               retImmi.map { (immiVd, immiRef) =>
+                  val (mhVd, mhRef) = vdAndRefFromExpr(
+                    dc2(
+                      addressRef.asExprOf[MemoryAddress],
+                      inputRefs.map(_.asExprOf[NativeInfo[?]]),
+                      retNIRef.map(_.asExprOf[NativeInfo[?]])
+                    ),
+                    "mh"
+                  )
+                  MHState(
+                    inputVds,
+                    inputRefs,
+                    emiVDs,
+                    emiRefs,
+                    retNIVd,
+                    retNIRef,
+                    immiVd,
+                    immiRef,
+                    mhVd,
+                    mhRef
+                  )
+               }
+            )
+         )
       )
 
-      Block(
-        inputEmiVds ++ inputNIVds ++ retValDef.toList ++
-           List(
-             returnImmiVD,
-             addressVd,
-             mhValDef
+      def lmb(s: MHState) =
+         Lambda(
+           Symbol.spliceOwner,
+           MT(paramNames.take(inputTypes.size).toList)(
+             _ => inputTypes.map { case (_, '[a]) => TypeRepr.of[a] },
+             _ => returnType match { case '[r] => TypeRepr.of[r] }
            ),
-        lmb
-      ).asExpr
+           (owner, trees) =>
+              returnType match {
+                 case '[r] =>
+                    val retImmi = s.retImmiRef.asExprOf[Immigrator[r]]
+                    val callExpr = call2(
+                      s.mhRef.asExprOf[MethodHandle],
+                      inputTypes.zip(trees.zip(s.inputEmiRefs)).map {
+                         case ((_, '[a]), (t, emi)) =>
+                            '{
+                               try ${ emi.asExprOf[Emigrator[a]] }(${
+                                  t.asExprOf[a]
+                               })(
+                                 using localAllocator
+                               )
+                               finally reset()
+
+                            }
+                      }
+                    )
+                    '{
+                       $retImmi($callExpr)
+                    }.asTerm.changeOwner(owner)
+              }
+         )
+
+      state.map(s =>
+         Block(
+           s.inputEmiVds ++ s.inputNIVds ++ s.retNIVd.toList ++
+              List(
+                s.retImmiVd,
+                addressVd,
+                s.mhVd
+              ),
+           lmb(s)
+         ).asExpr
+      )
    end wrappedMHFromDefDef
 end MethodHandleMacros

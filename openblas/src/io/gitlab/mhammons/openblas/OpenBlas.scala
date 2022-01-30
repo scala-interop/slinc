@@ -2,7 +2,7 @@ package io.gitlab.mhammons.openblas
 
 import io.gitlab.mhammons.slinc.*
 
-object OpenBlas extends Library(Location.System("cblas")):
+object OpenBlas extends Location2(Location.System("cblas")) derives ILibrary:
    type CblasIndex = Long
    def cblas_ddot(
        n: CblasIndex,
@@ -10,7 +10,7 @@ object OpenBlas extends Library(Location.System("cblas")):
        incx: Int,
        dy: Ptr[Double],
        incy: Int
-   ): Double = bind[Double]
+   ): Double = fromNative[Double]
 
    case class ComplexFloat(real: Float, imaginary: Float) derives Struct
 
@@ -21,4 +21,4 @@ object OpenBlas extends Library(Location.System("cblas")):
        y: Ptr[Any],
        incY: CblasIndex,
        dotu: Ptr[Any]
-   ) = bind[Unit]
+   ) = fromNative[Unit]

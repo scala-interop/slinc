@@ -1,5 +1,7 @@
 package io.gitlab.mhammons.slinc
 
+import java.nio.file.Paths
+
 /** Location information about the library you wish to bind
   */
 enum Location:
@@ -22,4 +24,8 @@ enum Location:
    case Absolute(absolutePath: String)
 
 trait Location2(loc: Location):
-   val location: Location = loc
+   loc match
+      case Location.Absolute(path) => System.load(path)
+      case Location.Local(relPath) =>
+         System.load(Paths.get(relPath).toAbsolutePath.toString)
+      case Location.System(name) => System.loadLibrary(name)

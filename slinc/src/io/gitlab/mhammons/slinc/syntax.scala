@@ -22,6 +22,7 @@ import io.gitlab.mhammons.slinc.components.{
    exportValue,
    summonOrError,
    Platform,
+   FromNative,
    widen,
    Cache
 }
@@ -218,7 +219,7 @@ export components.HelperTypes.*
 export components.Variadic.variadicBind
 export components.platform.*
 
-inline def bind2[R] = ${
+inline def fromNative[R] = ${
    bind2Impl[R]
 }
 
@@ -233,12 +234,14 @@ def bind2Impl[R](using Quotes, Type[R]): Expr[R] =
    val foundClass = findClass(Symbol.spliceOwner)
    val foundMethod = findMethod(Symbol.spliceOwner)
 
-   val foundIndex = Cache
-      .getCachedSymbols(foundClass)
+   val foundIndex = foundClass.declaredMethods
       .indexOf(foundMethod)
       .pipe {
-         case -1 => ???
-         case i  => i
+         case -1 =>
+            report.errorAndAbort(
+              s"${foundMethod.fullName} is not considered a native method. This is a serious error"
+            )
+         case i => i
       }
 
    val ((inputRefs, inputTypes), returnType) = foundMethod.tree match

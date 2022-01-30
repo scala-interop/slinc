@@ -1,7 +1,7 @@
 package io.gitlab.mhammons.slinc
 
 import jdk.incubator.foreign.SegmentAllocator
-import components.{Cache, SymbolLookup, NonNative}
+import components.{Cache, SymbolLookup, NonNative, FromNative}
 import scala.annotation.tailrec
 object Testlib
     extends Location2(Location.Absolute(BuildInfo.libtest))
@@ -13,7 +13,7 @@ object Testlib
    case class c_t(a: StaticArray[Int, 3], b: StaticArray[Float, 3])
        derives Struct
 
-   def slinc_test_modify(b_t: b_t) = bind2[b_t]
+   def slinc_test_modify(b_t: b_t) = fromNative[b_t]
    def slinc_test_addone(c_t: c_t) = bind[c_t]
    def slinc_test_getstaticarr(): Ptr[Int] = bind[Ptr[Int]]
    def slinc_test_passstaticarr(res: Ptr[Int]): Unit = bind[Unit]
