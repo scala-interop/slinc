@@ -71,7 +71,7 @@ class StdLibSuite extends munit.FunSuite:
            fnPtr
          )
 
-         copy.castTo[Long].toArray(base.size)
+         copy.castTo[Long].mkArray(base.size)
       }
 
       assertEquals(sortedBase.toSeq, base.sorted)

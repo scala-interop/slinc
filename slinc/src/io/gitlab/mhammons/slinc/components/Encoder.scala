@@ -6,6 +6,7 @@ import jdk.incubator.foreign.{
    MemoryAddress,
    ValueLayout
 }
+import scala.compiletime.erasedValue
 
 type Encodee[A, B] = Encoder[A] ?=> B
 def encoderOf[A]: Encodee[A, Encoder[A]] = summon[Encoder[A]]
@@ -86,6 +87,36 @@ object Encoder:
            memoryAddress.toRawLongValue + offset,
            a
          )
+
+   private inline def arrayToMemsegment[A](array: Array[A]) = inline array match
+      case arr: Array[Byte]   => MemorySegment.ofArray(arr)
+      case arr: Array[Short]  => MemorySegment.ofArray(arr)
+      case arr: Array[Int]    => MemorySegment.ofArray(arr)
+      case arr: Array[Long]   => MemorySegment.ofArray(arr)
+      case arr: Array[Float]  => MemorySegment.ofArray(arr)
+      case arr: Array[Double] => MemorySegment.ofArray(arr)
+
+   private inline def specializedEncoderCopy[A](
+       array: Array[A],
+       memoryAddress: MemoryAddress,
+       offset: Long
+   )(using NativeInfo[A]) =
+      memoryAddress
+         .addOffset(offset)
+         .asSegment(layoutOf[A].byteSize * array.length, memoryAddress.scope)
+         .copyFrom(arrayToMemsegment(array))
+
+   given byteArr: Encoder[Array[Byte]] = specializedEncoderCopy(_, _, _)
+
+   given shortArr: Encoder[Array[Short]] = specializedEncoderCopy(_, _, _)
+
+   given intArr: Encoder[Array[Int]] = specializedEncoderCopy(_, _, _)
+
+   given longArr: Encoder[Array[Long]] = specializedEncoderCopy(_, _, _)
+
+   given floatArr: Encoder[Array[Float]] = specializedEncoderCopy(_, _, _)
+
+   given doubleArr: Encoder[Array[Double]] = specializedEncoderCopy(_, _, _)
 
    given [A](using Encoder[A], NativeInfo[A]): Encoder[Array[A]] with
       def into(array: Array[A], memoryAddress: MemoryAddress, offset: Long) =

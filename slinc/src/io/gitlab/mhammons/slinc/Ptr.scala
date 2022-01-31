@@ -20,6 +20,7 @@ import components.{
    summonOrError,
    decoderOf,
    infoOf,
+   layoutOf,
    Informee,
    Decodee,
    Encodee,
@@ -101,7 +102,7 @@ class Ptr[A](
      */
    inline def castTo[B] =
       Ptr[B](memoryAddress, offset)
-   def asMemoryAddress = memoryAddress
+   def asMemoryAddress = memoryAddress.addOffset(offset)
    def selectDynamic(key: String) = myMap(key)
 
    /** Transform this pointer into an array
@@ -110,7 +111,9 @@ class Ptr[A](
      * @return
      *   A scala array with the aforementioned size
      */
-   def toArray(size: Int)(using Decoder[A], NativeInfo[A], ClassTag[A]) =
+   @deprecated("use mkArray instead", "v0.1.1") def toArray(
+       size: Int
+   )(using Decoder[A], NativeInfo[A], ClassTag[A]) =
       val l = NativeInfo[A].layout
       val elemSize = l.byteSize
       var i = 0
@@ -179,6 +182,46 @@ object Ptr:
       override def deref_=(a: A) =
          throw NullPointerException("SLinC Null Ptr attempted value update")
       override def asMemoryAddress = MemoryAddress.NULL
+
+   extension (a: Ptr[Byte])
+      /** Transforms a Ptr[Byte] to a Scala String
+        */
+      def mkString = CLinker.toJavaString(a.asMemoryAddress)
+      def toByteArray(size: Int) =
+         val addr = a.asMemoryAddress
+         addr.asSegment(layoutOf[Byte].byteSize * size, addr.scope).toByteArray
+
+   extension (a: Ptr[Short])
+      def mkArray(size: Int) =
+         val addr = a.asMemoryAddress
+         addr
+            .asSegment(layoutOf[Short].byteSize * size, addr.scope)
+            .toShortArray
+
+   extension (a: Ptr[Int])
+      def mkArray(size: Int) =
+         val addr = a.asMemoryAddress
+         addr.asSegment(layoutOf[Int].byteSize * size, addr.scope).toIntArray
+
+   extension (a: Ptr[Long])
+      def mkArray(size: Int) =
+         val addr = a.asMemoryAddress
+         addr.asSegment(layoutOf[Long].byteSize * size, addr.scope).toLongArray
+
+   extension (a: Ptr[Float])
+      def mkArray(size: Int) =
+         val addr = a.asMemoryAddress
+         addr
+            .asSegment(layoutOf[Float].byteSize * size, addr.scope)
+            .toFloatArray
+
+   extension (a: Ptr[Double])
+      def mkArray(size: Int) =
+         val addr = a.asMemoryAddress
+         addr
+            .asSegment(layoutOf[Double].byteSize * size, addr.scope)
+            .toDoubleArray
+
    extension [A](a: Ptr[A])
       /** Enables partial dereferencing of a Pointer to a Struct type
         * @return
@@ -196,11 +239,19 @@ object Ptr:
         * ```
         */
       transparent inline def partial = ${ selectableImpl[A]('a) }
-
-   extension (a: Ptr[Byte])
-      /** Transforms a Ptr[Byte] to a Scala String
-        */
-      def mkString = CLinker.toJavaString(a.asMemoryAddress)
+      def mkArray(size: Int)(using NativeInfo[A], ClassTag[A], Decoder[A]) =
+         val memoryAddress = a.asMemoryAddress
+         val l = NativeInfo[A].layout
+         val elemSize = l.byteSize
+         var i = 0
+         val arr = Array.ofDim[A](size)
+         while i < size do
+            arr(i) = decoderOf[A].from(
+              memoryAddress.addOffset(i * elemSize),
+              0
+            )
+            i += 1
+         arr
 
    private def selectableImpl[A: Type](nptr: Expr[Ptr[A]])(using Quotes) =
       val typeInfo = TypeInfo[A]
