@@ -22,7 +22,11 @@ import io.gitlab.mhammons.slinc.components.{
    exportValue,
    summonOrError,
    Platform,
-   widen
+   widen,
+   Cache,
+   findClass,
+   findMethod,
+   VariadicCache
 }
 
 /** Macro for generating a binding to C. Uses the method name and parameter
@@ -39,6 +43,7 @@ import io.gitlab.mhammons.slinc.components.{
   * @note
   *   binding does not work on generic methods
   */
+@deprecated("use accessNative instead", "v0.1.1")
 inline def bind[R](using
     @implicitNotFound(
       "You must provide a return type for bind"
@@ -62,6 +67,7 @@ inline def bind[R](using
   * @note
   *   binding does not work on generic methods
   */
+@deprecated("use accessNative instead", "v0.1.1")
 inline def bind[R](debug: Boolean)(using
     @implicitNotFound(
       "You must provide a return type for bind"
@@ -74,6 +80,8 @@ private def bindImpl[R](debugExpr: Expr[Boolean])(using q: Quotes)(using
     Type[R]
 ): Expr[R] =
    import quotes.reflect.*
+
+   val obj = Symbol.spliceOwner.owner.owner
 
    val debug = debugExpr.valueOrAbort
 
@@ -214,3 +222,97 @@ def allocate[A](num: Long): Informee[A, Allocatee[Ptr[A]]] =
 export components.HelperTypes.*
 export components.Variadic.variadicBind
 export components.platform.*
+
+inline def accessNative[R] = ${
+   accessNativeImpl[R]
+}
+
+private def accessNativeImpl[R](using Quotes, Type[R]): Expr[R] =
+   import quotes.reflect.*
+
+   val foundClass = findClass(Symbol.spliceOwner)
+   val foundMethod = findMethod(Symbol.spliceOwner)
+
+   val foundIndex = foundClass.declaredMethods
+      .indexOf(foundMethod)
+      .pipe {
+         case -1 =>
+            report.errorAndAbort(
+              s"${foundMethod.fullName} is not considered a native method. This is a serious error"
+            )
+         case i => i
+      }
+
+   val ((inputRefs, inputTypes), returnType) = foundMethod.tree match
+      case DefDef(_, params, retType, _) =>
+         params
+            .flatMap(_.params)
+            .collect { case v @ ValDef(r, t, _) =>
+               Ref(v.symbol) -> t
+            }
+            .unzip -> retType
+
+   val fnSymbol = Symbol.requiredClass(s"scala.Function${inputRefs.size}")
+   val fnTypeComplete = Applied(
+     TypeIdent(fnSymbol),
+     inputTypes :+ returnType
+   ).tpe.asType
+   (TypeIdent(foundClass).tpe.asType, fnTypeComplete) match
+      case ('[o], '[f]) =>
+         val lib = Expr.summonOrError[CLibrary[o]]
+         val lambda = '{
+            $lib.cache
+               .getCached[f](${ Expr(foundIndex) })
+         }.asExprOf[f]
+
+         Apply(
+           Select(
+             lambda.asTerm,
+             fnSymbol.declaredMethod("apply").head
+           ),
+           inputRefs
+         ).asExprOf[R]
+end accessNativeImpl
+
+transparent inline def accessNativeVariadic[R](inline args: Any*)(using
+    @implicitNotFound(
+      "You must provide a return type for nativeFromVariadic"
+    ) n: NotGiven[R =:= Nothing]
+) = ${
+   accessNativeVariadicImpl[R]('args)
+}
+
+private def accessNativeVariadicImpl[R](
+    args: Expr[Seq[Any]]
+)(using Quotes, Type[R]) =
+   import quotes.reflect.*
+   val foundClass = findClass(Symbol.spliceOwner)
+   val foundMethod = findMethod(Symbol.spliceOwner)
+   val foundIndex = foundClass.declaredMethods.indexOf(foundMethod).match {
+      case -1 =>
+         report.errorAndAbort(
+           s"${foundMethod.fullName} is not considered a variadic method. This is a serious error, please report it."
+         )
+      case i => i
+   }
+
+   val inputRefs = args match
+      case Varargs(exprs) =>
+         exprs.map(_.asTerm).toList
+
+   TypeIdent(foundClass).tpe.asType match
+      case '[o] =>
+         val lib = Expr
+            .summon[CLibrary[o]]
+            .getOrElse(
+              report.errorAndAbort(
+                s"No native bindings to access, since ${Type.show[o]} is not a library."
+              )
+            )
+         val variadicCache = '{
+            $lib.cache.getCached[VariadicCache[R]](${ Expr(foundIndex) })
+         }
+
+         '{
+            $variadicCache.apply(${ Varargs(inputRefs.map(_.asExpr)) }*)
+         }

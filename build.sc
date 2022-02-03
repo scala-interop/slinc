@@ -24,6 +24,9 @@ object slinc
     with variadic.VariadicGen {
 
    def moduleDeps = Seq(polymorphics)
+   def ivyDeps = Agg(
+     ivy"org.typelevel::cats-core:2.7.0"
+   )
    def scalaVersion = "3.1.0"
    def pomSettings = pomTemplate("SLinC - Scala <-> C Interop")
 
@@ -109,10 +112,6 @@ object slinc
 
    object bench extends Benchmarks {
       def jmhVersion = "1.33"
-      override def ivyDeps = super.ivyDeps() ++ Seq(
-        ivy"com.github.jnr:jnr-ffi:${v.jnr}",
-        ivy"net.java.dev.jna:jna:${v.jna}"
-      )
    }
 }
 

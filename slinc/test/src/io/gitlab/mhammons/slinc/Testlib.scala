@@ -1,8 +1,11 @@
 package io.gitlab.mhammons.slinc
 
 import jdk.incubator.foreign.SegmentAllocator
-
-object Testlib extends Library(Location.Absolute(BuildInfo.libtest)):
+import components.{Cache, SymbolLookup, NonNative}
+import scala.annotation.tailrec
+object Testlib
+    extends AbsoluteLocation(BuildInfo.libtest)
+    with Library(Location.Absolute(BuildInfo.libtest)) derives CLibrary:
    case class a_t(a: Int, b: Int) derives Struct
    case class b_t(c: Int, d: a_t) derives Struct
 
@@ -10,7 +13,7 @@ object Testlib extends Library(Location.Absolute(BuildInfo.libtest)):
    case class c_t(a: StaticArray[Int, 3], b: StaticArray[Float, 3])
        derives Struct
 
-   def slinc_test_modify(b_t: b_t) = bind[b_t]
+   def slinc_test_modify(b_t: b_t) = accessNative[b_t]
    def slinc_test_addone(c_t: c_t) = bind[c_t]
    def slinc_test_getstaticarr(): Ptr[Int] = bind[Ptr[Int]]
    def slinc_test_passstaticarr(res: Ptr[Int]): Unit = bind[Unit]
@@ -29,7 +32,11 @@ object Testlib extends Library(Location.Absolute(BuildInfo.libtest)):
    def bool_test(a: Boolean): Boolean = bind[Boolean]
    def float_test(f: Float): Float = bind[Float]
    def double_test(d: Double): Double = bind[Double]
-   def sum(n: Int) = variadicBind[Int](n)
+   def sum(n: Int) = accessNativeVariadic[Int](n)
 
    def bad_method(str: Ptr[Byte]): Unit = bind[Unit]
    def ibreak(str: Ptr[Byte]): String = bind[String]
+object TestLib2:
+   import Testlib.given SymbolLookup
+
+   def sum(n: Int) = variadicBind[Int](n)
