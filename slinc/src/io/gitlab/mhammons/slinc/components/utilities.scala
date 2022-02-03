@@ -58,3 +58,8 @@ extension [A](t: Expr[?])(using Quotes)
          case '{ $a: a } =>
             TypeRepr.of[a].widen.asType match
                case '[b] => '{ ${ a.asExprOf[b] }: b }
+
+def findClass(using q: Quotes)(symbol: q.reflect.Symbol): q.reflect.Symbol =
+   if symbol.isClassDef then symbol else findClass(symbol.owner)
+def findMethod(using q: Quotes)(symbol: q.reflect.Symbol): q.reflect.Symbol =
+   if symbol.isDefDef then symbol else findMethod(symbol.owner)

@@ -112,10 +112,6 @@ object slinc
 
    object bench extends Benchmarks {
       def jmhVersion = "1.33"
-      override def ivyDeps = super.ivyDeps() ++ Seq(
-        ivy"com.github.jnr:jnr-ffi:${v.jnr}",
-        ivy"net.java.dev.jna:jna:${v.jna}"
-      )
    }
 }
 

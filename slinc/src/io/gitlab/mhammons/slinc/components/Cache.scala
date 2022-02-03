@@ -28,6 +28,17 @@ object Cache:
 
       !(blacklist.contains(s.name) || isNotNative(s))
 
+   def isVariadic(using q: Quotes)(
+       s: q.reflect.Symbol
+   ): Boolean =
+      import quotes.reflect.*
+
+      s.tree match
+         case DefDef(_, _, ret, _) =>
+            ret.tpe.asType match
+               case '[VariadicCalls.VariadicCall] => true
+               case _                             => false
+
    private def cacheImpl[A](
        symbExpr: Expr[SymbolLookup]
    )(using Quotes, Type[A]) =
@@ -40,7 +51,11 @@ object Cache:
          .map(cs =>
             cs.declaredMethods
                .map(s =>
-                  if isCachedSymbol(s) then
+                  if isVariadic(s) then
+                     Validated.valid(List('{
+                        VariadicCache(${ Expr(s.name) }, $symbExpr)
+                     }))
+                  else if isCachedSymbol(s) then
                      MethodHandleMacros
                         .wrappedMHFromDefDef(s, symbExpr)
                         .bimap(

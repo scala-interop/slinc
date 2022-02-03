@@ -4,6 +4,7 @@ import java.nio.file.Paths
 
 /** Location information about the library you wish to bind
   */
+@deprecated("Use one of the LibraryLocation types instead", "v0.1.1")
 enum Location:
    /** Local .so file
      * @param relativePath
@@ -23,9 +24,22 @@ enum Location:
      */
    case Absolute(absolutePath: String)
 
-trait Location2(loc: Location):
-   loc match
-      case Location.Absolute(path) => System.load(path)
-      case Location.Local(relPath) =>
-         System.load(Paths.get(relPath).toAbsolutePath.toString)
-      case Location.System(name) => System.loadLibrary(name)
+/** Information about a non-standard library
+  */
+sealed trait LibraryLocation
+
+/** Indicates an absolute location for the library */
+trait AbsoluteLocation extends LibraryLocation:
+   // override this with the absolute path to the library
+   def path: String
+   System.load(path)
+
+trait LocalLocation extends LibraryLocation:
+   // override this with the relative (to the working directory) path to the library
+   def path: String
+   System.load(Paths.get(path).toAbsolutePath.toString)
+
+trait SystemLibrary extends LibraryLocation:
+   // override this with the library's name (sans lib or .so prefix and suffix)
+   def name: String
+   System.loadLibrary(name)

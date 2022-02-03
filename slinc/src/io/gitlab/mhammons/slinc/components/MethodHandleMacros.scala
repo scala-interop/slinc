@@ -233,14 +233,13 @@ object MethodHandleMacros:
       val ref = Ref(sym)
       vd -> ref
 
-   def wrappedMHFromDefDef(using
-       q: Quotes
-   )(
-       s: q.reflect.Symbol,
-       lookup: Expr[JSymbolLookup]
-   ): Validated[List[String], Expr[Any]] =
+   def wrappedMH(
+       memoryAddress: Expr[MemoryAddress],
+       inputNames: List[Option[String]],
+       inputTypes: List[Type[?]],
+       returnType: Type[?]
+   )(using q: Quotes): Validated[List[String], Expr[Any]] =
       import quotes.reflect.{MethodType => MT, *}
-
       case class MHState(
           inputNIVds: List[ValDef],
           inputNIRefs: List[Ref],
@@ -257,47 +256,44 @@ object MethodHandleMacros:
       val paramNames =
          LazyList.iterate('a')(a => (a + 1).toChar).map(_.toString)
 
-      val (addressVd, addressRef) = vdAndRefFromExpr(
-        '{
-           $lookup
-              .lookup(${ Expr(s.name) })
-              .orElseThrow(() =>
-                 new Exception(s"Could not lookup ${${ Expr(s.name) }}")
-              )
-        },
-        "addr"
-      )
-
-      val (inputTypes, returnType) = s.tree match
-         case DefDef(name, parameters, returnType, _) =>
-            parameters.flatMap(_.params.collect { case ValDef(a, b, _) =>
-               a -> b.tpe.asType
-            }) -> returnType.tpe.asType
-
       val inputNIs =
-         inputTypes
+         inputNames
+            .zip(inputTypes)
             .zip(paramNames.map(s => s"ni$s"))
-            .traverse { case ((inputName, '[a]), name) =>
+            .traverse { case ((maybeInputName, '[a]), name) =>
                Validated
                   .fromOption(
                     Expr.summon[NativeInfo[a]],
-                    List(
-                      s"Could not summon ${Type.show[NativeInfo[a]]} for parameter $inputName. Is it defined?"
-                    )
+                    maybeInputName match
+                       case Some(inputName) =>
+                          List(
+                            s"Could not summon ${Type.show[NativeInfo[a]]} for parameter $inputName. Is it defined?"
+                          )
+                       case None =>
+                          List(
+                            s"Could not summon ${Type.show[NativeInfo[a]]} for variadic argument. Is it defined?"
+                          )
                   )
                   .map(vdAndRefFromExpr(_, name))
             }
             .map(_.unzip)
 
-      val inputEmis = inputTypes
+      val inputEmis = inputNames
+         .zip(inputTypes)
          .zip(paramNames.map(s => s"emi$s"))
-         .traverse { case ((inputName, '[a]), name) =>
+         .traverse { case ((maybeInputName, '[a]), name) =>
             Validated
                .fromOption(
                  Expr.summon[Emigrator[a]],
-                 List(
-                   s"Could not summon ${Type.show[Emigrator[a]]} for parameter $inputName. Is it defined?"
-                 )
+                 maybeInputName match
+                    case Some(inputName) =>
+                       List(
+                         s"Could not summon ${Type.show[Emigrator[a]]} for parameter $inputName. Is it defined?"
+                       )
+                    case None =>
+                       List(
+                         s"Could not summon ${Type.show[Emigrator[a]]} for variadic parameter. Is it defined?"
+                       )
                )
                .map(vdAndRefFromExpr(_, name))
          }
@@ -336,7 +332,7 @@ object MethodHandleMacros:
                retImmi.map { (immiVd, immiRef) =>
                   val (mhVd, mhRef) = vdAndRefFromExpr(
                     dc2(
-                      addressRef.asExprOf[MemoryAddress],
+                      memoryAddress.asExprOf[MemoryAddress],
                       inputRefs.map(_.asExprOf[NativeInfo[?]]),
                       retNIRef.map(_.asExprOf[NativeInfo[?]])
                     ),
@@ -363,7 +359,7 @@ object MethodHandleMacros:
          Lambda(
            Symbol.spliceOwner,
            MT(paramNames.take(inputTypes.size).toList)(
-             _ => inputTypes.map { case (_, '[a]) => TypeRepr.of[a] },
+             _ => inputTypes.map { case '[a] => TypeRepr.of[a] },
              _ => returnType match { case '[r] => TypeRepr.of[r] }
            ),
            (owner, trees) =>
@@ -373,7 +369,7 @@ object MethodHandleMacros:
                     val callExpr = call2(
                       s.mhRef.asExprOf[MethodHandle],
                       inputTypes.zip(trees.zip(s.inputEmiRefs)).map {
-                         case ((_, '[a]), (t, emi)) =>
+                         case ('[a], (t, emi)) =>
                             '{
                                try ${ emi.asExprOf[Emigrator[a]] }(${
                                   t.asExprOf[a]
@@ -396,11 +392,40 @@ object MethodHandleMacros:
            s.inputEmiVds ++ s.inputNIVds ++ s.retNIVd.toList ++
               List(
                 s.retImmiVd,
-                addressVd,
                 s.mhVd
               ),
            lmb(s)
          ).asExpr
       )
+
+   def wrappedMHFromDefDef(using
+       q: Quotes
+   )(
+       s: q.reflect.Symbol,
+       lookup: Expr[JSymbolLookup]
+   ): Validated[List[String], Expr[Any]] =
+      import quotes.reflect.{MethodType => MT, *}
+      val paramNames =
+         LazyList.iterate('a')(a => (a + 1).toChar).map(_.toString)
+
+      val address =
+         '{
+            $lookup
+               .lookup(${ Expr(s.name) })
+               .orElseThrow(() =>
+                  new Exception(s"Could not lookup ${${ Expr(s.name) }}")
+               )
+         }
+
+      val ((inputNames, inputTypes), returnType) = s.tree match
+         case DefDef(name, parameters, returnType, _) =>
+            parameters
+               .flatMap(_.params.collect { case ValDef(a, b, _) =>
+                  Some(a) -> b.tpe.asType
+               })
+               .unzip -> returnType.tpe.asType
+
+      wrappedMH(address, inputNames, inputTypes, returnType)
+
    end wrappedMHFromDefDef
 end MethodHandleMacros

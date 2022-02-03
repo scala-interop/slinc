@@ -24,7 +24,10 @@ import io.gitlab.mhammons.slinc.components.{
    Platform,
    FromNative,
    widen,
-   Cache
+   Cache,
+   findClass,
+   findMethod,
+   VariadicCache
 }
 
 /** Macro for generating a binding to C. Uses the method name and parameter
@@ -219,17 +222,12 @@ export components.HelperTypes.*
 export components.Variadic.variadicBind
 export components.platform.*
 
-inline def fromNative[R] = ${
+inline def accessNative[R] = ${
    bind2Impl[R]
 }
 
 def bind2Impl[R](using Quotes, Type[R]): Expr[R] =
    import quotes.reflect.*
-
-   def findClass(symbol: Symbol): Symbol =
-      if symbol.isClassDef then symbol else findClass(symbol.owner)
-   def findMethod(symbol: Symbol): Symbol =
-      if symbol.isDefDef then symbol else findMethod(symbol.owner)
 
    val foundClass = findClass(Symbol.spliceOwner)
    val foundMethod = findMethod(Symbol.spliceOwner)
@@ -260,7 +258,7 @@ def bind2Impl[R](using Quotes, Type[R]): Expr[R] =
    ).tpe.asType
    (TypeIdent(foundClass).tpe.asType, fnTypeComplete) match
       case ('[o], '[f]) =>
-         val lib = Expr.summonOrError[ILibrary[o]]
+         val lib = Expr.summonOrError[CLibrary[o]]
          val lambda = '{
             $lib.cache
                .getCached[f](${ Expr(foundIndex) })
@@ -273,3 +271,46 @@ def bind2Impl[R](using Quotes, Type[R]): Expr[R] =
            ),
            inputRefs
          ).asExprOf[R]
+
+transparent inline def accessNativeVariadic[R](inline args: Any*)(using
+    @implicitNotFound(
+      "You must provide a return type for nativeFromVariadic"
+    ) n: NotGiven[R =:= Nothing]
+) = ${
+   accessNativeVariadicImpl[R]('args)
+}
+
+private def accessNativeVariadicImpl[R](
+    args: Expr[Seq[Any]]
+)(using Quotes, Type[R]) =
+   import quotes.reflect.*
+   val foundClass = findClass(Symbol.spliceOwner)
+   val foundMethod = findMethod(Symbol.spliceOwner)
+   val foundIndex = foundClass.declaredMethods.indexOf(foundMethod).match {
+      case -1 =>
+         report.errorAndAbort(
+           s"${foundMethod.fullName} is not considered a variadic method. This is a serious error, please report it."
+         )
+      case i => i
+   }
+
+   val inputRefs = args match
+      case Varargs(exprs) =>
+         exprs.map(_.asTerm).toList
+
+   TypeIdent(foundClass).tpe.asType match
+      case '[o] =>
+         val lib = Expr
+            .summon[CLibrary[o]]
+            .getOrElse(
+              report.errorAndAbort(
+                s"No native bindings to access, since ${Type.show[o]} is not a library."
+              )
+            )
+         val variadicCache = '{
+            $lib.cache.getCached[VariadicCache[R]](${ Expr(foundIndex) })
+         }
+
+         '{
+            $variadicCache.apply(${ Varargs(inputRefs.map(_.asExpr)) }*)
+         }

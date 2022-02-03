@@ -33,17 +33,19 @@ trait Library(location: Location):
          .lookup(name)
          .orElseThrow(() => new Exception(s"couldn't find symbol $name"))
 
-class ILibrary[A](val cache: Cache, val lookup: JSymbolLookup):
-   inline def call[R](args: Any*): R = ???
-object ILibrary:
-   inline given derived[A]: ILibrary[A] =
+class CLibrary[A](
+    val cache: Cache,
+    val lookup: JSymbolLookup
+) //inline def call[R](args: Any*): R = ???
+object CLibrary:
+   inline def derived[A]: CLibrary[A] =
       inline erasedValue[A] match
-         case _: Location2 =>
+         case _: LibraryLocation =>
             val c = Cache[A](JSymbolLookup.loaderLookup)
-            ILibrary[A](
+            CLibrary[A](
               c,
               JSymbolLookup.loaderLookup
             )
          case _ =>
             val c = Cache[A](CLinker.systemLookup)
-            ILibrary[A](c, CLinker.systemLookup)
+            CLibrary[A](c, CLinker.systemLookup)

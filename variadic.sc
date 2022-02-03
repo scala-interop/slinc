@@ -5,10 +5,11 @@ import scala.util.chaining._
 trait VariadicGen extends ScalaModule {
    def callClassGen(arity: Int) = {
       val typeBlock = s"[${typeListForArity(arity)}]"
-      val applyArgument = ("address" +: paramNames.take(arity) :+ "args")
-         .map(v => s"'$v")
-         .mkString(",")
-      s"""| case class VariadicCall$arity$typeBlock${constructor(arity)}{
+      val applyArgument =
+         ("address" +: "cache" +: paramNames.take(arity) :+ "args")
+            .map(v => s"'$v")
+            .mkString(",")
+      s"""| case class VariadicCall$arity$typeBlock${constructor(arity)} extends VariadicCall{
           |    inline def apply(inline args: Any*): $returnType = $${
           |       variadicCall${arity}Impl$typeBlock($applyArgument)
           |    }
@@ -17,15 +18,16 @@ trait VariadicGen extends ScalaModule {
 
    def macroImplGen(arity: Int) = {
       val typeBlock = s"[${typeListForArity(arity)}]"
-      val args = (("address" -> "MemoryAddress") +: paramNames
-         .zip(typeNames)
-         .take(arity)
-         .toList :+ ("args" -> "Seq[Any]"))
-         .map { case (p, t) =>
-            s"$p:Expr[$t]"
-         }
-         .toList
-         .mkString(",")
+      val args =
+         (("address" -> "MemoryAddress") +: ("cache" -> "LRU") +: paramNames
+            .zip(typeNames)
+            .take(arity)
+            .toList :+ ("args" -> "Seq[Any]"))
+            .map { case (p, t) =>
+               s"$p:Expr[$t]"
+            }
+            .toList
+            .mkString(",")
       val using = ("Quotes" +: (typeNames.take(arity) :+ returnType).map(t =>
          s"Type[$t]"
       )).mkString(",")
@@ -40,7 +42,7 @@ trait VariadicGen extends ScalaModule {
           | )(using
           |    $using
           | ): Expr[$returnType] = {
-          |    variadicHandler(address, List($argList), args)
+          |    variadicHandler(address, cache, List($argList), args)
           | }""".stripMargin
    }
 
@@ -60,12 +62,13 @@ trait VariadicGen extends ScalaModule {
    val typeNames = LazyList.iterate('A'.toInt, 24)(_ + 1).map(_.toChar.toString)
    val paramNames =
       LazyList.iterate('a'.toInt, 24)(_ + 1).map(_.toChar.toString)
-   def constructor(arity: Int) = (("address" -> "MemoryAddress") +: paramNames
-      .zip(typeNames)
-      .take(arity))
-      .map { case (p, t) => s"$p:$t" }
-      .mkString(",")
-      .pipe(ps => s"($ps)")
+   def constructor(arity: Int) =
+      (("address" -> "MemoryAddress") +: ("cache" -> "LRU") +: paramNames
+         .zip(typeNames)
+         .take(arity))
+         .map { case (p, t) => s"$p:$t" }
+         .mkString(",")
+         .pipe(ps => s"($ps)")
    def typeListForArity(arity: Int) =
       (typeNames.take(arity) :+ returnType).mkString(",")
 
