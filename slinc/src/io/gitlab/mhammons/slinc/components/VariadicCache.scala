@@ -4,7 +4,6 @@ import scala.quoted.*
 import jdk.incubator.foreign.{SymbolLookup, MemoryAddress}
 
 class VariadicCache[R](name: String, symbolLookup: SymbolLookup):
-   println("creating cache")
    val cache: ThreadLocal[LRU] = ThreadLocal.withInitial(() => new LRU(10))
    val address = symbolLookup
       .lookup(name)
@@ -37,7 +36,9 @@ object VariadicCache:
          .of[VariadicCalls.type]
          .typeSymbol
          .declaredTypes
-         .filter(_.name.endsWith(arity.toString))
+         .filter(s =>
+            s.name.endsWith(arity.toString) && s.name.startsWith("Cached")
+         )
          .head
       val tt = Applied(TypeIdent(symbol), params.map(_._2) :+ TypeTree.of[R])
       Apply(

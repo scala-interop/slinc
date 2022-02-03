@@ -14,7 +14,25 @@ import io.gitlab.mhammons.slinc.CLibrary
 
 trait VariadicMechanisms:
    trait VariadicCall
+
    protected def variadicHandler[R](
+       address: Expr[MemoryAddress],
+       params: List[Expr[Any]],
+       args: Expr[Seq[Any]]
+   )(using Quotes, Type[R]) =
+      import quotes.reflect.*
+      val vParams = args match
+         case Varargs(exprs) =>
+            exprs
+               .map(_.widen)
+               .map { case '{ $v: a } =>
+                  '{ Variadic[a](${ v }) }
+               }
+               .toList
+
+      MethodHandleMacros.binding[R](address, params ++ vParams).asExprOf[R]
+
+   protected def variadicHandlerC[R](
        address: Expr[MemoryAddress],
        cache: Expr[LRU],
        params: List[Expr[Any]],
@@ -65,7 +83,7 @@ trait VariadicMechanisms:
               (params ++ vParams).map(_.asTerm)
             ).asExprOf[R]
       }
-   end variadicHandler
+   end variadicHandlerC
 
 case class Variadic[A](a: A) extends AnyVal
 object Variadic extends VariadicMechanisms:
@@ -78,6 +96,7 @@ object Variadic extends VariadicMechanisms:
    given [A](using orig: Emigrator[A]): Emigrator[Variadic[A]] =
       orig.contramap[Variadic[A]](_.a)
 
+   @deprecated("Use accessNativeVariadic instead", "v0.1.1")
    transparent inline def variadicBind[R](inline args: Any*)(using
        @implicitNotFound(
          "You must provide a return type for variadicBind"
@@ -130,7 +149,7 @@ object Variadic extends VariadicMechanisms:
           ),
           params.map(_._2) :+ TypeTree.of[R]
         ),
-        address +: '{ LRU(1) }.asTerm +: params.map(_._1.asTerm)
+        address +: params.map(_._1.asTerm)
       ).asExpr
 
 end Variadic

@@ -82,5 +82,7 @@ object Cache:
             }
          }
          .getOrElse(
-           report.errorAndAbort("messed up ")
+           report.errorAndAbort(
+             s"Class not found for type ${Type.show[A]}... Are you sure you tried to derive CLibrary for a class or object?"
+           )
          )

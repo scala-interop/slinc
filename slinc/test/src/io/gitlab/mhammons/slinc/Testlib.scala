@@ -1,12 +1,11 @@
 package io.gitlab.mhammons.slinc
 
 import jdk.incubator.foreign.SegmentAllocator
-import components.{Cache, SymbolLookup, NonNative, FromNative}
+import components.{Cache, SymbolLookup, NonNative}
 import scala.annotation.tailrec
 object Testlib
-    extends AbsoluteLocation
+    extends AbsoluteLocation(BuildInfo.libtest)
     with Library(Location.Absolute(BuildInfo.libtest)) derives CLibrary:
-   def path = BuildInfo.libtest
    case class a_t(a: Int, b: Int) derives Struct
    case class b_t(c: Int, d: a_t) derives Struct
 

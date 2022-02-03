@@ -3,33 +3,49 @@ title: Binding C Methods
 layout: doc-page
 ---
 
-Slinc's main purpose as a library is to allow Scala programmers to easily create bindings to C methods and call them with as little fuss as possible. Slinc uses three concepts to create bindings to C methods at present: 
-* `bind`
-* `variadicBind`
-* `Library`
+Slinc's main purpose as a library is to allow Scala programmers to easily create bindings to C methods and call them with as little fuss as possible. Slinc uses three concepts to create bindings to C methods at present:
+* `CLibrary` and `nativeAccess`
+* `LocalLocation`, `AbsoluteLocation`, and `SystemLibrary`
+* `accessNativeVariadic`
+  
+## `CLibrary` and `nativeAccess`
 
-## `bind`
+`CLibrary` and `nativeAccess` are the ways binding and using C functions works in Slinc. In order to bind to a library, one must define a class or object that derives the `CLibrary` trait. All methods in a class or object that derives said trait will have C bindings matching their shape derived for them. `nativeAccess` is a macro that defines the methods in question as using the automatically generated bindings. As a practical example, say you wanted to bind to `qsort` from the C standard library. The following code would work for you.
 
-`bind` is a macro defined in Slinc, and for 99% of your method bindings, it will be all you need. `bind` works off the type signature of a method, and is fairly easy to use as long as you're aware of the mapping between C types and Scala types in Slinc. Please refer to the [Slinc Types](slinc-types.md) page if you need a refresher, or if you're new to Slinc. 
+```scala
+object MyBinding derives CLibrary:
+   def qsort(base: Ptr[Any], nitems: SizeT, size: SizeT, compar: Ptr[(Ptr[Any], Ptr[Any]) => Int]) = nativeAccess[Unit]
+```
 
-In C's stdlib.h, there's a method called `qsort`. 
+The name of the object does not matter, just the name and signature of the methods within it. The `CLibrary` typeclass, when derived for `MyBinding`, will generate the method handles and other machinery needed for the foreign API to work, while the `nativeAccess` macro provides a method definition that uses said machinery. As for the method signature needed for the bindings, please refer to [the Slinc types](slinc-types.md) page for more information. In the above case, the C definition of `qsort` is as follows:
 
 ```C
 void qsort(void *base, size_t nitems, size_t size, int (*compar)(const void *, const void *))
 ```
-To bind to it in Slinc, one must create a method with the same name, and the following implementation:
+
+Following the C signature, an input of a `void` pointer, two `size_t`s and a function pointer input that needs a function that takes two `void` pointers and returns an `int`, it follows that our Scala `qsort` binding should take `Ptr[Any]`, two `SizeT`s, and a `Ptr[(Ptr[Any], Ptr[Any]) => Int]` as input, since those are the corresponding Slinc types.
+
+## `LocalLocation`, `AbsoluteLocation`, and `SystemLibrary`
+
+These three types are meant to be extended by your binding object or class in order to indicate the specific library location or name for non-standard C libraries. When one of these types is seen while deriving the `CLibrary` typeclass, a special loader is used in order to fetch from the requisite library. As an example, take cblas:
 
 ```scala
-def qsort(base: Ptr[Any], nitems: SizeT, size: SizeT, compar: Ptr[(Ptr[Any], Ptr[Any]) => Int]) = bind[Unit]
+object OpenBlas extends SystemLibrary("cblas") derives CLibrary:
+   type CblasIndex = Long
+   def cblas_ddot(
+       n: CblasIndex,
+       dx: Ptr[Double],
+       incx: Int,
+       dy: Ptr[Double],
+       incy: Int
+   ): Double = accessNative[Double]
 ```
 
-That is it. `qsort` is now bound, and can be called with the appropriate data. 
+Here `SystemLibrary` is used since `libcblas.so` is on the library path. If you want to instead point to the absolute location, you can use `AbsoluteLocation` and pass in the location of the `.so` file as a `String`. Finally, if you want to bind to a library whose location is relative to the current working directory of your program, you can pass in a relative path to `LocalLocation`
 
-One small note: when binding a function it's necessary to use the function's name in C including the capitalization, but the parameter names do not matter in the least. All that matters for `bind` with regards to the parameters is that you've written the appropriate types.
+## `accessNativeVariadic`
 
-## `variadicBind`
-
-`variadicBind` is a special version of bind that allows you to bind to variadic functions. Because of the limitations of Scala 3 macros at present, its syntax is not as nice as `bind`'s, but it's still not hard to use.
+`accessNativeVariadic` is a special version of `accessNative` that allows you to use variadic function. Because of the limitations of Scala 3 macros at present, its syntax is not as nice as `accessNative`'s, but it's still not hard to use.
 
 In C's stdio.h, there's a method called `printf`.
 
@@ -40,32 +56,16 @@ int printf(const char *format, ...)
 The corresponding binding in Slinc would take the form 
 
 ```scala
-def printf(format: Ptr[Byte]) = variadicBind[Int](format)
+object MyLib derives CLibrary: 
+   def printf(format: Ptr[Byte]) = accessNativeVariadic[Int](format)
 ```
 
-One other difference between `variadicBind` and `bind` is that its bindings are curried methods, with the second set of parameters being the variadic arguments. 
+One other difference between `accessNativeVariadic` and `accessNative` is that its bindings are curried methods, with the second set of parameters being the variadic arguments. 
 
 Using our `printf` binding therefore looks like:
 
 ```scala
 scope{
-   printf("%d %d %f".encode)(5,3,10.0f)
+   MyLib.printf("%d %d %f".encode)(5,3,10.0f)
 }
 ```
-
-## `Library`
-
-`Library` is a trait in Slinc that's used to influence method lookup. So far, all our bindings have been to the C standard library, so we didn't need `Library`. However, if we wanted to bind to a system library, or a library that is positioned relative to our program, or a library that we have the absolute path to, we would need to define our bindings within an object that extends Library appropriately.
-
-```scala
-object MySpecialBinding extends Library(Position.Local("libs/myspeciallib.so")):
-   //this binding will be made to myspeciallib.so
-   def special_binding(i: Int) = bind[Float]
-```
-
-The `Library` trait takes one of three values from the `Position` enum:
-* Local
-* System
-* Absolute
-
-`System` indicates lookup should be done on libraries that are on the system path, `Local` indicates lookup should be done relative to the program's current working directory, and `Absolute` indicates lookup using an absolute path.

@@ -17,7 +17,7 @@ import java.lang.invoke.MethodType
 import cats.data.Validated
 import cats.implicits.*
 
-object MethodHandleMacros:
+private[slinc] object MethodHandleMacros:
    inline def methodTypeForFn[A](using Fn[A]) = ${
       methodTypeForFnImpl[A]
    }
@@ -397,6 +397,7 @@ object MethodHandleMacros:
            lmb(s)
          ).asExpr
       )
+   end wrappedMH
 
    def wrappedMHFromDefDef(using
        q: Quotes

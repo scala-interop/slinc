@@ -28,18 +28,25 @@ enum Location:
   */
 sealed trait LibraryLocation
 
-/** Indicates an absolute location for the library */
-trait AbsoluteLocation extends LibraryLocation:
+/** Indicates an absolute location for the library
+  * @param path
+  *   The absolute path to the library in question
+  */
+trait AbsoluteLocation(path: String) extends LibraryLocation:
    // override this with the absolute path to the library
-   def path: String
    System.load(path)
 
-trait LocalLocation extends LibraryLocation:
-   // override this with the relative (to the working directory) path to the library
-   def path: String
+/** Indicates a relative location for the library
+  * @param path
+  *   The path to the library relative to the current working directory of the
+  *   program
+  */
+trait LocalLocation(path: String) extends LibraryLocation:
    System.load(Paths.get(path).toAbsolutePath.toString)
 
-trait SystemLibrary extends LibraryLocation:
-   // override this with the library's name (sans lib or .so prefix and suffix)
-   def name: String
+/** Denotes a library that is on the library path of the system
+  * @param name
+  *   The name of the library, sans lib or .so prefixes/suffixes.
+  */
+trait SystemLibrary(name: String) extends LibraryLocation:
    System.loadLibrary(name)

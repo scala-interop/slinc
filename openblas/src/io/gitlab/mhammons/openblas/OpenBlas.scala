@@ -2,8 +2,7 @@ package io.gitlab.mhammons.openblas
 
 import io.gitlab.mhammons.slinc.*
 
-object OpenBlas extends SystemLibrary derives CLibrary:
-   def name = "cblas"
+object OpenBlas extends SystemLibrary("cblas") derives CLibrary:
    type CblasIndex = Long
    def cblas_ddot(
        n: CblasIndex,

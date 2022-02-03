@@ -18,6 +18,7 @@ import scala.annotation.tailrec
   * @see
   *   [[io.gitlab.mhammons.slinc.Location]]
   */
+@deprecated("Use one of the LibraryLocation subclasses instead", "v0.1.1")
 trait Library(location: Location):
    location match
       case Location.Absolute(path) => System.load(path)

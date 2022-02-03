@@ -22,7 +22,6 @@ import io.gitlab.mhammons.slinc.components.{
    exportValue,
    summonOrError,
    Platform,
-   FromNative,
    widen,
    Cache,
    findClass,
@@ -44,6 +43,7 @@ import io.gitlab.mhammons.slinc.components.{
   * @note
   *   binding does not work on generic methods
   */
+@deprecated("use accessNative instead", "v0.1.1")
 inline def bind[R](using
     @implicitNotFound(
       "You must provide a return type for bind"
@@ -67,6 +67,7 @@ inline def bind[R](using
   * @note
   *   binding does not work on generic methods
   */
+@deprecated("use accessNative instead", "v0.1.1")
 inline def bind[R](debug: Boolean)(using
     @implicitNotFound(
       "You must provide a return type for bind"
@@ -223,10 +224,10 @@ export components.Variadic.variadicBind
 export components.platform.*
 
 inline def accessNative[R] = ${
-   bind2Impl[R]
+   accessNativeImpl[R]
 }
 
-def bind2Impl[R](using Quotes, Type[R]): Expr[R] =
+private def accessNativeImpl[R](using Quotes, Type[R]): Expr[R] =
    import quotes.reflect.*
 
    val foundClass = findClass(Symbol.spliceOwner)
@@ -271,6 +272,7 @@ def bind2Impl[R](using Quotes, Type[R]): Expr[R] =
            ),
            inputRefs
          ).asExprOf[R]
+end accessNativeImpl
 
 transparent inline def accessNativeVariadic[R](inline args: Any*)(using
     @implicitNotFound(
