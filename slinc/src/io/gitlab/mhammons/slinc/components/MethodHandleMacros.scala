@@ -366,21 +366,22 @@ private[slinc] object MethodHandleMacros:
               returnType match {
                  case '[r] =>
                     val retImmi = s.retImmiRef.asExprOf[Immigrator[r]]
-                    val callExpr = call2(
-                      s.mhRef.asExprOf[MethodHandle],
-                      inputTypes.zip(trees.zip(s.inputEmiRefs)).map {
-                         case ('[a], (t, emi)) =>
-                            '{
-                               try ${ emi.asExprOf[Emigrator[a]] }(${
-                                  t.asExprOf[a]
-                               })(
-                                 using localAllocator
-                               )
-                               finally reset()
-
+                    val callExpr = '{
+                       given SegmentAllocator = localAllocator
+                       try ${
+                          call2(
+                            s.mhRef.asExprOf[MethodHandle],
+                            inputTypes.zip(trees.zip(s.inputEmiRefs)).map {
+                               case ('[a], (t, emi)) =>
+                                  '{
+                                     ${ emi.asExprOf[Emigrator[a]] }(${
+                                        t.asExprOf[a]
+                                     })
+                                  }
                             }
-                      }
-                    )
+                          )
+                       } finally reset()
+                    }
                     '{
                        $retImmi($callExpr)
                     }.asTerm.changeOwner(owner)
@@ -403,20 +404,11 @@ private[slinc] object MethodHandleMacros:
        q: Quotes
    )(
        s: q.reflect.Symbol,
-       lookup: Expr[JSymbolLookup]
+       address: Expr[MemoryAddress]
    ): Validated[List[String], Expr[Any]] =
       import quotes.reflect.{MethodType => MT, *}
       val paramNames =
          LazyList.iterate('a')(a => (a + 1).toChar).map(_.toString)
-
-      val address =
-         '{
-            $lookup
-               .lookup(${ Expr(s.name) })
-               .orElseThrow(() =>
-                  new Exception(s"Could not lookup ${${ Expr(s.name) }}")
-               )
-         }
 
       val ((inputNames, inputTypes), returnType) = s.tree match
          case DefDef(name, parameters, returnType, _) =>

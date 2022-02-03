@@ -2,15 +2,17 @@ package io.gitlab.mhammons.slinc.components
 
 import scala.quoted.*
 import scala.util.chaining.*
-import jdk.incubator.foreign.SymbolLookup
+import jdk.incubator.foreign.{SymbolLookup, MemoryAddress}
 import cats.data.Validated
 
 class Cache(storage: Array[Any]):
    def getCached[A](key: Int): A = storage(key).asInstanceOf[A]
 
 object Cache:
-   transparent inline def apply[A](symbolLookup: SymbolLookup): Cache = ${
-      cacheImpl[A]('symbolLookup)
+   transparent inline def apply[A, S, RC](
+       symbolLookup: SymbolLookup
+   ): Cache = ${
+      cacheImpl[A, S, RC]('symbolLookup)
    }
 
    def isCachedSymbol(using q: Quotes)(
@@ -39,11 +41,38 @@ object Cache:
                case '[VariadicCalls.VariadicCall] => true
                case _                             => false
 
-   private def cacheImpl[A](
+   def parseName(raw: Boolean, name: String): String = if raw then name
+   else name.flatMap(c => if c.isUpper then s"_${c.toLower}" else c.toString)
+
+   private def getAddress(using q: Quotes)(
+       lookup: Expr[SymbolLookup],
+       prefix: String,
+       raw: Boolean,
+       s: q.reflect.Symbol
+   ): Expr[MemoryAddress] =
+      val cleanedPrefix =
+         prefix
+            .filter(_ != '"')
+            .pipe(str => if str.nonEmpty then s"${str}_" else str)
+      val name =
+         Expr(s"$cleanedPrefix${parseName(raw, s.name)}")
+      '{
+         val nm = ${ name }
+         $lookup
+            .lookup(nm)
+            .orElseThrow(() =>
+               throw new Exception(s"Could not find $nm to bind to.")
+            )
+      }
+
+   private def cacheImpl[A, S, RC](
        symbExpr: Expr[SymbolLookup]
-   )(using Quotes, Type[A]) =
+   )(using q: Quotes, t: Type[A], s: Type[S], rc: Type[RC]) =
       import quotes.reflect.*
 
+      val raw = rc match
+         case '[ true]  => true
+         case '[ false] => false
       TypeRepr
          .of[A]
          .classSymbol
@@ -53,11 +82,21 @@ object Cache:
                .map(s =>
                   if isVariadic(s) then
                      Validated.valid(List('{
-                        VariadicCache(${ Expr(s.name) }, $symbExpr)
+                        VariadicCache(${
+                           getAddress(using q)(
+                             symbExpr,
+                             Type.show[S],
+                             raw,
+                             s
+                           )
+                        })
                      }))
                   else if isCachedSymbol(s) then
                      MethodHandleMacros
-                        .wrappedMHFromDefDef(s, symbExpr)
+                        .wrappedMHFromDefDef(
+                          s,
+                          getAddress(symbExpr, Type.show[S], raw, s)
+                        )
                         .bimap(
                           es =>
                              List(

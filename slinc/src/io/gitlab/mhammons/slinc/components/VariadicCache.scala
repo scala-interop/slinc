@@ -3,11 +3,8 @@ package io.gitlab.mhammons.slinc.components
 import scala.quoted.*
 import jdk.incubator.foreign.{SymbolLookup, MemoryAddress}
 
-class VariadicCache[R](name: String, symbolLookup: SymbolLookup):
+class VariadicCache[R](address: MemoryAddress):
    val cache: ThreadLocal[LRU] = ThreadLocal.withInitial(() => new LRU(10))
-   val address = symbolLookup
-      .lookup(name)
-      .orElseGet(() => throw new Exception(s"Could not find method ${name}"))
 
    transparent inline def apply(inline args: Any*) = ${
       VariadicCache.applyImpl[R]('address, '{ cache.get }, 'args)
