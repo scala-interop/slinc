@@ -14,7 +14,7 @@ function dataFunction(array, labels) {
 function loadBenchData(array, labels, benchName, version) {
    $.ajax({
       type: "GET",
-      url: "/resources/" + benchName + "-bench-v" + version + ".json",
+      url: pathToRoot+"/resources/" + benchName + "-bench-v" + version + ".json",
       dataType: "json",
       success: dataFunction(array, labels),
       async: false

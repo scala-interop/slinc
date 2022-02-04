@@ -54,10 +54,11 @@ import io.gitlab.mhammons.slinc.*
 
 case class div_t(quot: Int, rem: Int) derives Struct
 
-def div(numer: Int, denom: Int) = bind[div_t]
+object MyLib derives CLibrary:
+   def div(numer: Int, denom: Int) = bind[div_t]
 
 @main def calc =
-   val (quot, rem) = Tuple.fromProduct(div(5, 2))
+   val (quot, rem) = Tuple.fromProduct(MyLib.div(5, 2))
    println(s"got a quotient of $quot and a remainder $rem")
 ```
 

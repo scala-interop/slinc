@@ -17,5 +17,9 @@ layout: doc-page
 <h2>{{ benchName }}</h2>
 
 <canvas id="{{benchName}}Bench"></canvas>
-<script>inVersionGraph("{{benchBench}}", "{{benchVersion}}", "{{benchScale}}", ["{{ benchKeys | join: '", "'}}"], "{{ benchScaleType }}", document.getElementById('{{benchName}}Bench'));</script>
+<script defer="true">
+      window.addEventListener('DOMContentLoaded', function() {
+         inVersionGraph("{{benchBench}}", "{{benchVersion}}", "{{benchScale}}", ["{{ benchKeys | join: '", "'}}"], "{{ benchScaleType }}", document.getElementById('{{benchName}}Bench'));
+      });
+</script>
 {% endfor %}
