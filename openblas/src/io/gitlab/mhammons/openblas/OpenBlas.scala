@@ -2,9 +2,10 @@ package io.gitlab.mhammons.openblas
 
 import io.gitlab.mhammons.slinc.*
 
-object OpenBlas extends SystemLibrary("cblas") derives CLibrary:
+object OpenBlas extends SystemLibrary("cblas"), WithPrefix["cblas"]
+    derives CLibrary:
    type CblasIndex = Long
-   def cblas_ddot(
+   def ddot(
        n: CblasIndex,
        dx: Ptr[Double],
        incx: Int,
@@ -14,7 +15,7 @@ object OpenBlas extends SystemLibrary("cblas") derives CLibrary:
 
    case class ComplexFloat(real: Float, imaginary: Float) derives Struct
 
-   def cblas_cdotu_sub(
+   def cdotuSub(
        n: CblasIndex,
        x: Ptr[Any],
        incX: CblasIndex,

@@ -30,7 +30,7 @@ class OpenBlasBench:
    @Benchmark
    def slincblasDDot =
       scope {
-         OpenBlas.cblas_ddot(size, arr1.encode, 1, arr2.encode, 1)
+         OpenBlas.ddot(size, arr1.encode, 1, arr2.encode, 1)
       }
 
    val complexArrayBase1 =
@@ -56,7 +56,7 @@ class OpenBlasBench:
    def openblasCDotUStructStyle =
       scope {
          val complexPtr = allocate[OpenBlas.ComplexFloat](1)
-         OpenBlas.cblas_cdotu_sub(
+         OpenBlas.cdotuSub(
            size,
            complexStructArray1.encode.castTo[Any],
            1,
@@ -71,7 +71,7 @@ class OpenBlasBench:
    def openblasCDotUArrayStyle =
       scope {
          val complexPtr = allocate[Float](2)
-         OpenBlas.cblas_cdotu_sub(
+         OpenBlas.cdotuSub(
            size,
            complexArray1.encode.castTo[Any],
            1,

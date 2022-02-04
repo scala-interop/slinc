@@ -8,7 +8,7 @@ import jdk.incubator.foreign.{
 }
 import components.{SymbolLookup, Cache}
 import scala.quoted.*
-import scala.compiletime.erasedValue
+import scala.compiletime.{erasedValue, constValue}
 import scala.annotation.tailrec
 
 /** Denotes a collection of bindings to a library that's not part of the
@@ -40,13 +40,18 @@ class CLibrary[A](
 ) //inline def call[R](args: Any*): R = ???
 object CLibrary:
    inline def derived[A]: CLibrary[A] =
-      inline erasedValue[A] match
+      val loader = inline erasedValue[A] match
          case _: LibraryLocation =>
-            val c = Cache[A](JSymbolLookup.loaderLookup)
-            CLibrary[A](
-              c,
-              JSymbolLookup.loaderLookup
-            )
+            JSymbolLookup.loaderLookup
          case _ =>
-            val c = Cache[A](CLinker.systemLookup)
-            CLibrary[A](c, CLinker.systemLookup)
+            CLinker.systemLookup
+
+      type prefix[A] = A match
+         case WithPrefix[v] => v
+         case _             => ""
+
+      type rawCasing[A] = A match
+         case RawNaming => true
+         case _         => false
+
+      CLibrary(Cache[A, prefix[A], rawCasing[A]](loader), loader)
