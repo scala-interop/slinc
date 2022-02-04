@@ -22,8 +22,6 @@ object slinc
     with publishable.PublishableModule
     with benchmark.BenchmarksModule
     with variadic.VariadicGen {
-   def mimaPreviousVersions = Seq("0.0.0-45-0647f5-DIRTY50d251bf")
-   override def mimaCheckDirection = CheckDirection.Backward
 
    def moduleDeps = Seq(polymorphics)
    def scalaVersion = "3.1.0"
@@ -41,7 +39,8 @@ object slinc
    def scalaDocOptions = T {
       super.scalaDocOptions() ++ Seq(
         "-project-logo",
-        (millSourcePath / "docs" / "logo.png").toString
+        (millSourcePath / "docs" / "images" / "logo.svg").toString,
+        "-social-links:github::https://github.com/markehammons/SLInC,custom::https://gitlab.com/mhammons/slinc::gitlab-white.svg::gitlab-black.svg"
       )
    }
 
@@ -151,6 +150,24 @@ object cstd extends ScalaModule with benchmark.BenchmarksModule {
         "ALL-UNNAMED"
       )
 
+   }
+}
+
+object openblas extends ScalaModule with benchmark.BenchmarksModule {
+   def scalaVersion = "3.1.0"
+   def moduleDeps = Seq(slinc)
+
+   object bench extends Benchmarks {
+      def jmhVersion = "1.33"
+
+      def forkArgs = Seq(
+        "--add-modules=jdk.incubator.foreign",
+        "--enable-native-access=ALL-UNNAMED"
+      )
+
+      override def ivyDeps = super.ivyDeps() ++ Agg(
+        ivy"org.jblas:jblas:1.2.5"
+      )
    }
 }
 

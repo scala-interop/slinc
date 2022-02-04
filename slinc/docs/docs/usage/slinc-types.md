@@ -23,8 +23,8 @@ Most primitive types in Scala are supported by Slinc for C interop out of the bo
 You'll notice the absence of `Char` from this list. That's because a `Char` in Scala is actually a 16-bit value, and some supported characters cannot map to C's 8-bit `char`. 
 
 In order to overcome this, I have provided two extension methods on `Char`: 
-* asAsciiChar: Option[AsciiChar]
-* asAsciiChar: AsciiChar
+* asAscii: Option[AsciiChar]
+* asAsciiOrFail: AsciiChar
 
 The `AsciiChar` type is an opaque subtype of `Char` that is guaranteed to be less than 8-bits, either by the `Option` type, or by throwing an exception at the conversion site.
 
@@ -48,7 +48,7 @@ You can derive a `Struct` instance for a case class after the fact though.
 given Struct[Bar] = Struct.derived
 ```
 
-Structs in Slinc can hold all other C compatible types inside of them, including other Structs.
+Structs in Slinc can hold all other C compatible types inside of them, including other structs.
 
 ```scala
 case class Baz(b: Byte, s: Short, f: Float, d: Double, l: Long, foo: Foo) derives Struct
