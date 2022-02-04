@@ -5,4 +5,4 @@ layout: doc-page
 
 Currently, the following platforms are supported:
 
-* Linux x86_64
+* Java 17/Linux/x86_64
