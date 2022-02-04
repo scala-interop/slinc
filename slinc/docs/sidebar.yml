@@ -9,12 +9,15 @@ sidebar:
       - page: docs/usage/other-helpful-functions
       - page: docs/usage/supported-platforms
       - page: docs/usage/unsupported-features
-  - title: benchmarks
+  - title: Benchmarks
+    index: docs/benchmarks/index
     subsection:
       - title: v0.1.0
+        index: docs/benchmarks/v0-1-0/index
         subsection:
           - page: docs/benchmarks/v0-1-0/performance
       - title: v0.1.1
+        index: docs/benchmarks/v0-1-1/index
         subsection:
           - page: docs/benchmarks/v0-1-1/performance
           - page: docs/benchmarks/v0-1-1/self-improvement
