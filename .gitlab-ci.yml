@@ -78,6 +78,7 @@ pages:
         - out/*
   rules:
     - when: manual
+      allow_failure: true
   script:
     - $MILL_PREAMBLE slinc.docJar
     - cp -rv out/slinc/docJar.dest/javadoc .
