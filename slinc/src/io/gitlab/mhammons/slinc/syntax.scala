@@ -15,7 +15,6 @@ import io.gitlab.mhammons.slinc.components.{
    Writee,
    Exportee,
    Scopee,
-   SymbolLookup,
    segAlloc,
    writerOf,
    layoutOf,

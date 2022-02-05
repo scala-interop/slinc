@@ -6,7 +6,7 @@ import jdk.incubator.foreign.{
    MemoryAddress,
    CLinker
 }
-import components.{SymbolLookup, Cache}
+import components.Cache
 import scala.quoted.*
 import scala.compiletime.{erasedValue, constValue}
 import scala.annotation.tailrec

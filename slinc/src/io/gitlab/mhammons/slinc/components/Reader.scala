@@ -90,24 +90,7 @@ object Reader:
                         val types = args.map(_.asType)
                         (types.init, types.last)
 
-                  Lambda(
-                    Symbol.spliceOwner,
-                    MethodType(paramNames.take(inputTypes.size).toList)(
-                      _ => inputTypes.map { case '[a] => TypeRepr.of[a] },
-                      _ => retType.pipe { case '[r] => TypeRepr.of[r] }
-                    ),
-                    (meth, params) =>
-                       retType.pipe { case '[r] =>
-                          MethodHandleMacros
-                             .binding[r](
-                               'memoryAddress,
-                               params.map(_.asExpr)
-                             )
-                             .asTerm
-                             .changeOwner(meth)
 
-                       }
-                  ).asExprOf[A]
-
+                  MethodHandleMacros.wrappedMH('memoryAddress, inputTypes.map(_ => None), inputTypes, retType).fold(msgs => report.errorAndAbort(msgs.mkString("\n")), a => a.asExprOf[A])
                }
       }

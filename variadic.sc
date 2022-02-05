@@ -95,11 +95,7 @@ trait VariadicGen extends ScalaModule {
           |import scala.quoted.*
                                        |object VariadicCalls extends VariadicMechanisms {
                                        |${(for (arity <- 0 until limit)
-         yield callClassGen(arity)).mkString("\n")}
-                                       |${(for (arity <- 0 until limit)
          yield cachedCallClassGen(arity)).mkString("\n")}
-                                       |${(for (arity <- 0 until limit)
-         yield macroImplGen(arity)).mkString("\n")}
                                        |${(for (arity <- 0 until limit)
          yield cachedMacroImplGen(arity)).mkString("\n")}
                                        |}""".stripMargin
