@@ -9,8 +9,8 @@ import jdk.incubator.foreign.{
 }, MemoryLayout.PathElement
 import io.gitlab.mhammons.slinc.components.{
    NativeInfo,
-   Encoder,
-   Decoder,
+   Writer,
+   Reader,
    Exporter,
    Allocatee,
    segAlloc,
@@ -33,8 +33,8 @@ trait Struct[A <: Product]
     extends NativeInfo[A],
       Immigrator[A],
       Emigrator[A],
-      Encoder[A],
-      Decoder[A],
+      Writer[A],
+      Reader[A],
       Exporter[A]
 
 object Struct:
@@ -51,7 +51,7 @@ object Struct:
             val layout = ${ fromTypeInfo(typeInfo) }
             val carrierType = classOf[MemorySegment]
 
-         given s: Encoder[A] with
+         given s: Writer[A] with
             def into(a: A, memoryAddress: MemoryAddress, offset: Long): Unit =
                ${
                   serializerFromTypeInfo(
@@ -64,7 +64,7 @@ object Struct:
                   )
                }
 
-         given d: Decoder[A] with
+         given d: Reader[A] with
             def from(memoryAddress: MemoryAddress, offset: Long) =
                ${
                   deserializerFromTypeInfo(
@@ -137,7 +137,7 @@ object Struct:
             })
             val info = Expr.summonOrError[NativeInfo[A]]
             '{
-               ${ Expr.summonOrError[Decoder[a]] }.from(
+               ${ Expr.summonOrError[Reader[a]] }.from(
                  $memorySegmentExpr,
                  $info.layout.byteOffset($updatedPath*)
                )
@@ -179,7 +179,7 @@ object Struct:
       import quotes.reflect.*
       typeInfo match
          case PrimitiveInfo(name, '[a]) =>
-            val to = Expr.summonOrError[Encoder[a]]
+            val to = Expr.summonOrError[Writer[a]]
             val pathExpr = Expr.ofSeq(path)
             '{
                $to.into(

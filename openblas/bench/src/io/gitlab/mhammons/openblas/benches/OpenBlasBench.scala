@@ -5,7 +5,6 @@ import java.util.concurrent.TimeUnit
 import scala.util.Random
 import org.jblas.NativeBlas
 import io.gitlab.mhammons.slinc.*
-import io.gitlab.mhammons.slinc.components.Encoder
 import io.gitlab.mhammons.openblas.OpenBlas
 
 @State(Scope.Thread)
@@ -20,8 +19,6 @@ class OpenBlasBench:
    val size = 10_000
    val arr1 = Array.fill(size)(Random.nextDouble * Random.nextInt)
    val arr2 = Array.fill(size)(Random.nextDouble * Random.nextInt)
-
-   given enc: Encoder[Array[Double]] = summon[Encoder[Array[Double]]]
 
    @Benchmark
    def jblasDDot =

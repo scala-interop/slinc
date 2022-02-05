@@ -2,7 +2,7 @@ package io.gitlab.mhammons.slinc
 
 import scala.reflect.ClassTag
 import scala.compiletime.ops.int.<
-import components.{Decoder, decoderOf, Encoder, encoderOf}
+import components.{Reader, readerOf, Writer, writerOf}
 import javax.naming.spi.DirStateFactory.Result
 import components.NativeInfo
 import jdk.incubator.foreign.{MemoryLayout, MemorySegment, MemoryAddress}
@@ -85,10 +85,10 @@ object StaticArray:
       val carrierType = classOf[MemorySegment]
 
    given [
-       A: ClassTag: NativeInfo: Decoder,
+       A: ClassTag: NativeInfo: Reader,
        B <: Singleton & Int: ValueOf
-   ]: Decoder[StaticArray[A, B]] =
-      new Decoder[StaticArray[A, B]]:
+   ]: Reader[StaticArray[A, B]] =
+      new Reader[StaticArray[A, B]]:
          def from(
              memoryAddress: MemoryAddress,
              offset: Long
@@ -98,7 +98,7 @@ object StaticArray:
             var i = 0
             val ni = NativeInfo[A]
             while i < len do
-               s(i) = decoderOf[A].from(
+               s(i) = readerOf[A].from(
                  memoryAddress,
                  offset + (i * ni.layout.byteSize)
                )
@@ -106,11 +106,11 @@ object StaticArray:
             s
 
    given [A, B <: Singleton & Int](using
-       Encoder[A],
+       Writer[A],
        NativeInfo[A],
        ValueOf[B]
-   ): Encoder[StaticArray[A, B]] =
-      new Encoder[StaticArray[A, B]]:
+   ): Writer[StaticArray[A, B]] =
+      new Writer[StaticArray[A, B]]:
          def into(
              staticArray: StaticArray[A, B],
              memoryAddress: MemoryAddress,
@@ -120,7 +120,7 @@ object StaticArray:
             val len = valueOf[B]
             var i = 0
             while i < staticArray.size do
-               encoderOf[A].into(
+               writerOf[A].into(
                  staticArray(i),
                  memoryAddress,
                  offset + (nativeInfo.layout.byteSize * i)

@@ -15,19 +15,19 @@ import io.gitlab.mhammons.polymorphics.VoidHelper
 import io.gitlab.mhammons.polymorphics.MethodHandleHandler
 import scala.quoted.*
 
-type Decodee[A, B] = Decoder[A] ?=> B
-def decoderOf[A]: Decodee[A, Decoder[A]] =
-   summon[Decoder[A]]
-trait Decoder[A]:
+type Readee[A, B] = Reader[A] ?=> B
+def readerOf[A]: Readee[A, Reader[A]] =
+   summon[Reader[A]]
+trait Reader[A]:
    def from(memoryAddress: MemoryAddress, offset: Long): A
 
-   def map[B](fn: A => B): Decoder[B] =
+   def map[B](fn: A => B): Reader[B] =
       val orig = this
-      new Decoder[B]:
+      new Reader[B]:
          def from(memoryAddress: MemoryAddress, offset: Long) = fn(
            orig.from(memoryAddress, offset)
          )
-object Decoder:
+object Reader:
    inline def getAtOffset[A](
        inline fn: (MemorySegment, Long) => A,
        inline memoryAddress: MemoryAddress,
@@ -37,26 +37,26 @@ object Decoder:
         MemorySegment.globalNativeSegment,
         memoryAddress.toRawLongValue + offset
       )
-   given Decoder[Int] with
+   given Reader[Int] with
       def from(memoryAddress: MemoryAddress, offset: Long) =
          getAtOffset(MemoryAccess.getIntAtOffset, memoryAddress, offset)
-   given Decoder[Float] with
+   given Reader[Float] with
       def from(memoryAddress: MemoryAddress, offset: Long) =
          getAtOffset(MemoryAccess.getFloatAtOffset, memoryAddress, offset)
 
-   given Decoder[Long] with
+   given Reader[Long] with
       def from(memoryAddress: MemoryAddress, offset: Long) =
          getAtOffset(MemoryAccess.getLongAtOffset, memoryAddress, offset)
 
-   given Decoder[Short] with
+   given Reader[Short] with
       def from(memoryAddress: MemoryAddress, offset: Long) =
          getAtOffset(MemoryAccess.getShortAtOffset, memoryAddress, offset)
 
-   given Decoder[Byte] with
+   given Reader[Byte] with
       def from(memoryAddress: MemoryAddress, offset: Long) =
          getAtOffset(MemoryAccess.getByteAtOffset, memoryAddress, offset)
 
-   given Decoder[Boolean] with
+   given Reader[Boolean] with
       def from(memoryAddress: MemoryAddress, offset: Long) =
          if getAtOffset(
               MemoryAccess.getByteAtOffset,
@@ -66,7 +66,7 @@ object Decoder:
          then false
          else true
 
-   given Decoder[Char] with
+   given Reader[Char] with
       def from(memoryAddress: MemoryAddress, offset: Long) =
          getAtOffset(MemoryAccess.getCharAtOffset, memoryAddress, offset)
 
@@ -75,14 +75,14 @@ object Decoder:
 
    inline given [A](using
        Fn[A]
-   ): Decoder[A] = ${
+   ): Reader[A] = ${
       genDecoder[A]
    }
 
    private def genDecoder[A](using Quotes, Type[A]) =
       import quotes.reflect.*
       '{
-         new Decoder[A]:
+         new Reader[A]:
             def from(memoryAddress: MemoryAddress, offset: Long) =
                ${
                   val (inputTypes, retType) = TypeRepr.of[A] match

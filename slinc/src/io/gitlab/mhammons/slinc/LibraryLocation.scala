@@ -2,28 +2,6 @@ package io.gitlab.mhammons.slinc
 
 import java.nio.file.Paths
 
-/** Location information about the library you wish to bind
-  */
-@deprecated("Use one of the LibraryLocation types instead", "v0.1.1")
-enum Location:
-   /** Local .so file
-     * @param relativePath
-     *   The path relative to this program where the .so file is.
-     */
-   case Local(relativePath: String)
-
-   /** System library
-     * @param name
-     *   The name of the library to bind to
-     */
-   case System(name: String)
-
-   /** Absolute .so file path
-     * @param absolutePath
-     *   The absolute path of the .so file being bound
-     */
-   case Absolute(absolutePath: String)
-
 /** Information about a non-standard library
   */
 sealed trait LibraryLocation
