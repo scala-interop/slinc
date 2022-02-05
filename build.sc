@@ -27,7 +27,7 @@ object slinc
    def ivyDeps = Agg(
      ivy"org.typelevel::cats-core:2.7.0"
    )
-   def scalaVersion = "3.1.0"
+   def scalaVersion = "3.1.1"
    def pomSettings = pomTemplate("SLinC - Scala <-> C Interop")
 
    def scalacOptions = Seq(
@@ -116,7 +116,7 @@ object slinc
 }
 
 object cstd extends ScalaModule with benchmark.BenchmarksModule {
-   def scalaVersion = "3.1.0"
+   def scalaVersion = "3.1.1"
    def moduleDeps = Seq(slinc)
 
    object test extends Tests with TestModule.Munit {
@@ -153,7 +153,7 @@ object cstd extends ScalaModule with benchmark.BenchmarksModule {
 }
 
 object openblas extends ScalaModule with benchmark.BenchmarksModule {
-   def scalaVersion = "3.1.0"
+   def scalaVersion = "3.1.1"
    def moduleDeps = Seq(slinc)
 
    object bench extends Benchmarks {

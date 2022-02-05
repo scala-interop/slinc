@@ -8,24 +8,24 @@ import jdk.incubator.foreign.{
 }
 import scala.compiletime.erasedValue
 
-type Encodee[A, B] = Encoder[A] ?=> B
-def encoderOf[A]: Encodee[A, Encoder[A]] = summon[Encoder[A]]
-def encode[A](
+type Writee[A, B] = Writer[A] ?=> B
+def writerOf[A]: Writee[A, Writer[A]] = summon[Writer[A]]
+def write[A](
     a: A,
     memoryAddress: MemoryAddress,
     offset: Long
-): Encodee[A, Unit] = encoderOf[A].into(a, memoryAddress, offset)
+): Writee[A, Unit] = writerOf[A].into(a, memoryAddress, offset)
 
 //todo: rename to encoder
-trait Encoder[A]:
+trait Writer[A]:
    def into(a: A, memoryAddress: MemoryAddress, offset: Long): Unit
-   def contramap[B](fn: B => A): Encoder[B] =
+   def contramap[B](fn: B => A): Writer[B] =
       val orig = this
-      new Encoder[B]:
+      new Writer[B]:
          def into(a: B, memoryAddress: MemoryAddress, offset: Long) =
             orig.into(fn(a), memoryAddress, offset)
-object Encoder:
-   given Encoder[Int] with
+object Writer:
+   given Writer[Int] with
       def into(a: Int, memoryAddress: MemoryAddress, offset: Long) =
          MemoryAccess.setIntAtOffset(
            MemorySegment.globalNativeSegment,
@@ -33,7 +33,7 @@ object Encoder:
            a
          )
 
-   given Encoder[Long] with
+   given Writer[Long] with
       def into(a: Long, memoryAddress: MemoryAddress, offset: Long) =
          MemoryAccess.setLongAtOffset(
            MemorySegment.globalNativeSegment,
@@ -41,7 +41,7 @@ object Encoder:
            a
          )
 
-   given Encoder[Float] with
+   given Writer[Float] with
       def into(a: Float, memoryAddress: MemoryAddress, offset: Long) =
          MemoryAccess.setFloatAtOffset(
            MemorySegment.globalNativeSegment,
@@ -49,7 +49,7 @@ object Encoder:
            a
          )
 
-   given Encoder[Double] with
+   given Writer[Double] with
       def into(a: Double, memoryAddress: MemoryAddress, offset: Long) =
          MemoryAccess.setDoubleAtOffset(
            MemorySegment.globalNativeSegment,
@@ -57,7 +57,7 @@ object Encoder:
            a
          )
 
-   given Encoder[Short] with
+   given Writer[Short] with
       def into(a: Short, memoryAddress: MemoryAddress, offset: Long) =
          MemoryAccess.setShortAtOffset(
            MemorySegment.globalNativeSegment,
@@ -65,7 +65,7 @@ object Encoder:
            a
          )
 
-   given Encoder[Boolean] with
+   given Writer[Boolean] with
       def into(a: Boolean, memoryAddress: MemoryAddress, offset: Long) =
          MemoryAccess.setByteAtOffset(
            MemorySegment.globalNativeSegment,
@@ -73,14 +73,14 @@ object Encoder:
            if a then 1 else 0
          )
 
-   given Encoder[Char] with
+   given Writer[Char] with
       def into(a: Char, memoryAddress: MemoryAddress, offset: Long) =
          MemoryAccess.setCharAtOffset(
            MemorySegment.globalNativeSegment,
            memoryAddress.toRawLongValue + offset,
            a
          )
-   given Encoder[Byte] with
+   given Writer[Byte] with
       def into(a: Byte, memoryAddress: MemoryAddress, offset: Long) =
          MemoryAccess.setByteAtOffset(
            MemorySegment.globalNativeSegment,
@@ -106,23 +106,23 @@ object Encoder:
          .asSegment(layoutOf[A].byteSize * array.length, memoryAddress.scope)
          .copyFrom(arrayToMemsegment(array))
 
-   given byteArr: Encoder[Array[Byte]] = specializedEncoderCopy(_, _, _)
+   given byteArr: Writer[Array[Byte]] = specializedEncoderCopy(_, _, _)
 
-   given shortArr: Encoder[Array[Short]] = specializedEncoderCopy(_, _, _)
+   given shortArr: Writer[Array[Short]] = specializedEncoderCopy(_, _, _)
 
-   given intArr: Encoder[Array[Int]] = specializedEncoderCopy(_, _, _)
+   given intArr: Writer[Array[Int]] = specializedEncoderCopy(_, _, _)
 
-   given longArr: Encoder[Array[Long]] = specializedEncoderCopy(_, _, _)
+   given longArr: Writer[Array[Long]] = specializedEncoderCopy(_, _, _)
 
-   given floatArr: Encoder[Array[Float]] = specializedEncoderCopy(_, _, _)
+   given floatArr: Writer[Array[Float]] = specializedEncoderCopy(_, _, _)
 
-   given doubleArr: Encoder[Array[Double]] = specializedEncoderCopy(_, _, _)
+   given doubleArr: Writer[Array[Double]] = specializedEncoderCopy(_, _, _)
 
-   given [A](using Encoder[A], NativeInfo[A]): Encoder[Array[A]] with
+   given [A](using Writer[A], NativeInfo[A]): Writer[Array[A]] with
       def into(array: Array[A], memoryAddress: MemoryAddress, offset: Long) =
          var i = 0
          while i < array.length do
-            encoderOf[A].into(
+            writerOf[A].into(
               array(i),
               memoryAddress,
               offset + (NativeInfo[A].layout.byteSize * i)

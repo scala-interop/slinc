@@ -12,12 +12,11 @@ import io.gitlab.mhammons.slinc.components.{
    Allocatee,
    MethodHandleMacros,
    Informee,
-   Encodee,
+   Writee,
    Exportee,
    Scopee,
-   SymbolLookup,
    segAlloc,
-   encoderOf,
+   writerOf,
    layoutOf,
    exportValue,
    summonOrError,
@@ -28,103 +27,8 @@ import io.gitlab.mhammons.slinc.components.{
    findMethod,
    VariadicCache
 }
+import scala.annotation.targetName
 
-/** Macro for generating a binding to C. Uses the method name and parameter
-  * types of the method it's bound to for binding generation
-  *
-  * @tparam R
-  *   The return type of the binding
-  * @return
-  *   Binding code for the C function
-  * @example
-  * ```scala
-  * def abs(i: Int) = bind[Int]
-  * ```
-  * @note
-  *   binding does not work on generic methods
-  */
-@deprecated("use accessNative instead", "v0.1.1")
-inline def bind[R](using
-    @implicitNotFound(
-      "You must provide a return type for bind"
-    ) n: NotGiven[R =:= Nothing]
-): R = ${
-   bindImpl[R]('false)
-}
-
-/** Macro for generating a binding to C. Uses the method name and parmeter types
-  * of the method it's assigned to for binding generation
-  * @param debug
-  *   Tells the compiler whether to print info about the generated code.
-  * @tparam R
-  *   The return type of the binding
-  * @return
-  *   Binding code for the C function
-  * @example
-  * ```scala
-  * def abs(i: Int) = bind[Int]
-  * ```
-  * @note
-  *   binding does not work on generic methods
-  */
-@deprecated("use accessNative instead", "v0.1.1")
-inline def bind[R](debug: Boolean)(using
-    @implicitNotFound(
-      "You must provide a return type for bind"
-    ) n: NotGiven[R =:= Nothing]
-): R = ${
-   bindImpl[R]('debug)
-}
-
-private def bindImpl[R](debugExpr: Expr[Boolean])(using q: Quotes)(using
-    Type[R]
-): Expr[R] =
-   import quotes.reflect.*
-
-   val obj = Symbol.spliceOwner.owner.owner
-
-   val debug = debugExpr.valueOrAbort
-
-   val owner = Symbol.spliceOwner.owner
-
-   val (name, params) =
-      if owner.isDefDef then
-
-         owner.tree match
-            case d @ DefDef(name, parameters, _, _) =>
-               parameters
-                  .collectFirst {
-                     case TypeParamClause(_) =>
-                        report.errorAndAbort(
-                          "Cannot generate C bind from generic method"
-                        )
-                     case t @ TermParamClause(valDefs) =>
-                        val params =
-                           valDefs.map(t => Ref(t.symbol).asExpr.widen)
-                        (name, params)
-                  }
-                  .getOrElse(
-                    (name, Nil)
-                  )
-      else
-         report.errorAndAbort(
-           s"didn't get defdef ${owner.tree.show(using Printer.TreeAnsiCode)}"
-         )
-
-   val memoryAddress = '{
-      val symbolLookup = ${ Expr.summonOrError[SymbolLookup] }
-      val fnName = ${ Expr(name) }
-      symbolLookup.lookup(fnName)
-   }
-
-   MethodHandleMacros
-      .binding[R](memoryAddress, params)
-      .tap { exp =>
-         if debug then report.info(exp.show)
-      }
-      .asExprOf[R]
-
-end bindImpl
 
 /** Provides an allocation scope.
   * @tparam A
@@ -166,23 +70,14 @@ def lazyScope[A](fn: Scopee[Allocatee[A]]) =
    given SegmentAllocator = SegmentAllocator.arenaAllocator(resourceScope)
    fn
 
-extension [A: ClassTag](
-    a: Array[A]
-)
-   def encode: Allocatee[Scopee[Informee[A, Exportee[Array[A], Ptr[A]]]]] =
+extension [A](a: A)
+   def encode: Allocatee[Scopee[Informee[A, Exportee[A, Ptr[A]]]]] =
       val addr = exportValue(a)
       Ptr[A](addr, 0)
 
-extension [A, S <: Iterable[A]](s: S)
-   def encode: Informee[A, Encodee[A, Allocatee[Ptr[A]]]] =
-      val addr = segAlloc.allocateArray(layoutOf[A], s.size).address
-      s.zipWithIndex.foreach((a, i) =>
-         encoderOf[A].into(a, addr, i * layoutOf[A].byteSize)
-      )
-      Ptr[A](addr, 0)
-
-extension [A](a: A)
-   def encode: Allocatee[Scopee[Informee[A, Exportee[A, Ptr[A]]]]] =
+extension [A](a: Array[A])
+   @targetName("arrayEncoder")
+   def encode: Allocatee[Scopee[Exportee[Array[A], Ptr[A]]]] = 
       val addr = exportValue(a)
       Ptr[A](addr, 0)
 
@@ -220,7 +115,6 @@ def allocate[A](num: Long): Informee[A, Allocatee[Ptr[A]]] =
    Ptr[A](segAlloc.allocate(num * layoutOf[A].byteSize).address, 0)
 
 export components.HelperTypes.*
-export components.Variadic.variadicBind
 export components.platform.*
 
 inline def accessNative[R] = ${

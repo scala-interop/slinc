@@ -24,12 +24,12 @@ def exportValue[A](a: A): Scopee[Allocatee[Exportee[A, MemoryAddress]]] =
 object Exporter:
    private inline def allocatingSerialize[A](
        a: A
-   ): Allocatee[Informee[A, Encodee[A, MemoryAddress]]] =
+   ): Allocatee[Informee[A, Writee[A, MemoryAddress]]] =
       val address = allocate[A].address
-      encode(a, address, 0)
+      write(a, address, 0)
       address
 
-   def derive[A]: Informee[A, Encodee[A, Exporter[A]]] =
+   def derive[A]: Informee[A, Writee[A, Exporter[A]]] =
       new Exporter[A]:
          def exportValue(a: A) = allocatingSerialize(a)
 
@@ -48,55 +48,15 @@ object Exporter:
 
    given Exporter[Byte] = derive[Byte]
 
-   given expByteArr: Exporter[Array[Byte]] with
-      def exportValue(a: Array[Byte]) =
-         val address =
-            segAlloc.allocate(layoutOf[Byte].byteSize * a.length).address
-         encode(a, address, 0)
-         address
 
-   given expShortArr: Exporter[Array[Short]] with
-      def exportValue(a: Array[Short]) =
-         val address =
-            segAlloc.allocate(layoutOf[Short].byteSize * a.length).address
-         encode(a, address, 0)
-         address
-
-   given expIntArr: Exporter[Array[Int]] with
-      def exportValue(a: Array[Int]) =
-         val address =
-            segAlloc.allocate(layoutOf[Int].byteSize * a.length).address
-         encode(a, address, 0)
-         address
-
-   given expLongArr: Exporter[Array[Long]] with
-      def exportValue(a: Array[Long]) =
-         val address =
-            segAlloc.allocate(layoutOf[Long].byteSize * a.length).address
-         encode(a, address, 0)
-         address
-
-   given expFloatArr: Exporter[Array[Float]] with
-      def exportValue(a: Array[Float]) =
-         val address =
-            segAlloc.allocate(layoutOf[Float].byteSize * a.length).address
-         encode(a, address, 0)
-         address
-
-   given expDoubleArr: Exporter[Array[Double]] with
-      def exportValue(a: Array[Double]) =
-         val address =
-            segAlloc.allocate(layoutOf[Double].byteSize * a.length).address
-         encode(a, address, 0)
-         address
-
-   given [A](using Encoder[A], NativeInfo[A]): Exporter[Array[A]] with
+   given [A](using Writer[Array[A]], NativeInfo[A]): Exporter[Array[A]] with
       def exportValue(a: Array[A]) =
          val address =
             segAlloc.allocate(layoutOf[A].byteSize * a.length).address
-         encode(a, address, 0)
+         write[Array[A]](a, address, 0)
          address
 
+   
    inline given fnExporter[A](using Fn[A]): Exporter[A] = ${
       fnExporterImpl[A]
    }

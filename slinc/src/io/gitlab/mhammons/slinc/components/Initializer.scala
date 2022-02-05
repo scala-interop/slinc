@@ -25,9 +25,9 @@ trait Initializer[T](using Integral[T]):
 object Initializer:
    given Initializer[Byte] with
       def fromByte(b: Byte): Byte = b
-      def fromShort(s: Short) = None
-      def fromInt(i: Int) = None
-      def fromLong(l: Long) = None
+      def fromShort(s: Short) = if s > Byte.MaxValue then None else Some(s.toByte)
+      def fromInt(i: Int) = if i > Byte.MaxValue then None else Some(i.toByte)
+      def fromLong(l: Long) = if l > Byte.MaxValue then None else Some(l.toByte)
 
    given Initializer[Short] with
       def fromByte(b: Byte) = b.toShort

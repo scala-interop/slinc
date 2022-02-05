@@ -28,10 +28,10 @@ object HelperTypes:
          val layout = C_CHAR
          val carrierType = classOf[Byte]
 
-      given Encoder[AsciiChar] =
-         encoderOf[Byte].contramap[AsciiChar](_.toByte)
+      given Writer[AsciiChar] =
+         writerOf[Byte].contramap[AsciiChar](_.toByte)
 
-      given Decoder[AsciiChar] = decoderOf[Byte].map(AsciiChar.apply)
+      given Reader[AsciiChar] = readerOf[Byte].map(AsciiChar.apply)
 
       given Exporter[AsciiChar] = Exporter.derive[AsciiChar]
 

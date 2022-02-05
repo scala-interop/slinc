@@ -14,17 +14,17 @@ import jdk.incubator.foreign.{
    ValueLayout
 }, MemoryLayout.PathElement
 import components.{
-   Decoder,
-   Encoder,
+   Reader,
+   Writer,
    NativeInfo,
    summonOrError,
-   decoderOf,
+   readerOf,
    infoOf,
    layoutOf,
    Informee,
-   Decodee,
-   Encodee,
-   encoderOf,
+   Readee,
+   Writee,
+   writerOf,
    Emigrator,
    Allocatee
 }
@@ -57,11 +57,11 @@ class Ptr[A](
      * val y: Int = !x
      * ```
      */
-   def `unary_!` : Decodee[A, A] =
+   def `unary_!` : Readee[A, A] =
       deref
 
-   def deref: Decodee[A, A] =
-      decoderOf[A].from(
+   def deref: Readee[A, A] =
+      readerOf[A].from(
         memoryAddress,
         offset
       )
@@ -76,11 +76,11 @@ class Ptr[A](
      * !x == 5 //true
      * ```
      */
-   def `unary_!_=`(a: A): Encodee[A, Unit] =
+   def `unary_!_=`(a: A): Writee[A, Unit] =
       deref = a
 
-   def deref_=(a: A): Encodee[A, Unit] =
-      encoderOf[A].into(a, memoryAddress, offset)
+   def deref_=(a: A): Writee[A, Unit] =
+      writerOf[A].into(a, memoryAddress, offset)
 
    /** Offsets this pointer by a number of elements of size A
      * @param num
@@ -113,13 +113,13 @@ class Ptr[A](
      */
    @deprecated("use mkArray instead", "v0.1.1") def toArray(
        size: Int
-   )(using Decoder[A], NativeInfo[A], ClassTag[A]) =
+   )(using Reader[A], NativeInfo[A], ClassTag[A]) =
       val l = NativeInfo[A].layout
       val elemSize = l.byteSize
       var i = 0
       val arr = Array.ofDim[A](size)
       while i < size do
-         arr(i) = decoderOf[A].from(
+         arr(i) = readerOf[A].from(
            memoryAddress.addOffset(i * elemSize),
            offset
          )
@@ -239,14 +239,14 @@ object Ptr:
         * ```
         */
       transparent inline def partial = ${ selectableImpl[A]('a) }
-      def mkArray(size: Int)(using NativeInfo[A], ClassTag[A], Decoder[A]) =
+      def mkArray(size: Int)(using NativeInfo[A], ClassTag[A], Reader[A]) =
          val memoryAddress = a.asMemoryAddress
          val l = NativeInfo[A].layout
          val elemSize = l.byteSize
          var i = 0
          val arr = Array.ofDim[A](size)
          while i < size do
-            arr(i) = decoderOf[A].from(
+            arr(i) = readerOf[A].from(
               memoryAddress.addOffset(i * elemSize),
               0
             )
@@ -296,7 +296,7 @@ object Ptr:
 
    given [A]: Immigrator[Ptr[A]] = a => Ptr[A](a.asInstanceOf[MemoryAddress], 0)
 
-   given [A, P <: Ptr[A]](using NativeInfo[A]): Decoder[P] with
+   given [A, P <: Ptr[A]](using NativeInfo[A]): Reader[P] with
       def from(
           memoryAddress: MemoryAddress,
           offset: Long
@@ -308,7 +308,7 @@ object Ptr:
 
          Ptr[A](address, 0).asInstanceOf[P]
 
-   private val ptrSerializer = new Encoder[Ptr[Any]]:
+   private val ptrSerializer = new Writer[Ptr[Any]]:
       def into(ptr: Ptr[Any], memoryAddress: MemoryAddress, offset: Long) =
          MemoryAccess.setAddressAtOffset(
            MemorySegment.globalNativeSegment,
@@ -316,7 +316,7 @@ object Ptr:
            ptr.asMemoryAddress
          )
 
-   given [A]: Encoder[Ptr[A]] =
-      ptrSerializer.asInstanceOf[Encoder[Ptr[A]]]
+   given [A]: Writer[Ptr[A]] =
+      ptrSerializer.asInstanceOf[Writer[Ptr[A]]]
 
    given [A]: Exporter[Ptr[A]] = Exporter.derive[Ptr[A]]

@@ -185,36 +185,6 @@ private[slinc] object MethodHandleMacros:
         mh.asTerm +: ps.map(_.asTerm)
       ).asExprOf[Any]
 
-   def binding[Ret: Type](
-       address: Expr[MemoryAddress],
-       ps: List[Expr[Any]]
-   )(using
-       Quotes
-   ) =
-      import quotes.reflect.*
-      val methodHandle =
-         dc[Ret](
-           address,
-           ps
-         )
-
-      Expr.betaReduce('{
-         given SegmentAllocator = localAllocator
-         try {
-            val mh = $methodHandle
-            ${
-               call(
-                 '{ mh },
-                 ps.map(_.widen).map { case '{ $a: a } =>
-                    '{ ${ Expr.summonOrError[Emigrator[a]] }($a) }
-                 }
-               )
-            }
-         } finally {
-            reset()
-         }
-
-      })
 
    def vdAndRefFromExpr[A](expr: Expr[A], name: String)(using
        q: Quotes,
