@@ -71,7 +71,7 @@ def lazyScope[A](fn: Scopee[Allocatee[A]]) =
    fn
 
 extension [A](a: A)
-   def encode: Allocatee[Scopee[Exportee[A, Ptr[A]]]] =
+   def encode: Allocatee[Scopee[Informee[A, Exportee[A, Ptr[A]]]]] =
       val addr = exportValue(a)
       Ptr[A](addr, 0)
 
