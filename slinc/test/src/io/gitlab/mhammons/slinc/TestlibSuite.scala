@@ -2,6 +2,16 @@ package io.gitlab.mhammons.slinc
 
 class TestlibSuite extends munit.FunSuite:
    import Testlib.*
+
+   val a = Testlib.a_t(3, 4)
+   val b = Testlib.b_t(5, a)
+
+   assertEquals(
+      Testlib.slinc_test_modify(b),
+      b.copy(d = a.copy(a = 9))
+   )
+
+
    test("modify") {
       val a = Testlib.a_t(3, 4)
       val b = Testlib.b_t(5, a)

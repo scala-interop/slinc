@@ -2,7 +2,7 @@ import mill._, scalalib._, scalalib.publish._
 import $ivy.`de.tototec::de.tobiasroeser.mill.vcs.version::0.1.4`
 import de.tobiasroeser.mill.vcs.version.VcsVersion
 
-import $ivy.`com.github.lolgab::mill-mima_mill0.10:0.0.9`
+import $ivy.`com.github.lolgab::mill-mima_mill0.10:0.0.12`
 import com.github.lolgab.mill.mima._
 import upickle.default._
 

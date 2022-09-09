@@ -6,6 +6,7 @@ import java.io.File
 import java.nio.file.Paths
 
 class StructSuite extends munit.FunSuite:
+   case class div_t(quot: Int, rem: Int) derives Struct
    test(
      "Can serialize and deserialize simple structs"
    ) {
@@ -18,49 +19,49 @@ class StructSuite extends munit.FunSuite:
       assertEquals(result, div_t(5, 2))
    }
 
-   test("can serialize and deserialize nested structs") {
-      case class div_t(quot: Int, rem: Int) derives Struct
-      case class div_x(x: Int, div: div_t) derives Struct
+   // test("can serialize and deserialize nested structs") {
+   //    case class div_t(quot: Int, rem: Int) derives Struct
+   //    case class div_x(x: Int, div: div_t) derives Struct
 
-      val sample = div_x(5, div_t(5, 4))
+   //    val sample = div_x(5, div_t(5, 4))
 
-      val result = scope {
-         !sample.encode
-      }
+   //    val result = scope {
+   //       !sample.encode
+   //    }
 
-      assertEquals(sample, result)
-   }
+   //    assertEquals(sample, result)
+   // }
 
-   test("can update structs that are on the native heap") {
-      case class div_t(quot: Int, rem: Int) derives Struct
-      val expectedResult = div_t(2, 9)
-      val result = scope {
-         val ptr = div_t(3, 4).encode
-         !ptr = expectedResult
-         !ptr
-      }
-      assertEquals(result, expectedResult)
-   }
+   // test("can update structs that are on the native heap") {
+   //    case class div_t(quot: Int, rem: Int) derives Struct
+   //    val expectedResult = div_t(2, 9)
+   //    val result = scope {
+   //       val ptr = div_t(3, 4).encode
+   //       !ptr = expectedResult
+   //       !ptr
+   //    }
+   //    assertEquals(result, expectedResult)
+   // }
 
-   test("can partially dereference pointers") {
-      case class div_t(quot: Int, rem: Int) derives Struct
-      val result = scope {
-         !div_t(3, 4).encode.partial.quot
-      }
+   // test("can partially dereference pointers") {
+   //    case class div_t(quot: Int, rem: Int) derives Struct
+   //    val result = scope {
+   //       !div_t(3, 4).encode.partial.quot
+   //    }
 
-      assertEquals(3, result)
-   }
+   //    assertEquals(3, result)
+   // }
 
-   test("can partially update pointers") {
-      case class div_t(quot: Int, rem: Int) derives Struct
-      val result = scope {
-         val ptr = div_t(3, 4).encode
-         !ptr.partial.quot = 8
-         !ptr
-      }
+   // test("can partially update pointers") {
+   //    case class div_t(quot: Int, rem: Int) derives Struct
+   //    val result = scope {
+   //       val ptr = div_t(3, 4).encode
+   //       !ptr.partial.quot = 8
+   //       !ptr
+   //    }
 
-      assertEquals(result, div_t(8, 4))
-   }
+   //    assertEquals(result, div_t(8, 4))
+   // }
 
 //  test(
 //    "can retrieve layouts for simple structs made of non-pointer primitives"
