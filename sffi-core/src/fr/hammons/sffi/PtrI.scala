@@ -3,14 +3,19 @@ package fr.hammons.sffi
 import scala.language.dynamics
 import scala.compiletime.{erasedValue, error, constValue, summonFrom}
 
-trait WPtr:
-  self: WBasics & WAssign & WDeref & WStructInfo & WLayoutInfo =>
-  type Pointer[A] = Ptr[A]
-  protected def alloc(layoutInfo: LayoutInfo[?], num: Long)(using
-      Allocator
-  ): RawMem
+trait PtrI[
+    RawMem,
+    Allocator, 
+    LayoutInfo[A <: AnyKind] <: LayoutInfoI[?]#LayoutInfo[A],
+    StructInfo[A] <: StructInfoI[LayoutInfo]#StructInfo[A],
+    Deref[A] <: DerefI[RawMem]#Deref[A],
+    Assign[A] <: AssignI[RawMem]#Assign[A],
+    InTransition[A] <: InTransitionI[Allocator, LayoutInfo]#InTransition[A]
+]:
+  def alloc[A](layoutInfo: LayoutInfo[A], num: Long)(using Allocator): RawMem
+
   class Ptr[A](val mem: RawMem, val offset: Long) extends Dynamic:
-    def as[B]: Pointer[B] = this.asInstanceOf[Pointer[B]]
+    def as[B]: Ptr[B] = this.asInstanceOf[Ptr[B]]
     inline def nameExists[S <: Singleton & String, T <: Tuple](s: S): Unit =
       inline erasedValue[T] match
         case _: ((S, ?) *: ?) => ()
@@ -19,7 +24,7 @@ trait WPtr:
 
     inline def selectDynamic[S <: Singleton & String, B <: Tuple](inline s: S)(
         using ptrShape: PtrShape[A, B]
-    ): Pointer[Tuple.Elem[Values[B], IndexOf[S, B]]] =
+    ): Ptr[Tuple.Elem[Values[B], IndexOf[S, B]]] =
       inline if constValue[KeyExists[S, B]] then
         summonFrom {
           case si: StructInfo[A] =>
@@ -46,7 +51,7 @@ trait WPtr:
   object Ptr:
     def blank[A](using li: LayoutInfo[A])(using Allocator)(
         size: Long = 1
-    ): Pointer[A] = Ptr(alloc(li, size), 0)
+    ): Ptr[A] = Ptr(alloc(li, size), 0)
 
     extension [A](ptr: Ptr[A])(using assign: Assign[A])
       def update(a: A) = assign.assign(ptr.mem, ptr.offset, a)
@@ -56,3 +61,11 @@ trait WPtr:
       def toArray(size: Long) = deref.toArray(ptr.mem, 0, size)
 
   extension (ptr: Ptr[Byte]) def asString: String
+
+  given ptrInfo: LayoutInfo[Ptr]
+
+  given refinedPtrInfo[A]: LayoutInfo[Ptr[A]] =
+    ptrInfo.asInstanceOf[LayoutInfo[Ptr[A]]]
+
+  given ptrInTransition[A]: InTransition[Ptr[A]]
+
