@@ -17,6 +17,7 @@ import scala.compiletime.erasedValue
 import scala.annotation.targetName
 import java.beans.MethodDescriptor
 
+@JavaPlatform("17")
 object FFI17 extends FFI, LayoutInfo17, Basics17:
 
   protected def offsetOf(name: String, context: MemoryLayout): Long =
