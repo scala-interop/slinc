@@ -3,6 +3,10 @@ package fr.hammons.sffi
 import org.openjdk.jmh.annotations.*
 import java.util.concurrent.TimeUnit
 import scala.util.Random
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 @State(Scope.Thread)
 @Fork(
@@ -16,13 +20,19 @@ class BindingBenches:
   val ffi: FFI = FFI17
   import ffi.*
 
-  case class div_t(quot: Int, rem: Int) derives Struct
+  // case class div_t(quot: Int, rem: Int) derives Struct
 
   val abs = fnGen[Int => Int]("abs")
   val labs = fnGen[Int => Int]("labs")
   val rand = fnGen[() => Int]("rand")
   val sprintf = fnGen[(Ptr[Byte], Ptr[Byte], Seq[Variadic]) => Int]("sprintf")
-  val div = fnGen[(Int, Int) => div_t]("div")
+
+  trait A[B]
+  given A[Int] with {}
+
+  val genCache = GenCache()
+
+  // val div = fnGen[(Int, Int) => div_t]("div")
   val qsort =
     fnGen[(Ptr[Any], Long, Long, Ptr[(Ptr[Any], Ptr[Any]) => Int]) => Unit](
       "qsort"
@@ -61,9 +71,9 @@ class BindingBenches:
     val ptr = sprintf(res, str, Seq(toNative("world")))
   }
 
-  @Benchmark
-  def nativeDiv =
-    div(4, 2)
+  // @Benchmark
+  // def nativeDiv =
+  //   div(4, 2)
 
   val arrayToSort = Array.fill(10000)(Random.nextInt)
   val fnPtr: Ptr[(Ptr[Int], Ptr[Int]) => Int] = Scope(global = true) {
@@ -82,3 +92,44 @@ class BindingBenches:
 
       qsortMeth(arr, 4, 10000, fnPtr)
     }
+
+
+  def summonA = summon[A[Int]]
+  @Benchmark
+  def summonIt = 
+    val all = for 
+      _ <- 0 until 12
+    yield Future{
+      for 
+        _ <- 0 until 1000
+      yield summonA
+    }
+    all.foreach(Await.result(_, Duration.Inf))
+
+  def grabA = genCache.getOrAdd2(0, new A[Int]{})
+  @Benchmark
+  def cacheIt =
+    val all = for 
+      _ <- 0 until 12
+    yield Future{
+      for 
+        _ <- 0 until 1000
+      yield grabA
+    }
+    all.foreach(Await.result(_,Duration.Inf))
+
+
+  def grabB = genCache.getOrAddJit(1, new A[Int] {}, new A[Int]{})
+  @Benchmark
+  def cacheItJit = 
+    val all = for 
+      _ <- 0 until 12
+    yield Future{
+      for 
+        _ <- 0 until 1000
+      yield grabB
+    }
+    all.foreach(Await.result(_,Duration.Inf))
+
+
+  

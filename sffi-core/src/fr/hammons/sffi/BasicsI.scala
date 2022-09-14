@@ -4,5 +4,4 @@ trait BasicsI:
   type Context
   type Scope 
   type RawMem 
-  type Allocator 
-  type Pointer[A]
+  type Allocator

@@ -1,6 +1,6 @@
 package fr.hammons.sffi
 
-import scala.compiletime.{erasedValue, constValue, summonInline}
+import scala.compiletime.{erasedValue, constValue, summonInline, codeOf}
 import scala.deriving.Mirror
 import scala.annotation.targetName
 
@@ -52,6 +52,9 @@ trait WStruct:
               writeGen[t](mem, place + 1, tup.tail, offsets)
         case _: EmptyTuple => ()
 
+    private inline def subassign[V <: Tuple](b: RawMem, offset: Long, a: V, offsets: IArray[Long]): Unit = 
+      writeGen[V](b, 0, a, offsets)
+
     private inline def readGenTup[T <: Tuple](
         mem: RawMem,
         offset: Long,
@@ -99,8 +102,11 @@ trait WStruct:
       @targetName("arrayApply")
       override def apply(p: Array[P])(using Scope, Allocator): Ptr[P] = ???
 
+      //var printCode = true
       def assign(b: RawMem, offset: Long, a: P) =
+        //subassign[V](b, offset, Tuple.fromProductTyped(a), offsets)
         writeGen[V](b, 0, Tuple.fromProductTyped(a), offsets)
+        
 
       private val arr = Array.ofDim[Any](offsets.length)
       def deref(b: RawMem, offset: Long) =

@@ -19,6 +19,10 @@ object v {
 trait BaseModule extends ScalaModule with ScalafmtModule {
   def scalaVersion = "3.2.1-RC1"
 
+  def ivyDeps = Agg(
+    ivy"org.scala-lang::scala3-staging:${scalaVersion()}"
+  )
+
   def scalacOptions = Seq(
     "-deprecation",
     "-Wunused:all",
@@ -35,7 +39,7 @@ trait BaseModule extends ScalaModule with ScalafmtModule {
 
 object `sffi-core` extends BaseModule with PublishableModule {
   def pomSettings = pomTemplate("scala-ffi-core")
- object test extends BaseModule {
+ object test extends Tests with TestModule.Munit {
     def moduleDeps = Seq(`sffi-core`)
 
     def ivyDeps = Agg(ivy"org.scalameta::munit:${v.munit}")

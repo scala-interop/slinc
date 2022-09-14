@@ -2,9 +2,26 @@ package fr.hammons.sffi
 
 import ffi.*
 import jdk.incubator.foreign.MemoryLayout
+import jdk.incubator.foreign.*
 import jdk.incubator.foreign.CLinker.*
 
+
+
 class ExportableSpec extends munit.FunSuite {
+  test("ffi2 can export structs") {
+    val ffi3 = FFI173
+    import ffi3.*
+    case class X(a: Int, b: Int)
+
+    println(layoutOf[X])
+    val size = MemoryLayout.structLayout(C_INT, C_INT).nn.byteSize()
+    val mem = 
+      CLinker.allocateMemory(size).nn.asSegment(size, ResourceScope.globalScope()).nn
+
+    write(mem.asInstanceOf[basics.RawMem], 0, X(1,2))
+
+  }
+
   val size = MemoryLayout.unionLayout(C_INT, C_LONG_LONG, C_CHAR).nn.byteSize()
   println(size)
   test("can export integers") {

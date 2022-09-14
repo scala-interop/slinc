@@ -21,6 +21,7 @@ trait BenchmarksModule extends Module with ScalaModule {
             val (_, resources) = generateBenchmarkSources()
             Jvm.runSubprocess(
               "org.openjdk.jmh.Main",
+              jvmArgs = forkArgs(), //:+ "-Djmh.blackhole.autoDetect=true",
               classPath = (runClasspath() ++ generatorDeps())
                  .map(_.path) ++ Seq(compileGeneratedSources().path, resources),
               mainArgs = args,
