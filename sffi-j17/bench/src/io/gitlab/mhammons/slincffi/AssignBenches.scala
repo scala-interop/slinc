@@ -1,6 +1,7 @@
 package fr.hammons.sffi
 
-import org.openjdk.jmh.annotations.*, Mode.{SampleTime, SingleShotTime, Throughput}
+import org.openjdk.jmh.annotations.*,
+Mode.{SampleTime, SingleShotTime, Throughput}
 import java.util.concurrent.TimeUnit
 
 import jdk.incubator.foreign.MemoryLayout
@@ -8,7 +9,6 @@ import jdk.incubator.foreign.*
 import jdk.incubator.foreign.CLinker.*
 import org.openjdk.jmh.infra.Blackhole
 import scala.compiletime.codeOf
-
 
 //multicore results:
 // AssignBenches.assignCaseClass      thrpt    5      52.865 ± 2.990  ops/us
@@ -20,9 +20,8 @@ import scala.compiletime.codeOf
 @Fork(
   jvmArgsAppend = Array(
     "--add-modules=jdk.incubator.foreign",
-    "--enable-native-access=ALL-UNNAMED",
-    //"-Denable-sffi-jit=true",
-    "-XX:ActiveProcessorCount=1",
+    "--enable-native-access=ALL-UNNAMED"
+    // "-XX:ActiveProcessorCount=1",
   )
 )
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
@@ -35,25 +34,19 @@ class AssignBenches:
   }
 
   val ffi3 = FFI173
-  import ffi3.*
-  case class X(a: Int, y: Y, b: Int)
-  case class Y(a: Int, b: Int)
+  import ffi3.{Struct as Struct2, *, given}
+  case class X(a: Int, y: Y, b: Int) derives Struct2
+  case class Y(a: Int, b: Int) derives Struct2
 
-  val layout: Object = layoutOf[X].asInstanceOf[MemoryLayout]
-  val xVal = X(2,Y(2,3),3)
+  val xVal = X(2, Y(2, 3), 3)
 
-  //println(layoutOf[X])
-  val size = layoutOf[X].asInstanceOf[MemoryLayout].byteSize()
-  val mem =
-    CLinker
-      .allocateMemory(size)
-      .nn
-      .asSegment(size, ResourceScope.globalScope())
-      .nn.asInstanceOf[basics.RawMem]
+  // println(layoutOf[X])
+  val size = summon[LayoutOf[X]].layout.size
+  val mem = Allocator.globalAllocator().allocate(summon[LayoutOf[X]].layout)
 
-  // val gen = 
+  // val gen =
   //   val layout = MemoryLayout.structLayout(C_INT, MemoryLayout.structLayout(C_INT, C_INT),C_INT).nn
-  //   () => 
+  //   () =>
   //   Write17.genStructWriter(layout)
   //   ()
 
@@ -66,7 +59,7 @@ class AssignBenches:
     Ptr.blank[div_t](1)
   }
 
-  val div_t_Value = div_t(2, div_u(2,3), 3)
+  val div_t_Value = div_t(2, div_u(2, 3), 3)
 
   @Benchmark
   def assignInt = intPtr.update(4)
@@ -80,10 +73,22 @@ class AssignBenches:
 
   @Benchmark
   @BenchmarkMode(Array(SingleShotTime, Throughput))
-  def assignCaseClass2 = 
-    write(mem, 0, xVal)
+  def assignCaseClass2 =
+    mem.write(xVal, 0.toBytes)
 
-  @Benchmark 
-  @BenchmarkMode(Array(SingleShotTime, SampleTime))
-  def compile(blackhole: Blackhole) = 
-    blackhole.consume(Write17.gen(layout))
+  @Benchmark
+  @BenchmarkMode(Array(SingleShotTime, Throughput))
+  @Fork(
+    jvmArgsAppend = Array(
+      "--add-modules=jdk.incubator.foreign",
+      "--enable-native-access=ALL-UNNAMED",
+      "-Dsffi-jit=false"
+      // "-XX:ActiveProcessorCount=1",
+    )
+  )
+  def assignCaseClass2NoJIT =
+    mem.write(xVal, 0.toBytes)
+// @Benchmark
+// @BenchmarkMode(Array(SingleShotTime, SampleTime))
+// def compile(blackhole: Blackhole) =
+//   blackhole.consume(Write17.gen(layout))
