@@ -1,5 +1,8 @@
 package fr.hammons.sffi
 
+import scala.deriving.Mirror
+import scala.reflect.ClassTag
+
 object LayoutI17 extends LayoutI.PlatformSpecific:
 
   override given byteLayout: LayoutOf[Byte] with
@@ -10,8 +13,8 @@ object LayoutI17 extends LayoutI.PlatformSpecific:
   override given intLayout: LayoutOf[Int] with
     val layout = IntLayout17()
 
-  override def structLayout(layouts: DataLayout*): StructLayout =
-    StructLayout17(layouts*)
+  override def structLayout[T](layouts: DataLayout*)(using Mirror.ProductOf[T], ClassTag[T]): StructLayout =
+    StructLayout17[T](layouts*)
 
   override given longLayout: LayoutOf[Long] = ???
 

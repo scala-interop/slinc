@@ -1,6 +1,7 @@
 package fr.hammons.sffi
 
 import scala.compiletime.summonInline
+import scala.deriving.Mirror
 trait LayoutOf[A]:
   val layout: DataLayout
 
@@ -17,4 +18,4 @@ object LayoutI:
     given floatLayout: LayoutOf[Float]
     given shortLayout: LayoutOf[Short]
     given byteLayout: LayoutOf[Byte]
-    def structLayout(layouts: DataLayout*): StructLayout
+    def structLayout[T](layouts: DataLayout*)(using Mirror.ProductOf[T], scala.reflect.ClassTag[T]): StructLayout

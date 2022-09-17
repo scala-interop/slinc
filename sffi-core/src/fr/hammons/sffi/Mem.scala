@@ -18,4 +18,4 @@ trait Mem:
   def readByte(offset: Bytes): Byte
   def readMem(offset: Bytes): Mem
   def readShort(offset: Bytes): Short 
-  //def read[A](offset: Bytes): A
+  def read[A](offset: Bytes)(using Receive[A]): A = summon[Receive[A]].from(this, offset)

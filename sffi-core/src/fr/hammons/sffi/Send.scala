@@ -1,11 +1,19 @@
 package fr.hammons.sffi
 
 import scala.quoted.*
+import scala.annotation.targetName
 
 trait Send[A]:
   def to(mem: Mem, offset: Bytes, a: A): Unit
 
 object Send:
+
+  given [A]: Fn[Send[A], (Mem, Bytes, A), Unit] with 
+    def andThen(fn: Send[A], andThen: Unit => Unit): Send[A] = (mem: Mem, offset: Bytes, a: A) => andThen(fn.to(mem, offset, a))
+    @targetName("complexAndThen")
+    def andThen[ZZ](fn: Send[A], andThen: Unit => ZZ): FnCalc[(Mem, Bytes, A), ZZ] = (mem: Mem, offset: Bytes, a: A) => andThen(fn.to(mem, offset, a))
+    //val eq = summon[Send[A] =:= FnCalc[(Mem,Bytes, A), Unit]]
+
   private def sendGenHelper(
       layout: DataLayout,
       rawMem: Expr[Mem],
@@ -19,17 +27,17 @@ object Send:
         //val nv = value.asExprOf[Product]
         val fns = children.zipWithIndex.map {
           case (StructMember(childLayout, _, subOffset), idx) =>
-            Expr.betaReduce(sendGenHelper(
+            sendGenHelper(
               childLayout,
               rawMem,
               '{ $offset + ${ Expr(subOffset) } },
               '{ $value.asInstanceOf[Product].productElement(${ Expr(idx) }) }
-            ))
+            )
         }.toList
         Expr.block(fns, '{})
 
-  def sendStaged(layout: DataLayout)(using Quotes): Expr[Send[Product]] =
-    '{ (mem: Mem, offset: Bytes, a: Product) =>
+  def sendStaged(layout: DataLayout)(using Quotes): Expr[Send[Object]] =
+    '{ (mem: Mem, offset: Bytes, a: Object) =>
       ${
         sendGenHelper(layout, 'mem, 'offset, 'a)
       }

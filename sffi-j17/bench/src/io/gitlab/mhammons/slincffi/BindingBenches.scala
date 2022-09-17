@@ -30,8 +30,6 @@ class BindingBenches:
   trait A[B]
   given A[Int] with {}
 
-  val genCache = GenCache()
-
   // val div = fnGen[(Int, Int) => div_t]("div")
   val qsort =
     fnGen[(Ptr[Any], Long, Long, Ptr[(Ptr[Any], Ptr[Any]) => Int]) => Unit](
@@ -105,31 +103,3 @@ class BindingBenches:
       yield summonA
     }
     all.foreach(Await.result(_, Duration.Inf))
-
-  def grabA = genCache.getOrAdd2(0, new A[Int]{})
-  @Benchmark
-  def cacheIt =
-    val all = for 
-      _ <- 0 until 12
-    yield Future{
-      for 
-        _ <- 0 until 1000
-      yield grabA
-    }
-    all.foreach(Await.result(_,Duration.Inf))
-
-
-  def grabB = genCache.getOrAddJit(1, new A[Int] {}, new A[Int]{})
-  @Benchmark
-  def cacheItJit = 
-    val all = for 
-      _ <- 0 until 12
-    yield Future{
-      for 
-        _ <- 0 until 1000
-      yield grabB
-    }
-    all.foreach(Await.result(_,Duration.Inf))
-
-
-  

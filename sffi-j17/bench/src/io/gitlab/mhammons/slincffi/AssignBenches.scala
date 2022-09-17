@@ -9,6 +9,13 @@ import jdk.incubator.foreign.*
 import jdk.incubator.foreign.CLinker.*
 import org.openjdk.jmh.infra.Blackhole
 import scala.compiletime.codeOf
+import scala.deriving.Mirror
+
+
+val ffi3 = FFI173
+import ffi3.{Struct as Struct2, *, given}
+case class Y(a: Int, y: Int) derives Struct2
+
 
 //multicore results:
 // AssignBenches.assignCaseClass      thrpt    5      52.865 ± 2.990  ops/us
@@ -33,10 +40,9 @@ class AssignBenches:
     Ptr.blank[Int](1)
   }
 
-  val ffi3 = FFI173
-  import ffi3.{Struct as Struct2, *, given}
   case class X(a: Int, y: Y, b: Int) derives Struct2
-  case class Y(a: Int, b: Int) derives Struct2
+
+
 
   val xVal = X(2, Y(2, 3), 3)
 
@@ -71,10 +77,41 @@ class AssignBenches:
   @Benchmark
   def derefCaseClass = !div_tPtr
 
+
+  @Benchmark 
+  @BenchmarkMode(Array(SingleShotTime, Throughput))
+  def assignInt2 = 
+    mem.write(4, 0.toBytes)
+
   @Benchmark
   @BenchmarkMode(Array(SingleShotTime, Throughput))
   def assignCaseClass2 =
     mem.write(xVal, 0.toBytes)
+
+  @Benchmark
+  @BenchmarkMode(Array(SingleShotTime, Throughput))
+  def readCaseClass2 = 
+    mem.read[X](0.toBytes)
+
+  @Benchmark 
+  @BenchmarkMode(Array(SingleShotTime, Throughput))
+    @Fork(
+    jvmArgsAppend = Array(
+      "--add-modules=jdk.incubator.foreign",
+      "--enable-native-access=ALL-UNNAMED",
+      "-Dsffi-jit=false"
+      // "-XX:ActiveProcessorCount=1",
+    )
+  )
+  def readCaseClass2NoJIT =
+    mem.read[X](0.toBytes)
+
+  @Benchmark 
+  def genCaseClass =
+    val t = (2,(2,3),3)
+    val m1 = summon[Mirror.ProductOf[X]]
+    val m2 = summon[Mirror.ProductOf[Y]]
+    m1.fromProduct(t.copy(_2 = m2.fromProduct(t._2)))
 
   @Benchmark
   @BenchmarkMode(Array(SingleShotTime, Throughput))

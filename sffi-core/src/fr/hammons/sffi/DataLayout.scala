@@ -1,5 +1,7 @@
 package fr.hammons.sffi
 
+import scala.deriving.Mirror
+
 enum Kind:
   case Int
   case Short
@@ -52,6 +54,8 @@ case class StructMember(layout: DataLayout, name: String, offset: Bytes)
 trait StructLayout extends DataLayout:
   val offsets: Vector[Bytes] = children.map(_.offset)
   val children: Vector[StructMember]
+  val transform: Tuple => Product
+  val clazz: Class[?]
   def withName(name: String): StructLayout
 
 object StructLayout:
