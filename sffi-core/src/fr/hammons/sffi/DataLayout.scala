@@ -30,6 +30,9 @@ trait LongLayout extends PrimitiveLayout:
   def withName(name: String): LongLayout
   val kind = Kind.Long
 
+object LongLayout:
+  def unapply(l: LongLayout): (Option[String], Bytes) = (l.name, l.size)
+
 trait FloatLayout extends PrimitiveLayout:
   def withName(name: String): FloatLayout
   val kind = Kind.Float

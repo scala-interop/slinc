@@ -19,7 +19,9 @@ trait FFI3(
   protected val jitService =
     if useJit then JitManagerImpl(comp) else DummyManager
   protected val structI = StructI(layoutI, jitService)
+  protected val typesI = TypesI.platformTypes(layoutI)
   export layoutI.{*, given}
+  export typesI.{*, given}
   export structI.Struct
 
   private[sffi] def forceJit() = jitService.jitNow()

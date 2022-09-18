@@ -13,9 +13,10 @@ object LayoutI17 extends LayoutI.PlatformSpecific:
   override given intLayout: LayoutOf[Int] with
     val layout = IntLayout17()
 
-  override def structLayout[T](layouts: DataLayout*)(using Mirror.ProductOf[T], ClassTag[T]): StructLayout =
+  override def getStructLayout[T](layouts: DataLayout*)(using Mirror.ProductOf[T], ClassTag[T]): StructLayout =
     StructLayout17[T](layouts*)
 
-  override given longLayout: LayoutOf[Long] = ???
+  override given longLayout: LayoutOf[Long] with 
+    val layout = LongLayout17()
 
   override given shortLayout: LayoutOf[Short] = ???

@@ -42,18 +42,16 @@ trait WStruct:
         mem: RawMem,
         place: Int,
         values: T,
+        offset: Long,
         offsets: IArray[Long]
     ): Unit =
       inline erasedValue[T] match
         case _: (h *: t) =>
           inline values match
             case tup: (`h` *: `t`) =>
-              summonInline[Assign[h]].assign(mem, offsets(place), tup.head)
-              writeGen[t](mem, place + 1, tup.tail, offsets)
+              summonInline[Assign[h]].assign(mem, offsets(place) + offset, tup.head)
+              writeGen[t](mem, place + 1, tup.tail, offset, offsets)
         case _: EmptyTuple => ()
-
-    private inline def subassign[V <: Tuple](b: RawMem, offset: Long, a: V, offsets: IArray[Long]): Unit = 
-      writeGen[V](b, 0, a, offsets)
 
     private inline def readGenTup[T <: Tuple](
         mem: RawMem,
@@ -105,7 +103,7 @@ trait WStruct:
       //var printCode = true
       def assign(b: RawMem, offset: Long, a: P) =
         //subassign[V](b, offset, Tuple.fromProductTyped(a), offsets)
-        writeGen[V](b, 0, Tuple.fromProductTyped(a), offsets)
+        writeGen[V](b, 0, Tuple.fromProductTyped(a), offset, offsets)
         
 
       private val arr = Array.ofDim[Any](offsets.length)

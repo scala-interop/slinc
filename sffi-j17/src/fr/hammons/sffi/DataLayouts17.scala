@@ -1,6 +1,6 @@
 package fr.hammons.sffi
 
-import jdk.incubator.foreign.CLinker.{C_CHAR, C_INT}
+import jdk.incubator.foreign.CLinker.{C_CHAR, C_INT, C_LONG}
 import jdk.incubator.foreign.GroupLayout
 import jdk.incubator.foreign.ValueLayout
 import jdk.incubator.foreign.MemoryLayout, MemoryLayout.PathElement
@@ -26,6 +26,15 @@ class IntLayout17(
     IntLayout17(Some(name), backing.withName(name))
   val size: Bytes = Bytes(backing.byteSize())
 
+class LongLayout17(
+    val name: Option[String] = None,
+    val backing: ValueLayout = C_LONG
+) extends LongLayout:
+  def withName(name: String): LongLayout =
+    LongLayout17(Some(name), backing.withName(name))
+
+  val size = Bytes(backing.byteSize())
+
 class StructLayout17(
     val children: Vector[StructMember],
     val backing: GroupLayout,
@@ -50,6 +59,7 @@ object StructLayout17:
     val backing: Seq[MemoryLayout] = memberLayouts.map {
       case i: IntLayout17    => i.backing: MemoryLayout
       case b: ByteLayout17   => b.backing: MemoryLayout
+      case l: LongLayout17   => l.backing: MemoryLayout
       case s: StructLayout17 => s.backing: MemoryLayout
       case _                 => throw Exception("I do not know this datatype!!")
     }

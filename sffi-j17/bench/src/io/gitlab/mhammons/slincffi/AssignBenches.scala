@@ -15,6 +15,7 @@ import scala.deriving.Mirror
 val ffi3 = FFI173
 import ffi3.{Struct as Struct2, *, given}
 case class Y(a: Int, y: Int) derives Struct2
+case class X(a: Int, y: Y, b: Int) derives Struct2
 
 
 //multicore results:
@@ -40,7 +41,6 @@ class AssignBenches:
     Ptr.blank[Int](1)
   }
 
-  case class X(a: Int, y: Y, b: Int) derives Struct2
 
 
 
@@ -71,7 +71,7 @@ class AssignBenches:
   def assignInt = intPtr.update(4)
 
   @Benchmark
-  @BenchmarkMode(Array(SingleShotTime, SampleTime))
+  @BenchmarkMode(Array(SingleShotTime, Throughput))
   def assignCaseClass = div_tPtr.update(div_t_Value)
 
   @Benchmark
