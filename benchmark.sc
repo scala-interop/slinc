@@ -30,6 +30,7 @@ trait BenchmarksModule extends Module with ScalaModule {
          }
 
       def compileGeneratedSources = T {
+         val pathSeperator = System.getProperty("path.separator")
          val dest = T.ctx.dest
          val (sourcesDir, _) = generateBenchmarkSources()
          val sources = os.walk(sourcesDir).filter(os.isFile)
@@ -39,7 +40,7 @@ trait BenchmarksModule extends Module with ScalaModule {
            "-cp",
            (runClasspath() ++ generatorDeps())
               .map(_.path.toString)
-              .mkString(":"),
+              .mkString(pathSeperator),
            "-d",
            dest
          ).call(dest)

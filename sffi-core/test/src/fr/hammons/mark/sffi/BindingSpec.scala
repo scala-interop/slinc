@@ -33,7 +33,7 @@ trait BindingSpec(val f: FFI) extends munit.FunSuite:
     )
   }
 
-  test("labs") {
+  test("labs".ignore) {
     assertEquals(
       labs(-5L),
       5L
