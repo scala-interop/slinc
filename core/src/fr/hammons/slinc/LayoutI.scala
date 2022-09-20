@@ -37,7 +37,7 @@ class LayoutI(platformSpecific: LayoutI.PlatformSpecific):
     )
 
 
-  inline def structLayoutHelper[T <: Tuple]: List[DataLayout] = 
+  private inline def structLayoutHelper[T <: Tuple]: List[DataLayout] = 
     inline erasedValue[T] match 
         case _: ((name, value) *: t) =>
           summonInline[LayoutOf[value]].layout

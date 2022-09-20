@@ -1,8 +1,6 @@
 import os.Path
 import $file.benchmark, benchmark.BenchmarksModule
 import $file.publishable, publishable.PublishableModule
-import $file.platform, platform.PlatformTypegen
-import $file.variadic, variadic.VariadicGen
 import mill._, scalalib._, scalafmt._
 import $ivy.`com.lihaoyi::mill-contrib-buildinfo:`
 import mill.contrib.buildinfo.BuildInfo
@@ -71,12 +69,17 @@ trait BaseModule extends ScalaModule with ScalafmtModule {
 // }
 
 object core extends BaseModule with PublishableModule {
-    def pomSettings = pomTemplate("scala-ffi-core")
+
+  def pomSettings = pomTemplate("scala-ffi-core")
 
   object test extends Tests with TestModule.Munit with JacocoTestModule {
     def ivyDeps = Agg(ivy"org.scalameta::munit:${v.munit}")
   }
 
+}
+
+object j17 extends BaseModule with PublishableModule {
+  def pomSettings = pomTemplate("")
 }
 
 // object slinc

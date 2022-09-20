@@ -10,6 +10,7 @@ trait PublishableModule extends PublishModule with Mima {
    implicit val checkDirectionW: ReadWriter[CheckDirection] =
       upickle.default.macroRW[CheckDirection]
 
+   override def artifactName = T("slinc-" + millModuleSegments.parts.mkString("-"))
    def mimaPreviousVersions = Seq(
      os.proc("git", "describe", "--tags", "--abbrev=0")
         .call(cwd = os.pwd)
