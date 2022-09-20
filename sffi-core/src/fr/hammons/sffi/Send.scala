@@ -4,84 +4,135 @@ import scala.quoted.*
 import scala.annotation.targetName
 import scala.deriving.Mirror
 import scala.compiletime.{erasedValue, summonInline}
+import scala.util.chaining.*
 
 trait Send[A]:
-  def to(mem: Mem, offset: Bytes, a: A): Unit
+  def to(mem: Mem, offset: Bytes, value: A): Unit
 
 object Send:
+  given [A]: Fn[Send[A], (Mem, Bytes, A), Unit] with
+    def andThen(function: Send[A], andThen: Unit => Unit): Send[A] =
+      (mem: Mem, offset: Bytes, value: A) =>
+        andThen(function.to(mem, offset, value))
 
-  given [A]: Fn[Send[A], (Mem, Bytes, A), Unit] with 
-    def andThen(fn: Send[A], andThen: Unit => Unit): Send[A] = (mem: Mem, offset: Bytes, a: A) => andThen(fn.to(mem, offset, a))
     @targetName("complexAndThen")
-    def andThen[ZZ](fn: Send[A], andThen: Unit => ZZ): FnCalc[(Mem, Bytes, A), ZZ] = (mem: Mem, offset: Bytes, a: A) => andThen(fn.to(mem, offset, a))
-    //val eq = summon[Send[A] =:= FnCalc[(Mem,Bytes, A), Unit]]
+    def andThen[ZZ](
+        function: Send[A],
+        andThen: Unit => ZZ
+    ): FnCalc[(Mem, Bytes, A), ZZ] = (mem: Mem, offset: Bytes, value: A) =>
+      andThen(function.to(mem, offset, value))
+
+  def staged[A <: Product](layout: StructLayout): JitCompiler => Send[A] =
+    (jitCompiler: JitCompiler) =>
+      jitCompiler(
+        '{
+          new Send[Product]:
+            def to(mem: Mem, offset: Bytes, value: Product) =
+              ${
+                stagedHelper(layout, 'mem, 'offset, 'value)
+              }
+        }.tap(_.pipe(_.show).tap(println))
+      ).asInstanceOf[Send[A]]
 
   private def stagedHelper(
       layout: DataLayout,
-      rawMem: Expr[Mem],
+      mem: Expr[Mem],
       offset: Expr[Bytes],
       value: Expr[Any]
   )(using Quotes): Expr[Unit] =
+    import quotes.reflect.*
+
     layout match
       case IntLayout(_, _) =>
-        '{ $rawMem.writeInt($value.asInstanceOf[Int], $offset) }
-      case LongLayout(_,_) =>
-        '{ $rawMem.writeLong($value.asInstanceOf[Long], $offset)}
-      case StructLayout(_, _, children) =>
-        //val nv = value.asExprOf[Product]
-        val fns = children.zipWithIndex.map {
-          case (StructMember(childLayout, _, subOffset), idx) =>
-            stagedHelper(
-              childLayout,
-              rawMem,
-              '{ $offset + ${ Expr(subOffset) } },
-              '{ $value.asInstanceOf[Product].productElement(${ Expr(idx) }) }
-            )
-        }.toList
-        Expr.block(fns, '{})
+        '{ $mem.writeInt($value.asInstanceOf[Int], $offset) }
+      case LongLayout(_, _) =>
+        '{ $mem.writeLong($value.asInstanceOf[Long], $offset) }
+      case structLayout @ StructLayout(_, _, children) =>
+        val fields =
+          if canBeUsedDirectly(structLayout.clazz) then
+            Symbol
+              .classSymbol(structLayout.clazz.getCanonicalName().nn)
+              .caseFields
+          else Nil
 
-  def staged(layout: StructLayout)(using Quotes): Expr[Send[Product]] =
-    '{ 
-      new Send[Product]:
-        def to(mem: Mem, offset: Bytes, a: Product) =     
-          ${
-            stagedHelper(layout, 'mem, 'offset, 'a)
+        val fns = children.zipWithIndex.map {
+          case (StructMember(childLayout, _, childOffset), index) =>
+            (nv: Expr[Product]) =>
+              val childField =
+                if fields.nonEmpty then Select(nv.asTerm, fields(index)).asExpr
+                else '{ $nv.productElement(${ Expr(index) }) }
+
+              stagedHelper(
+                childLayout,
+                mem,
+                '{ $offset + ${ Expr(childOffset) } },
+                childField
+              )
+        }.toList
+
+        if canBeUsedDirectly(structLayout.clazz) then
+          TypeRepr.typeConstructorOf(structLayout.clazz).asType match
+            case '[a & Product] =>
+              '{
+                val a: a & Product = $value.asInstanceOf[a & Product]
+
+                ${
+                  Expr.block(fns.map(fn => fn('a)), '{})
+                }
+              }
+        else
+          '{
+            val a: Product = $value.asInstanceOf[Product]
+
+            ${
+              Expr.block(fns.map(_('a)), '{})
+            }
           }
-    }
-  
+  end stagedHelper
+
   inline def compileTime[A <: Product](
-      offsets: IArray[Bytes]
-  )(using m: Mirror.ProductOf[A]): Send[Product] =
-    (rawMem: Mem, offset: Bytes, a: Product) =>
+      childOffsets: IArray[Bytes]
+  )(using m: Mirror.ProductOf[A]): Send[A] =
+    (mem: Mem, structOffset: Bytes, value: Product) =>
       compileTimeHelper[m.MirroredElemTypes](
-        Tuple.fromProduct(a.asInstanceOf[A]).toArray,
-        rawMem,
-        offset,
-        offsets,
+        Tuple.fromProductTyped(value.asInstanceOf[A]),
+        mem,
+        structOffset,
+        childOffsets,
         0
       )
+
   private inline def compileTimeHelper[A <: Tuple](
-      a: Array[Object],
-      rawMem: Mem,
-      offset: Bytes,
-      offsets: IArray[Bytes],
+      value: A,
+      mem: Mem,
+      structOffset: Bytes,
+      childOffsets: IArray[Bytes],
       position: Int
   ): Unit =
-    inline erasedValue[A] match
-      case _: (h *: t) =>
+    inline value match
+      case refinedTuple: (h *: t) =>
         summonInline[Send[h]].to(
-          rawMem,
-          offsets(position) + offset,
-          a(position).asInstanceOf[h]
+          mem,
+          childOffsets(position) + structOffset,
+          refinedTuple.head
         )
-        compileTimeHelper[t](a, rawMem, offset, offsets, position + 1)
+        compileTimeHelper[t](
+          refinedTuple.tail,
+          mem,
+          structOffset,
+          childOffsets,
+          position + 1
+        )
       case _: EmptyTuple => ()
 
   given Send[Int] with
-    inline def to(mem: Mem, offset: Bytes, a: Int) = mem.writeInt(a, offset)
+    inline def to(mem: Mem, offset: Bytes, value: Int) =
+      mem.writeInt(value, offset)
 
   given Send[Float] with
-    inline def to(mem: Mem, offset: Bytes, a: Float) = mem.writeFloat(a, offset)
+    inline def to(mem: Mem, offset: Bytes, value: Float) =
+      mem.writeFloat(value, offset)
 
   given Send[Long] with
-    inline def to(mem: Mem, offset: Bytes, a: Long) = mem.writeLong(a, offset)
+    inline def to(mem: Mem, offset: Bytes, value: Long) =
+      mem.writeLong(value, offset)

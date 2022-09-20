@@ -1,11 +1,12 @@
 package fr.hammons.sffi
 
-import scala.annotation.targetName
-
-import scala.quoted.*
-import scala.deriving.Mirror
 import java.lang.reflect.Modifier
-import scala.compiletime.{erasedValue,summonInline}
+
+import scala.annotation.targetName
+import scala.quoted.*
+import scala.compiletime.{erasedValue, summonInline}
+import scala.util.chaining.*
+import scala.deriving.Mirror
 
 trait Receive[A]:
   def from(mem: Mem, offset: Bytes): A
@@ -27,30 +28,28 @@ object Receive:
   given Receive[Long] with
     def from(mem: Mem, offset: Bytes): Long = mem.readLong(offset)
 
-  def staged(
+  def staged[A <: Product](
       layout: StructLayout
-  ): ([A] => (Quotes ?=> Expr[A]) => A) => Receive[Product] =
+  ): JitCompiler => Receive[A] =
     val transforms =
       getTransforms(layout).distinctBy((className, _) => className)
-    val transformsArray = transforms.map((_, transform) => transform).toArray
+    val transformsArray =
+      IArray.from(transforms.map((_, transform) => transform))
     val transformIndices =
       transforms.map((className, _) => className).zipWithIndex.toMap
 
-    (run: [A] => (Quotes ?=> Expr[A]) => A) =>
-      run {
-        val code = '{ (fns: Array[Tuple => Product]) =>
+    (jitCompiler: JitCompiler) =>
+      jitCompiler(
+        '{ (fns: IArray[Tuple => Product]) =>
           new Receive[Product]:
-            def from(mem: Mem, offset: Bytes) = ${
+            def from(mem: Mem, structOffset: Bytes) = ${
               stagedHelper(
                 layout,
                 transformIndices
-              )('mem, 'offset, 'fns).asExprOf[Product]
+              )('mem, 'structOffset, 'fns).asExprOf[Product]
             }
-        }
-        println(code.show)
-        code
-      }(transformsArray)
-
+        }.tap(_.pipe(_.show).tap(println))
+      )(transformsArray).asInstanceOf[Receive[A]]
   end staged
 
   private def stagedHelper(
@@ -58,28 +57,30 @@ object Receive:
       transformIndices: Map[String, Int]
   )(
       mem: Expr[Mem],
-      offset: Expr[Bytes],
-      transforms: Expr[Array[Tuple => Product]]
+      structOffset: Expr[Bytes],
+      transforms: Expr[IArray[Tuple => Product]]
   )(using Quotes): Expr[Any] =
     layout match
       case IntLayout(_, _) =>
-        '{ $mem.readInt($offset) }
+        '{ $mem.readInt($structOffset) }
 
       case LongLayout(_, _) =>
-        '{ $mem.readLong($offset) }
-      case s @ StructLayout(_, _, children) =>
-        val transformIndex = transformIndices(s.clazz.getCanonicalName().nn)
+        '{ $mem.readLong($structOffset) }
+      case structLayout @ StructLayout(_, _, children) =>
+        val transformIndex = transformIndices(
+          structLayout.clazz.getCanonicalName().nn
+        )
         val exprs = children.map {
-          case StructMember(childLayout, _, structOffset) =>
+          case StructMember(childLayout, _, childOffset) =>
             stagedHelper(childLayout, transformIndices)(
               mem,
-              '{ $offset + ${ Expr(structOffset) } },
+              '{ $structOffset + ${ Expr(childOffset) } },
               transforms
             )
         }.toList
 
-        if canBeUsedDirectly(s.clazz) then
-          constructFromTarget(s.clazz.getCanonicalName().nn, exprs)
+        if canBeUsedDirectly(structLayout.clazz) then
+          constructFromTarget(structLayout.clazz, exprs)
         else
           '{
             $transforms(${ Expr(transformIndex) })(${
@@ -87,18 +88,6 @@ object Receive:
             })
           }
   end stagedHelper
-
-  private def canBeUsedDirectly(clazz: Class[?]): Boolean =
-    println(clazz.getCanonicalName().nn)
-    val enclosingClass = clazz.getEnclosingClass()
-    if enclosingClass == null && clazz
-        .getEnclosingConstructor() == null && clazz.getEnclosingMethod() == null
-    then true
-    else if canBeUsedDirectly(enclosingClass.nn) && Modifier.isStatic(
-        clazz.getModifiers()
-      ) && Modifier.isPublic(clazz.getModifiers())
-    then true
-    else false
 
   private def getTransforms(
       layout: DataLayout
@@ -110,11 +99,11 @@ object Receive:
           .flatMap(getTransforms)
       case _ => Vector.empty
 
-  private def constructFromTarget(target: String, members: List[Expr[Any]])(
+  private def constructFromTarget(clazz: Class[?], members: List[Expr[Any]])(
       using Quotes
   ) =
     import quotes.reflect.*
-    Symbol.classSymbol(target).typeRef.asType match
+    TypeRepr.typeConstructorOf(clazz).asType match
       case '[a] =>
         Apply(
           Select(
@@ -126,7 +115,7 @@ object Receive:
 
   inline def compileTime[A <: Product](
       offsets: IArray[Bytes]
-  )(using m: Mirror.ProductOf[A]): Receive[Product] =
+  )(using m: Mirror.ProductOf[A]): Receive[A] =
     (mem, offset) =>
       m.fromProduct(
         compileTimeHelper[m.MirroredElemTypes](
@@ -136,6 +125,7 @@ object Receive:
           0
         )
       )
+
   private inline def compileTimeHelper[A <: Tuple](
       mem: Mem,
       offset: Bytes,

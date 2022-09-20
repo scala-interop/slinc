@@ -20,31 +20,16 @@ import scala.reflect.ClassTag
 type JitCompiler = [A] => ((Quotes) ?=> Expr[A]) => A
 object DummyManager extends JitManager:
   def jitc[F, Input <: Tuple, Output](
-      atomicRef: AtomicReference[F],
+      atomicRef: F => Unit,
       lowSpeed: F,
-      highSpeed: (Quotes) ?=> Expr[F]
-  )(using f: Fn[F, Input, Output]): Unit =
-    atomicRef.set(lowSpeed)
-
-  def jitc2[F, Input <: Tuple, Output](
-      atomicRef: AtomicReference[F],
-      lowSpeed: F,
-      highSpeed: ([A] => (x: (Quotes) ?=> Expr[A]) => A) => F
-  )(using f: Fn[F, Input, Output]): Unit = atomicRef.set(lowSpeed)
+      highSpeed: JitCompiler => F
+  )(using f: Fn[F, Input, Output]): Unit = atomicRef(lowSpeed)
 
   def jitNow(): Unit = ()
 
 trait JitManager:
   def jitc[F, Input <: Tuple, Output](
-      atomicRef: AtomicReference[F],
-      lowSpeed: F,
-      highSpeed: Quotes ?=> Expr[F]
-  )(using
-      f: Fn[F, Input, Output]
-  ): Unit
-
-  def jitc2[F, Input <: Tuple, Output](
-      atomicRef: AtomicReference[F],
+      atomicRef: F => Unit,
       lowSpeed: F,
       highSpeed: JitCompiler => F
   )(using f: Fn[F, Input, Output]): Unit
@@ -68,7 +53,7 @@ class JitManagerImpl(
   given ExecutionContext = ExecutionContext.fromExecutor(tp)
 
   private case class StuffToJit[A](
-      ref: AtomicReference[A],
+      ref: A => Unit,
       counter: AtomicInteger,
       fnGen: () => A
   )
@@ -89,7 +74,7 @@ class JitManagerImpl(
             .filter(jitTarget => jitTarget.counter.get() > jitThreshold)
       toJit.foreach(jitTarget =>
         val code = jitTarget.fnGen()
-        jitTarget.ref.set(code)
+        jitTarget.ref(code)
         jitTarget.counter.set(Int.MinValue)
       )
       jitAllNow.compareAndSet(true, false)
@@ -115,35 +100,12 @@ class JitManagerImpl(
   }
 
   def jitc[F, Input <: Tuple, Output](
-      atomicRef: AtomicReference[F],
-      lowSpeed: F,
-      highSpeed: Quotes ?=> Expr[F]
-  )(using
-      f: Fn[F, Input, Output]
-  ): Unit =
-    val counter = AtomicInteger(0)
-    atomicRef.set(
-      lowSpeed.andThen { z =>
-        counter.getAndIncrement()
-        z
-      }
-    )
-    var succeeded = false
-    while !succeeded do
-      import language.unsafeNulls
-      val watchList = toWatch.get()
-      succeeded = toWatch.compareAndSet(
-        watchList,
-        watchList :+ StuffToJit(atomicRef, counter, () => run { highSpeed })
-      )
-
-  def jitc2[F, Input <: Tuple, Output](
-      atomicRef: AtomicReference[F],
+      atomicRef: F => Unit,
       lowSpeed: F,
       highSpeed: JitCompiler => F
   )(using f: Fn[F, Input, Output]): Unit =
     val counter = AtomicInteger(0)
-    atomicRef.set(
+    atomicRef(
       lowSpeed.andThen { z =>
         counter.getAndIncrement()
         z

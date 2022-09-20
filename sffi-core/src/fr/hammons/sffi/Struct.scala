@@ -1,12 +1,13 @@
 package fr.hammons.sffi
 
 import scala.deriving.Mirror
+import scala.compiletime.uninitialized
 import java.util.concurrent.atomic.AtomicReference
 import scala.reflect.ClassTag
 
 class StructI(layoutI: LayoutI, jitManager: JitManager):
   import layoutI.{given, *}
-  abstract class Struct[A <: Product] extends LayoutOf[A], Send[A], Receive[A]
+  trait Struct[A <: Product] extends LayoutOf[A], Send[A], Receive[A]
 
   object Struct:
     inline def derived[A <: Product](using
@@ -18,27 +19,24 @@ class StructI(layoutI: LayoutI, jitManager: JitManager):
 
       private val offsetsArray = IArray.from(layout.offsets)
 
-      private val sender: AtomicReference[Send[Product]] =
-        AtomicReference()
+      @volatile private var sender: Send[A] = uninitialized
 
-      private val receiver: AtomicReference[Receive[Product]] =
-        AtomicReference()
+      @volatile private var receiver: Receive[A] = uninitialized
 
       jitManager.jitc(
-        sender,
+        (s: Send[A]) => sender = s,
         Send.compileTime[A](offsetsArray),
-        Send.staged(layout)
+        Send.staged[A](layout)
       )
 
-      jitManager.jitc2(
-        receiver,
+      jitManager.jitc(
+        (r: Receive[A]) => receiver = r,
         Receive.compileTime[A](offsetsArray),
-        Receive.staged(layout)
+        Receive.staged[A](layout)
       )
+
       final def to(mem: Mem, offset: Bytes, a: A): Unit =
-        import scala.language.unsafeNulls
-        sender.get.to(mem, offset, a)
+        sender.to(mem, offset, a)
 
       final def from(mem: Mem, offset: Bytes): A =
-        import scala.language.unsafeNulls
-        receiver.get().from(mem, offset).asInstanceOf[A]
+        receiver.from(mem, offset).asInstanceOf[A]
