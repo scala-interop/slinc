@@ -24,15 +24,15 @@ class StructI(layoutI: LayoutI, jitManager: JitManager):
       @volatile private var receiver: Receive[A] = uninitialized
 
       jitManager.jitc(
-        (s: Send[A]) => sender = s,
         Send.compileTime[A](offsetsArray),
-        Send.staged[A](layout)
+        Send.staged[A](layout),
+        sender = _,
       )
 
       jitManager.jitc(
-        (r: Receive[A]) => receiver = r,
         Receive.compileTime[A](offsetsArray),
-        Receive.staged[A](layout)
+        Receive.staged[A](layout),
+        receiver = _,
       )
 
       final def to(mem: Mem, offset: Bytes, a: A): Unit =

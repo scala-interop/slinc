@@ -17,7 +17,7 @@ trait Slinc(
   protected val layoutI = LayoutI(layoutPlatformSpecific)
   protected def comp: Compiler
   protected val jitService =
-    if useJit then JitManagerImpl(comp) else DummyManager
+    if useJit then JitManagerImpl(comp) else NoJitManager
   protected val structI = StructI(layoutI, jitService)
   protected val typesI = TypesI.platformTypes(layoutI)
   export layoutI.{*, given}

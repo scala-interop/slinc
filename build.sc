@@ -6,6 +6,8 @@ import $file.variadic, variadic.VariadicGen
 import mill._, scalalib._, scalafmt._
 import $ivy.`com.lihaoyi::mill-contrib-buildinfo:`
 import mill.contrib.buildinfo.BuildInfo
+import $ivy.`de.tototec::de.tobiasroeser.mill.jacoco_mill0.10:0.0.2`
+import de.tobiasroeser.mill.jacoco.JacocoTestModule
 
 import com.github.lolgab.mill.mima._
 
@@ -37,39 +39,44 @@ trait BaseModule extends ScalaModule with ScalafmtModule {
   )
 }
 
-object `sffi-core` extends BaseModule with PublishableModule {
-  def pomSettings = pomTemplate("scala-ffi-core")
- object test extends Tests with TestModule.Munit {
-    def moduleDeps = Seq(`sffi-core`)
+// object `sffi-core` extends BaseModule with PublishableModule {
+//   def pomSettings = pomTemplate("scala-ffi-core")
+//  object test extends Tests with TestModule.Munit {
+//     def moduleDeps = Seq(`sffi-core`)
 
-    def ivyDeps = Agg(ivy"org.scalameta::munit:${v.munit}")
-  }
+//     def ivyDeps = Agg(ivy"org.scalameta::munit:${v.munit}")
+//   }
 
-}
+// }
 
-object `sffi-j17` extends BaseModule with PublishableModule with BenchmarksModule {
-  def moduleDeps = Seq(`sffi-core`)
-  object bench extends Benchmarks {
-    def jmhVersion = "1.33"
-  }
+// object `sffi-j17` extends BaseModule with PublishableModule with BenchmarksModule {
+//   def moduleDeps = Seq(`sffi-core`)
+//   object bench extends Benchmarks {
+//     def jmhVersion = "1.33"
+//   }
 
-  object test extends Tests with TestModule.Munit {
-    def moduleDeps = Seq(`sffi-core`.test, `sffi-j17`)
-    def forkArgs = Seq(
-      "--add-modules",
-      "jdk.incubator.foreign",
-      "--enable-native-access",
-      "ALL-UNNAMED"
-    )
+//   object test extends Tests with TestModule.Munit {
+//     def moduleDeps = Seq(`sffi-core`.test, `sffi-j17`)
+//     def forkArgs = Seq(
+//       "--add-modules",
+//       "jdk.incubator.foreign",
+//       "--enable-native-access",
+//       "ALL-UNNAMED"
+//     )
 
-    def ivyDeps = Agg(ivy"org.scalameta::munit:${v.munit}")
-  }
+//     def ivyDeps = Agg(ivy"org.scalameta::munit:${v.munit}")
+//   }
 
-  def pomSettings = pomTemplate("scala-ffi-java-17")
-}
+//   def pomSettings = pomTemplate("scala-ffi-java-17")
+// }
 
 object core extends BaseModule with PublishableModule {
     def pomSettings = pomTemplate("scala-ffi-core")
+
+  object test extends Tests with TestModule.Munit with JacocoTestModule {
+    def ivyDeps = Agg(ivy"org.scalameta::munit:${v.munit}")
+  }
+
 }
 
 // object slinc
