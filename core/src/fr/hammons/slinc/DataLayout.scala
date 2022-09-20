@@ -2,56 +2,83 @@ package fr.hammons.slinc
 
 import scala.deriving.Mirror
 
-enum Kind:
-  case Int
-  case Short
-  case Long
-  case Float
-  case Byte
-  case Double
-  case Pointer
+enum ByteOrder:
+  case BigEndian
+  case LittleEndian
+  case HostDefault
 
 sealed trait DataLayout:
   val name: Option[String]
   val size: Bytes
+  val alignment: Bytes
+  val byteOrder: ByteOrder
   def withName(name: String): DataLayout
 
 sealed trait PrimitiveLayout extends DataLayout:
-  val kind: Kind
+  val alignment = size
 
-trait IntLayout extends PrimitiveLayout:
-  def withName(name: String): IntLayout
-  val kind = Kind.Int
+class IntLayout private[slinc] (
+    val name: Option[String],
+    val size: Bytes,
+    val byteOrder: ByteOrder
+) extends PrimitiveLayout:
+  def withName(name: String): IntLayout = IntLayout(Some(name), size, byteOrder)
 
 object IntLayout:
-  def unapply(l: IntLayout): (Option[String], Bytes) = (l.name, l.size)
+  def unapply(l: IntLayout): (Option[String], Bytes, ByteOrder) =
+    (l.name, l.size, l.byteOrder)
 
-trait LongLayout extends PrimitiveLayout:
-  def withName(name: String): LongLayout
-  val kind = Kind.Long
+class LongLayout private[slinc] (
+    val name: Option[String],
+    val size: Bytes,
+    val byteOrder: ByteOrder
+) extends PrimitiveLayout:
+  def withName(name: String): LongLayout =
+    LongLayout(Some(name), size, byteOrder)
 
 object LongLayout:
-  def unapply(l: LongLayout): (Option[String], Bytes) = (l.name, l.size)
+  def unapply(l: LongLayout): (Option[String], Bytes, ByteOrder) =
+    (l.name, l.size, l.byteOrder)
 
-trait FloatLayout extends PrimitiveLayout:
-  def withName(name: String): FloatLayout
-  val kind = Kind.Float
+class FloatLayout private[slinc] (
+    val name: Option[String],
+    val size: Bytes,
+    val byteOrder: ByteOrder
+) extends PrimitiveLayout:
+  def withName(name: String): FloatLayout =
+    FloatLayout(Some(name), size, byteOrder)
 
-trait DoubleLayout extends PrimitiveLayout:
-  def withName(name: String): DoubleLayout
-  val kind = Kind.Double
+class DoubleLayout private[slinc] (
+    val name: Option[String],
+    val size: Bytes,
+    val byteOrder: ByteOrder
+) extends PrimitiveLayout:
+  def withName(name: String): DoubleLayout =
+    DoubleLayout(Some(name), size, byteOrder)
 
-trait ByteLayout extends PrimitiveLayout:
-  def withName(name: String): ByteLayout
-  val kind = Kind.Byte
+class ByteLayout private[slinc] (
+    val name: Option[String],
+    val size: Bytes,
+    val byteOrder: ByteOrder
+) extends PrimitiveLayout:
+  def withName(name: String): ByteLayout =
+    ByteLayout(Some(name), size, byteOrder)
 
-trait ShortLayout extends PrimitiveLayout:
-  def withName(name: String): ShortLayout
-  val kind = Kind.Short
+class ShortLayout private[slinc] (
+    val name: Option[String],
+    val size: Bytes,
+    val byteOrder: ByteOrder
+) extends PrimitiveLayout:
+  def withName(name: String): ShortLayout =
+    ShortLayout(Some(name), size, byteOrder)
 
-trait PointerLayout extends PrimitiveLayout:
-  def withName(name: String): PointerLayout
-  val kind = Kind.Pointer
+class PointerLayout private[slinc] (
+    val name: Option[String],
+    val size: Bytes,
+    val byteOrder: ByteOrder
+) extends PrimitiveLayout:
+  def withName(name: String): PointerLayout =
+    PointerLayout(Some(name), size, byteOrder)
 
 case class StructMember(layout: DataLayout, name: String, offset: Bytes)
 trait StructLayout extends DataLayout:

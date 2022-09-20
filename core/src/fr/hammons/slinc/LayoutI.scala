@@ -2,17 +2,34 @@ package fr.hammons.slinc
 
 import scala.compiletime.{summonInline, erasedValue, constValue}
 import scala.deriving.Mirror
-import scala.reflect.ClassTag.apply
 import scala.reflect.ClassTag
 
-trait LayoutOf[A]:
+trait LayoutOf[A <: AnyKind]:
   val layout: DataLayout
 
-class LayoutI(protected val platformSpecific: LayoutI.PlatformSpecific):
-  export platformSpecific.given
+class LayoutI(platformSpecific: LayoutI.PlatformSpecific):
   import platformSpecific.getStructLayout
   given LayoutOf[Char] with
-    val layout = shortLayout.layout
+    val layout = platformSpecific.shortLayout
+
+  given LayoutOf[Int] with 
+    val layout = platformSpecific.intLayout
+  
+  given LayoutOf[Long] with 
+    val layout = platformSpecific.longLayout
+  
+  given LayoutOf[Float] with
+    val layout = platformSpecific.floatLayout
+  
+  given LayoutOf[Short] with 
+    val layout = platformSpecific.shortLayout
+
+  given LayoutOf[Byte] with 
+    val layout = platformSpecific.byteLayout
+
+  given LayoutOf[Ptr] with 
+    val layout = platformSpecific.pointerLayout
+
 
   inline def structLayout[P <: Product](using m: Mirror.ProductOf[P], ct: ClassTag[P]) = 
     getStructLayout[P](
@@ -31,9 +48,11 @@ class LayoutI(protected val platformSpecific: LayoutI.PlatformSpecific):
 
 object LayoutI:
   trait PlatformSpecific:
-    given intLayout: LayoutOf[Int]
-    given longLayout: LayoutOf[Long]
-    given floatLayout: LayoutOf[Float]
-    given shortLayout: LayoutOf[Short]
-    given byteLayout: LayoutOf[Byte]
+    val intLayout: IntLayout
+    val longLayout: LongLayout
+    val floatLayout: FloatLayout
+    val shortLayout: ShortLayout 
+    val doubleLayout: DoubleLayout
+    val pointerLayout: PointerLayout
+    val byteLayout: ByteLayout
     def getStructLayout[T](layouts: DataLayout*)(using Mirror.ProductOf[T], scala.reflect.ClassTag[T]): StructLayout

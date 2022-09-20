@@ -61,10 +61,10 @@ object Receive:
       transforms: Expr[IArray[Tuple => Product]]
   )(using Quotes): Expr[Any] =
     layout match
-      case IntLayout(_, _) =>
+      case IntLayout(_, _, _) =>
         '{ $mem.readInt($structOffset) }
 
-      case LongLayout(_, _) =>
+      case LongLayout(_, _, _) =>
         '{ $mem.readLong($structOffset) }
       case structLayout @ StructLayout(_, _, children) =>
         val transformIndex = transformIndices(

@@ -43,9 +43,9 @@ object Send:
     import quotes.reflect.*
 
     layout match
-      case IntLayout(_, _) =>
+      case IntLayout(_, _, _) =>
         '{ $mem.writeInt($value.asInstanceOf[Int], $offset) }
-      case LongLayout(_, _) =>
+      case LongLayout(_, _, _) =>
         '{ $mem.writeLong($value.asInstanceOf[Long], $offset) }
       case structLayout @ StructLayout(_, _, children) =>
         val fields =
