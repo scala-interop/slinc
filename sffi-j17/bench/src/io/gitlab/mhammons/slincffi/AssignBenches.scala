@@ -18,6 +18,7 @@ case class Y(a: Int, y: Int) derives Struct2
 case class X(a: Int, y: Y, b: Int) derives Struct2
 
 
+
 //multicore results:
 // AssignBenches.assignCaseClass      thrpt    5      52.865 ± 2.990  ops/us
 // AssignBenches.assignCaseClass2     thrpt    5     185.211 ± 6.678  ops/us
@@ -35,6 +36,8 @@ case class X(a: Int, y: Y, b: Int) derives Struct2
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 //@BenchmarkMode(Array(Mode.SampleTime))
 class AssignBenches:
+
+
   val ffi = FFI.getFFI
   import ffi.*
   val intPtr = Scope(global = true) {

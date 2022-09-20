@@ -68,6 +68,10 @@ object `sffi-j17` extends BaseModule with PublishableModule with BenchmarksModul
   def pomSettings = pomTemplate("scala-ffi-java-17")
 }
 
+object core extends BaseModule with PublishableModule {
+    def pomSettings = pomTemplate("scala-ffi-core")
+}
+
 // object slinc
 //     extends ScalaModule
 //     with PlatformTypegen
