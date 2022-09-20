@@ -39,12 +39,12 @@ trait PublishableModule extends PublishModule with Mima {
 
    def pomTemplate(description: String) = PomSettings(
      description = description,
-     organization = "io.gitlab.mhammons",
-     url = "https://gitlab.io/mhammons/slinc",
-     licenses = Seq(License.`Apache-2.0`),
-     versionControl = VersionControl.gitlab("mhammons", "slinc"),
+     organization = "fr.hammons",
+     url = "https://github.com/markehammons/SLInC",
+     licenses = Seq(License.`AGPL-3.0-or-later`,License.`LGPL-3.0-or-later`),
+     versionControl = VersionControl.github("markehammons", "slinc"),
      developers = Seq(
-       Developer("mhammons", "Mark Hammons", "https://gitlab.io/mhammons")
+       Developer("markehammons", "Mark Hammons", "https://github.com/markehammons")
      )
    )
 
