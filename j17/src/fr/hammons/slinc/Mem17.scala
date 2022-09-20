@@ -1,0 +1,34 @@
+package fr.hammons.slinc
+
+import jdk.incubator.foreign.MemorySegment
+import jdk.incubator.foreign.MemoryAccess
+
+class Mem17(mem: MemorySegment) extends Mem:
+
+  override def readLong(offset: Bytes): Long = ???
+
+  override def readFloat(offset: Bytes): Float = ???
+
+  override def readShort(offset: Bytes): Short = ???
+
+  override def readMem(offset: Bytes): Mem = ???
+
+  override def writeInt(v: Int, offset: Bytes): Unit = MemoryAccess.setIntAtOffset(mem, offset.toLong, v)
+
+  override def readInt(offset: Bytes): Int = MemoryAccess.getIntAtOffset(mem, offset.toLong)
+
+  override def write(v: Short, offset: Bytes): Unit = ???
+
+  override def write(v: Mem, offset: Bytes): Unit = ???
+
+  override def write(v: Byte, offset: Bytes): Unit = ???
+
+  override def write(v: Int, offset: Bytes): Unit = ???
+
+  override def writeLong(v: Long, offset: Bytes): Unit = ???
+
+  override def writeFloat(v: Float, offset: Bytes): Unit = ???
+
+  override def readByte(offset: Bytes): Byte = ???
+
+  override def offset(bytes: Bytes): Mem = ???

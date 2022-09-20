@@ -70,7 +70,7 @@ trait BaseModule extends ScalaModule with ScalafmtModule {
 
 object core extends BaseModule with PublishableModule {
 
-  def pomSettings = pomTemplate("scala-ffi-core")
+  def pomSettings = pomTemplate("slinc-core")
 
   object test extends Tests with TestModule.Munit with JacocoTestModule {
     def ivyDeps = Agg(ivy"org.scalameta::munit:${v.munit}")
@@ -78,8 +78,25 @@ object core extends BaseModule with PublishableModule {
 
 }
 
-object j17 extends BaseModule with PublishableModule {
-  def pomSettings = pomTemplate("")
+object j17 extends BaseModule with PublishableModule with BenchmarksModule {
+  def moduleDeps = Seq(core)
+  def pomSettings = pomTemplate("slinc-java-17")
+
+  object bench extends Benchmarks {
+    def jmhVersion = "1.33"
+    def forkArgs = super.forkArgs() ++ Seq(
+      "--add-modules=jdk.incubator.foreign",
+      "--enable-native-access=ALL-UNNAMED"
+    )
+  }
+
+  object test extends Tests with TestModule.Munit with JacocoTestModule {
+    def ivyDeps = Agg(ivy"org.scalameta::munit:${v.munit}")
+    def forkArgs = super.forkArgs() ++ Seq(
+      "--add-modules=jdk.incubator.foreign",
+      "--enable-native-access=ALL-UNNAMED"
+    )
+  }
 }
 
 // object slinc

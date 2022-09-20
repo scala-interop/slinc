@@ -15,11 +15,14 @@ private def nameOfImpl[T](using Quotes, Type[T]): Expr[String] =
 
 def canBeUsedDirectly(clazz: Class[?]): Boolean =
   val enclosingClass = clazz.getEnclosingClass()
-  if enclosingClass == null && clazz
-      .getEnclosingConstructor() == null && clazz.getEnclosingMethod() == null
+  if clazz.getCanonicalName() == null then false
+  else if enclosingClass == null && clazz
+      .getEnclosingConstructor() == null && clazz.getEnclosingMethod() == null 
   then true
   else if canBeUsedDirectly(enclosingClass.nn) && Modifier.isStatic(
       clazz.getModifiers()
     ) && Modifier.isPublic(clazz.getModifiers())
-  then true
+  then 
+    println("here")
+    true
   else false

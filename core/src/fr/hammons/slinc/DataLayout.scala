@@ -81,12 +81,8 @@ class PointerLayout private[slinc] (
     PointerLayout(Some(name), size, byteOrder)
 
 case class StructMember(layout: DataLayout, name: String, offset: Bytes)
-trait StructLayout extends DataLayout:
-  val offsets: Vector[Bytes] = children.map(_.offset)
-  val children: Vector[StructMember]
-  val transform: Tuple => Product
-  val clazz: Class[?]
-  def withName(name: String): StructLayout
+class StructLayout private[slinc] (val name: Option[String], val size: Bytes, val alignment: Bytes, val byteOrder: ByteOrder, val transform: Tuple => Product, val clazz: Class[?], val children: Vector[StructMember]) extends DataLayout:
+  def withName(name: String): StructLayout = StructLayout(Some(name), size, alignment, byteOrder, transform, clazz, children)
 
 object StructLayout:
   def unapply(s: StructLayout): (Option[String], Bytes, Vector[StructMember]) =

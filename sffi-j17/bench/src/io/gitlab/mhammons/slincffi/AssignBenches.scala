@@ -4,13 +4,6 @@ import org.openjdk.jmh.annotations.*,
 Mode.{SampleTime, SingleShotTime, Throughput}
 import java.util.concurrent.TimeUnit
 
-import jdk.incubator.foreign.MemoryLayout
-import jdk.incubator.foreign.*
-import jdk.incubator.foreign.CLinker.*
-import org.openjdk.jmh.infra.Blackhole
-import scala.compiletime.codeOf
-import scala.deriving.Mirror
-
 
 val ffi3 = FFI173
 import ffi3.{Struct as Struct2, *, given}

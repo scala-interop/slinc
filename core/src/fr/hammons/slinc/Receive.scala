@@ -68,7 +68,7 @@ object Receive:
         '{ $mem.readLong($structOffset) }
       case structLayout @ StructLayout(_, _, children) =>
         val transformIndex = transformIndices(
-          structLayout.clazz.getCanonicalName().nn
+          structLayout.clazz.getName().nn
         )
         val exprs = children.map {
           case StructMember(childLayout, _, childOffset) =>
@@ -94,7 +94,7 @@ object Receive:
   ): Vector[(String, Tuple => Product)] =
     layout match
       case s @ StructLayout(_, _, members) =>
-        (s.clazz.getCanonicalName().nn, s.transform) +: members
+        (s.clazz.getName().nn, s.transform) +: members
           .map(_.layout)
           .flatMap(getTransforms)
       case _ => Vector.empty

@@ -77,7 +77,7 @@ object Send:
                 val a: a & Product = $value.asInstanceOf[a & Product]
 
                 ${
-                  Expr.block(fns.map(fn => fn('a)), '{})
+                  Expr.block(fns.map(_('a)), '{})
                 }
               }
         else

@@ -16,7 +16,6 @@ trait Slinc(
     .flatMap(_.nn.toBooleanOption)
     .getOrElse(true)
   protected val layoutI = LayoutI(layoutPlatformSpecific)
-  protected def comp: Compiler
   protected val structI = StructI(layoutI, jitManager)
   protected val typesI = TypesI.platformTypes(layoutI)
   export layoutI.{*, given}
@@ -26,4 +25,8 @@ trait Slinc(
   extension (l: Long) def toBytes = Bytes(l)
 
   object Allocator:
-    export allocatorPlatformSpecific.globalAllocator
+    def global[A](fn: Allocator ?=> A) = 
+      given alloc: Allocator = allocatorPlatformSpecific.globalAllocator()
+      val result = fn
+      alloc.close()
+      result

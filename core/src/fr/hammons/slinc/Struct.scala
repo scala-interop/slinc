@@ -17,7 +17,7 @@ class StructI(layoutI: LayoutI, jitManager: JitManager):
       val layout: StructLayout =
         structLayout[A]
 
-      private val offsetsArray = IArray.from(layout.offsets)
+      private val offsetsArray = IArray.from(layout.children.map(_.offset))
 
       @volatile private var sender: Send[A] = uninitialized
 
