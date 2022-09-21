@@ -36,7 +36,7 @@ class JitManagerSpec extends munit.FunSuite:
       while !changed do
         changed = code() != 1
         Thread.sleep(100)
-    }, 3.seconds)
+    }, 15.seconds)
     assertEquals(code(), 2)
   }
 

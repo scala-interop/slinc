@@ -4,20 +4,27 @@ import $file.publishable, publishable.PublishableModule
 import mill._, scalalib._, scalafmt._
 import $ivy.`com.lihaoyi::mill-contrib-buildinfo:`
 import mill.contrib.buildinfo.BuildInfo
+import com.github.lolgab.mill.mima._
+
 import $ivy.`de.tototec::de.tobiasroeser.mill.jacoco_mill0.10:0.0.2`
 import de.tobiasroeser.mill.jacoco.JacocoTestModule
-
-import com.github.lolgab.mill.mima._
 
 object v {
   val munit = "1.0.0-M6"
   val jmh = "1.33"
   val jnr = "2.2.3"
   val jna = "5.9.0"
+  val scoverage = "1.4.0"
 }
 
 trait BaseModule extends ScalaModule with ScalafmtModule {
   def scalaVersion = "3.2.1-RC1"
+  // def scoverageVersion = "2.0.5"
+
+  val munitVersion = "1.0.0-M6"
+  val jmhV = "1.33"
+  val jnr = "2.2.3"
+  val jna = "5.9.0"
 
   def ivyDeps = Agg(
     ivy"org.scala-lang::scala3-staging:${scalaVersion()}"
@@ -73,7 +80,7 @@ object core extends BaseModule with PublishableModule {
   def pomSettings = pomTemplate("slinc-core")
 
   object test extends Tests with TestModule.Munit with JacocoTestModule {
-    def ivyDeps = Agg(ivy"org.scalameta::munit:${v.munit}")
+    def ivyDeps = Agg(ivy"org.scalameta::munit:$munitVersion")
   }
 
 }
@@ -82,23 +89,29 @@ object j17 extends BaseModule with PublishableModule with BenchmarksModule {
   def moduleDeps = Seq(core)
   def pomSettings = pomTemplate("slinc-java-17")
 
-  object bench extends Benchmarks {
-    def jmhVersion = "1.33"
-    def forkArgs = super.forkArgs() ++ Seq(
-      "--add-modules=jdk.incubator.foreign",
-      "--enable-native-access=ALL-UNNAMED"
-    )
-  }
-
   object test extends Tests with TestModule.Munit with JacocoTestModule {
-    def ivyDeps = Agg(ivy"org.scalameta::munit:${v.munit}")
+    def ivyDeps = Agg(ivy"org.scalameta::munit:$munitVersion")
     def forkArgs = super.forkArgs() ++ Seq(
       "--add-modules=jdk.incubator.foreign",
       "--enable-native-access=ALL-UNNAMED"
     )
   }
-}
 
+  //todo: remove this nasty hack needed for jacoco coverage reports
+  object benchmarks extends BaseModule{
+    def moduleDeps = Seq(j17)
+    override def scalaVersion = j17.scalaVersion
+    override def scalacOptions = j17.scalacOptions
+    object test extends Benchmarks {
+      def jmhVersion = jmhV
+      def forkArgs = super.forkArgs() ++ Seq(
+        "--add-modules=jdk.incubator.foreign",
+        "--enable-native-access=ALL-UNNAMED"
+      )
+    }
+  }
+
+}
 // object slinc
 //     extends ScalaModule
 //     with PlatformTypegen

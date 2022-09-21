@@ -1,8 +1,6 @@
 package fr.hammons.slinc
 
 
-case class A(a: Int, b: Int) 
-case class B(a: Int, b: A, c: Int)
 class TransferSpec extends munit.FunSuite:
   test("can read and write jvm ints") {
     import Slinc17.default.{*, given}
@@ -53,6 +51,7 @@ class TransferSpec extends munit.FunSuite:
   }
 
   test("top-level compiled reader and writer works") {
+    import TransferSpec.*
     import Slinc17.immediateJit.{*, given}
     given Struct[A] = Struct.derived
     given Struct[B] = Struct.derived
@@ -64,3 +63,6 @@ class TransferSpec extends munit.FunSuite:
       assertEquals(!mem, testValue)
     }
   }
+object TransferSpec:
+  case class A(a: Int, b: Int) 
+  case class B(a: Int, b: A, c: Int)

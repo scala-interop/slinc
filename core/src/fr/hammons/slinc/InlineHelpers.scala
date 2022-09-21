@@ -23,6 +23,5 @@ def canBeUsedDirectly(clazz: Class[?]): Boolean =
       clazz.getModifiers()
     ) && Modifier.isPublic(clazz.getModifiers())
   then 
-    println("here")
     true
   else false

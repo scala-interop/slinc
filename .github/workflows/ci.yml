@@ -16,8 +16,14 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: ${{ matrix.jvm }}
-      - run: ./mill sffi-core.test
-      - run: ./mill sffi-j${{ matrix.jvm }}.test
+      - run: ./mill core.test
+      - run: ./mill j${{ matrix.jvm }}.test
+      - run: ./mill de.tobiasroeser.mill.jacoco.Jacoco/jacocoReportFull
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3 
+        with:
+          directory: out/de/tobiasroeser/mill/jacoco/Jacoco/jacocoReportFull.dest
+          flags: unittests
   benchmarks:
     needs: unit-tests
     strategy:
@@ -32,4 +38,7 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: ${{ matrix.jvm }}
-      - run: ./mill sffi-j${{ matrix.jvm }}.bench -f1
+      - run: ./mill j${{ matrix.jvm }}.benchmarks.test -f1 -o j${{ matrix.jvm }}-${{ matrix.os }}.bench -rff j${{ matrix.jvm }}-${{ matrix.os }}.json -rf json
+      - uses: actions/upload-artifact@v3
+        with:
+          path: out/j${{ matrix.jvm }}/benchmarks/test/jmhRun.dest/*
