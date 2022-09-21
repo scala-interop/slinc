@@ -39,23 +39,27 @@ object Receive:
       transforms.map((className, _) => className).zipWithIndex.toMap
 
     (jitCompiler: JitCompiler) =>
-      jitCompiler(
+      jitCompiler {
+        val implementation = (
+            fns: Expr[IArray[Tuple => Product]],
+            mem: Expr[Mem],
+            structOffset: Expr[Bytes]
+        ) =>
+          stagedHelper(layout, transformIndices, mem, structOffset, fns)
+            .asExprOf[Product]
         '{ (fns: IArray[Tuple => Product]) =>
           new Receive[Product]:
             def from(mem: Mem, structOffset: Bytes) = ${
-              stagedHelper(
-                layout,
-                transformIndices
-              )('mem, 'structOffset, 'fns).asExprOf[Product]
+              implementation('{ fns }, '{ mem }, '{ structOffset })
             }
+
         }.tap(_.pipe(_.show).tap(println))
-      )(transformsArray).asInstanceOf[Receive[A]]
+      }(transformsArray).asInstanceOf[Receive[A]]
   end staged
 
   private def stagedHelper(
       layout: DataLayout,
-      transformIndices: Map[String, Int]
-  )(
+      transformIndices: Map[String, Int],
       mem: Expr[Mem],
       structOffset: Expr[Bytes],
       transforms: Expr[IArray[Tuple => Product]]
@@ -72,7 +76,9 @@ object Receive:
         )
         val exprs = children.map {
           case StructMember(childLayout, _, childOffset) =>
-            stagedHelper(childLayout, transformIndices)(
+            stagedHelper(
+              childLayout,
+              transformIndices,
               mem,
               '{ $structOffset + ${ Expr(childOffset) } },
               transforms

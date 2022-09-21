@@ -70,22 +70,23 @@ object Send:
               )
         }.toList
 
+        val implementation = [A] =>
+          (inputExpression: Expr[A & Product]) =>
+            Expr.block(fns.map(_(inputExpression)), '{})
         if canBeUsedDirectly(structLayout.clazz) then
           TypeRepr.typeConstructorOf(structLayout.clazz).asType match
             case '[a & Product] =>
               '{
                 val a: a & Product = $value.asInstanceOf[a & Product]
 
-                ${
-                  Expr.block(fns.map(_('a)), '{})
-                }
+                ${ implementation('{ a }) }
               }
         else
           '{
             val a: Product = $value.asInstanceOf[Product]
 
             ${
-              Expr.block(fns.map(_('a)), '{})
+              implementation('{ a })
             }
           }
   end stagedHelper
