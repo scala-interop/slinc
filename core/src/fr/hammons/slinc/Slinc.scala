@@ -9,24 +9,27 @@ import java.util.concurrent.ThreadFactory
 
 trait Slinc(
     layoutPlatformSpecific: LayoutI.PlatformSpecific,
-    allocatorPlatformSpecific: Allocator.PlatformSpecific,
+    scopePlatformSpecific: ScopeI.PlatformSpecific,
+    transitionsPlatformSpecific: TransitionsI.PlatformSpecific,
+    libraryIPlatformSpecific: LibraryI.PlatformSpecific,
     jitManager: JitManager
 ):
   private val useJit = Option(System.getProperty("sffi-jit"))
     .flatMap(_.nn.toBooleanOption)
     .getOrElse(true)
   protected val layoutI = LayoutI(layoutPlatformSpecific)
-  protected val structI = StructI(layoutI, jitManager)
+  protected val transitionsI = TransitionsI(transitionsPlatformSpecific)
+  protected val structI = StructI(layoutI, transitionsI, jitManager)
   protected val typesI = TypesI.platformTypes(layoutI)
+  protected val scopeI = ScopeI(scopePlatformSpecific)
+  protected val libraryI = LibraryI(libraryIPlatformSpecific)
   export layoutI.{*, given}
   export typesI.{*, given}
+  export libraryI.*
+  export transitionsI.given
   export structI.Struct
+  export scopeI.given
 
   extension (l: Long) def toBytes = Bytes(l)
+  
 
-  object Allocator:
-    def global[A](fn: Allocator ?=> A) = 
-      given alloc: Allocator = allocatorPlatformSpecific.globalAllocator()
-      val result = fn
-      alloc.close()
-      result

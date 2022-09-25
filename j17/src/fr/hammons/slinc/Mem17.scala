@@ -3,7 +3,7 @@ package fr.hammons.slinc
 import jdk.incubator.foreign.MemorySegment
 import jdk.incubator.foreign.MemoryAccess
 
-class Mem17(mem: MemorySegment) extends Mem:
+class Mem17(private[slinc] val mem: MemorySegment) extends Mem:
 
   override def readLong(offset: Bytes): Long = ???
 
@@ -32,3 +32,7 @@ class Mem17(mem: MemorySegment) extends Mem:
   override def readByte(offset: Bytes): Byte = ???
 
   override def offset(bytes: Bytes): Mem = ???
+
+  def asBase: Object = mem
+  def resize(bytes: Bytes): Mem = 
+    Mem17(mem.address().nn.asSegment(bytes.toLong, mem.scope().nn).nn)

@@ -5,9 +5,10 @@ import scala.compiletime.uninitialized
 import java.util.concurrent.atomic.AtomicReference
 import scala.reflect.ClassTag
 
-class StructI(layoutI: LayoutI, jitManager: JitManager):
+class StructI(layoutI: LayoutI, transitionI: TransitionsI, jitManager: JitManager):
   import layoutI.{given, *}
-  trait Struct[A <: Product] extends LayoutOf[A], Send[A], Receive[A]
+  import transitionI.given
+  trait Struct[A <: Product] extends LayoutOfStruct[A], Send[A], Receive[A], InAllocatingTransitionNeeded[A], OutTransitionNeeded[A]
 
   object Struct:
     inline def derived[A <: Product](using
@@ -40,3 +41,15 @@ class StructI(layoutI: LayoutI, jitManager: JitManager):
 
       final def from(mem: Mem, offset: Bytes): A =
         receiver.from(mem, offset).asInstanceOf[A]
+
+      final def in(a: A)(using alloc: Allocator): Object = 
+        val mem = alloc.allocate(this.layout)
+        to(mem, Bytes(0), a)
+        transitionI.structMemIn(mem)
+
+      final def out(a: Object): A = 
+        val mem = transitionI.structMemOut(a)
+        from(mem, Bytes(0))
+
+
+

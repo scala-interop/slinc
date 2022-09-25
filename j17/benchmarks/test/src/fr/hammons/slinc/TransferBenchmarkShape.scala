@@ -3,6 +3,7 @@ package fr.hammons.slinc
 import org.openjdk.jmh.annotations.*,
 Mode.{SampleTime, SingleShotTime, Throughput}
 import java.util.concurrent.TimeUnit
+import fr.hammons.slinc.Scope
 
 case class A(a: Int, b: B, c: Int)
 case class B(a: Int, b: Int)
@@ -17,13 +18,13 @@ trait TransferBenchmarkShape(val s: Slinc) {
   given Struct[C] = Struct.derived
   given Struct[D] = Struct.derived
 
-  val aPtr = Allocator.global{
+  val aPtr = Scope.global{
     Ptr.blank[A]
   }
 
   val a = A(1,B(2,3),4)
 
-  val cPtr = Allocator.global{
+  val cPtr = Scope.global{
     Ptr.blank[C]
   }
 

@@ -11,12 +11,29 @@ class Allocator17(
     Mem17(segmentAllocator.allocate(layout.size.toLong, layout.alignment.toLong).nn)
 
   override def upcall[Fn](function: Fn): Mem = ???
+  override def base: Object = segmentAllocator
 
-  override def close(): Unit = if canClose then scope.close()
 
-object Allocator17 extends Allocator.PlatformSpecific:
-  def globalAllocator(): Allocator =
-    val global = ResourceScope.globalScope().nn
-    Allocator17(SegmentAllocator.arenaAllocator(global).nn, global, false)
+object Scope17 extends ScopeI.PlatformSpecific:
+  def createGlobalScope: GlobalScope = new GlobalScope:
+    def apply[A](fn: (Allocator) ?=> A): A = 
+      val rs = ResourceScope.globalScope().nn
+      given Allocator = Allocator17(SegmentAllocator.arenaAllocator(rs).nn, rs, false)
+      fn 
 
-  def tempAllocator(): Allocator = ???
+  def createConfinedScope: ConfinedScope = new ConfinedScope:
+    def apply[A](fn: Allocator ?=> A): A = 
+      val rs = ResourceScope.newConfinedScope().nn
+      given Allocator = Allocator17(SegmentAllocator.arenaAllocator(rs).nn, rs, false)
+      val res = fn 
+      rs.close()
+      res
+    
+  def createTempScope: TempScope = new TempScope:
+    def apply[A](fn: Allocator ?=> A): A =
+      given Allocator = Allocator17(TempAllocator.localAllocator(), ResourceScope.globalScope().nn, false)
+      val res = fn 
+      TempAllocator.reset()
+      res
+
+

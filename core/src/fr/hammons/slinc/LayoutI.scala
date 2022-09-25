@@ -7,6 +7,9 @@ import scala.reflect.ClassTag
 trait LayoutOf[A <: AnyKind]:
   val layout: DataLayout
 
+trait LayoutOfStruct[A <: Product] extends LayoutOf[A]:
+  val layout: DataLayout
+
 class LayoutI(platformSpecific: LayoutI.PlatformSpecific):
   import platformSpecific.getStructLayout
   given LayoutOf[Char] with
@@ -27,8 +30,10 @@ class LayoutI(platformSpecific: LayoutI.PlatformSpecific):
   given LayoutOf[Byte] with 
     val layout = platformSpecific.byteLayout
 
-  given LayoutOf[Ptr] with 
+  given ptrGen: LayoutOf[Ptr] with 
     val layout = platformSpecific.pointerLayout
+
+  given [A]: LayoutOf[Ptr[A]] = ptrGen.asInstanceOf[LayoutOf[Ptr[A]]]
 
 
   inline def structLayout[P <: Product](using m: Mirror.ProductOf[P], ct: ClassTag[P]) = 
