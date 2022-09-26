@@ -11,6 +11,18 @@ public class MethodHandleFacade {
     return mh.invoke(a);
   }
 
+  public static int call1Int(MethodHandle mh, int a) throws Throwable {
+    return (int) mh.invoke(a);
+  }
+
+  public static Object call2Int(MethodHandle mh, Object sa, int a, int b) throws Throwable {
+    return mh.invoke(sa,a,b);
+  }
+
+  public static int callExact(MethodHandle mh, int a) throws Throwable {
+    return (int) mh.invokeExact(a);
+  }
+
   public static Object call2(MethodHandle mh, Object a, Object b) throws Throwable {
     return mh.invoke(a,b);
   }

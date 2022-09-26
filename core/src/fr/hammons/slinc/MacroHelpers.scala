@@ -32,3 +32,20 @@ object MacroHelpers:
     else findOwningMethod(s.owner)
 
 
+  def getMethodSymbols(using q: Quotes)(s: q.reflect.Symbol) = 
+    s.declaredMethods.filter(_.name != "writeReplace")
+
+  def getInputsAndOutputType(using
+      q: Quotes
+  )(methodSymbol: q.reflect.Symbol) =
+    import quotes.reflect.*
+    methodSymbol.tree match
+      case DefDef(_, params, ret, _) =>
+        params.last match
+          case TermParamClause(valDefs) =>
+            val inputs =
+              valDefs
+                .map(t => MacroHelpers.widenExpr(Ref(t.symbol).asExpr))
+
+            inputs -> ret.tpe.asType
+

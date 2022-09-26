@@ -5,7 +5,6 @@ import jdk.incubator.foreign.FunctionDescriptor
 import jdk.incubator.foreign.MemorySegment
 import jdk.incubator.foreign.MemoryAddress
 import java.lang.invoke.MethodType
-import fr.hammons.sffi.VoidHelper
 import jdk.incubator.foreign.CLinker
 import jdk.incubator.foreign.SymbolLookup
 import jdk.incubator.foreign.Addressable

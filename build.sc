@@ -1,6 +1,7 @@
 import os.Path
 import $file.benchmark, benchmark.BenchmarksModule
 import $file.publishable, publishable.PublishableModule
+import $file.facadeGenerator, facadeGenerator.FacadeGenerationModule
 import mill._, scalalib._, scalafmt._
 import $ivy.`com.lihaoyi::mill-contrib-buildinfo:`
 import mill.contrib.buildinfo.BuildInfo
@@ -75,9 +76,11 @@ trait BaseModule extends ScalaModule with ScalafmtModule {
 //   def pomSettings = pomTemplate("scala-ffi-java-17")
 // }
 
-object core extends BaseModule with PublishableModule {
+object core extends BaseModule with PublishableModule with FacadeGenerationModule {
 
   def pomSettings = pomTemplate("slinc-core")
+
+  def specializationArity = 4
 
   object test extends Tests with TestModule.Munit with JacocoTestModule {
     def ivyDeps = Agg(ivy"org.scalameta::munit:$munitVersion")
@@ -88,6 +91,8 @@ object core extends BaseModule with PublishableModule {
 object j17 extends BaseModule with PublishableModule with BenchmarksModule {
   def moduleDeps = Seq(core)
   def pomSettings = pomTemplate("slinc-java-17")
+
+  def javacOptions = super.javacOptions() ++ Seq("--add-modules=jdk.incubator.foreign")
 
   object test extends Tests with TestModule.Munit with JacocoTestModule {
     def ivyDeps = Agg(ivy"org.scalameta::munit:$munitVersion")

@@ -3,6 +3,7 @@ package fr.hammons.slinc
 import scala.compiletime.{summonInline, erasedValue, constValue}
 import scala.deriving.Mirror
 import scala.reflect.ClassTag
+import scala.quoted.*
 
 trait LayoutOf[A <: AnyKind]:
   val layout: DataLayout
@@ -61,3 +62,14 @@ object LayoutI:
     val pointerLayout: PointerLayout
     val byteLayout: ByteLayout
     def getStructLayout[T](layouts: DataLayout*)(using Mirror.ProductOf[T], scala.reflect.ClassTag[T]): StructLayout
+
+  def getLayoutFor[A](using Quotes, Type[A]) =
+    import quotes.reflect.*
+    val expr = Expr
+      .summon[LayoutOf[A]]
+      .getOrElse(
+        report.errorAndAbort(s"Cannot find a layout of ${Type.show[A]}")
+      )
+
+    '{ $expr.layout }
+

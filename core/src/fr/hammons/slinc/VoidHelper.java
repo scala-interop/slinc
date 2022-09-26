@@ -1,4 +1,4 @@
-package fr.hammons.sffi;
+package fr.hammons.slinc;
 
 import java.lang.invoke.MethodType;
 

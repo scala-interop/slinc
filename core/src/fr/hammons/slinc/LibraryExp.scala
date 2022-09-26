@@ -33,14 +33,14 @@ object LibraryExp:
   )(s: q.reflect.Symbol, cls: q.reflect.Symbol) =
     import quotes.reflect.*
     if s.isDefDef then
-      Libraryo.checkMethodIsCompatible(s)
+      LibraryI.checkMethodIsCompatible(s)
       Symbol.newMethod(
         cls,
         s.name,
         if s.paramSymss.size == 1 then 
-          generateMethodType(Nil, Nil, s.paramSymss(0), Libraryo.getReturnType(s))
+          generateMethodType(Nil, Nil, s.paramSymss(0), LibraryI.getReturnType(s))
         else if s.paramSymss.size == 2 then 
-          generatePolyType(s.paramSymss, Libraryo.getReturnType(s))
+          generatePolyType(s.paramSymss, LibraryI.getReturnType(s))
         else 
           report.errorAndAbort("Too many clauses!!")
       )
