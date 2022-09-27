@@ -14,10 +14,10 @@ class TransitionsI(platformSpecific: TransitionsI.PlatformSpecific):
 
   given [A]: OutTransitionNeeded[Ptr[A]] =
     genPtrOutTransition.asInstanceOf[OutTransitionNeeded[Ptr[A]]]
-
   given InTransitionNeeded[Allocator] = platformSpecific.allocatorIn
 
-  private[slinc] def structMemIn(mem: Mem)(using Allocator) = platformSpecific.inMem.in(mem)
+  private[slinc] def structMemIn(mem: Mem)(using Allocator) =
+    platformSpecific.inMem.in(mem)
   private[slinc] def structMemOut(o: Object) = platformSpecific.outMem.out(o)
 
 object TransitionsI:

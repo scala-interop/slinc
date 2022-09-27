@@ -15,6 +15,9 @@ class Mem17(private[slinc] val mem: MemorySegment) extends Mem:
 
   override def writeInt(v: Int, offset: Bytes): Unit = MemoryAccess.setIntAtOffset(mem, offset.toLong, v)
 
+  override def writeIntArray(v: Array[Int], offset: Bytes): Unit = 
+    mem.asSlice(offset.toLong).nn.copyFrom(MemorySegment.ofArray(v))
+
   override def readInt(offset: Bytes): Int = MemoryAccess.getIntAtOffset(mem, offset.toLong)
 
   override def write(v: Short, offset: Bytes): Unit = ???
@@ -31,7 +34,8 @@ class Mem17(private[slinc] val mem: MemorySegment) extends Mem:
 
   override def readByte(offset: Bytes): Byte = ???
 
-  override def offset(bytes: Bytes): Mem = ???
+
+  override def offset(bytes: Bytes): Mem = Mem17(mem)
 
   def asBase: Object = mem
   def resize(bytes: Bytes): Mem = 

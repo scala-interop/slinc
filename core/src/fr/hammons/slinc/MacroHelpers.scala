@@ -1,6 +1,7 @@
 package fr.hammons.slinc
 
 import scala.quoted.*
+import dotty.tools.dotc.core.Types.TypeRef.apply
 
 object MacroHelpers:
   def widenExpr(t: Expr[?])(using Quotes) =
@@ -48,4 +49,18 @@ object MacroHelpers:
                 .map(t => MacroHelpers.widenExpr(Ref(t.symbol).asExpr))
 
             inputs -> ret.tpe.asType
+
+  def assertIsFunction[A](using Quotes, Type[A]) = 
+    import quotes.reflect.*
+    if !TypeRepr.of[A].typeSymbol.name.startsWith("Function") then 
+      report.errorAndAbort(s"Function input required for this method, got ${Type.show[A]} instead", Position.ofMacroExpansion)
+  
+  def getInputTypesAndOutputTypes[A](using Quotes, Type[A]) = 
+    import quotes.reflect.*
+    assertIsFunction[A]
+
+    val args = TypeRepr.of[A].typeArgs.map(_.asType)
+    args.init -> args.last
+
+
 

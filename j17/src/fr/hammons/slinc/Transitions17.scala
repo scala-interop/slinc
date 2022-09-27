@@ -4,7 +4,9 @@ import jdk.incubator.foreign.{MemorySegment, MemoryAddress, ResourceScope}
 
 object Transitions17 extends TransitionsI.PlatformSpecific:
 
-  def outStruct(obj: Object, size: Bytes): Mem = Mem17(obj.asInstanceOf[MemorySegment])
+  def outStruct(obj: Object, size: Bytes): Mem = Mem17(
+    obj.asInstanceOf[MemorySegment]
+  )
   val inMem: InTransitionNeeded[Mem] = new InTransitionNeeded[Mem]:
     def in(a: Mem): Object = a.asBase
 
@@ -15,11 +17,9 @@ object Transitions17 extends TransitionsI.PlatformSpecific:
     def in(a: Mem): Object = a.asBase.asInstanceOf[MemorySegment].address().nn
 
   val outPointer: OutTransitionNeeded[Mem] = new OutTransitionNeeded[Mem]:
+    import scala.language.unsafeNulls
     def out(obj: Object): Mem = Mem17(
-      obj
-        .asInstanceOf[MemoryAddress]
-        .asSegment(1, ResourceScope.globalScope().nn)
-        .nn
+      MemorySegment.globalNativeSegment().asSlice(obj.asInstanceOf[MemoryAddress])
     )
 
   val allocatorIn: InTransitionNeeded[Allocator] =

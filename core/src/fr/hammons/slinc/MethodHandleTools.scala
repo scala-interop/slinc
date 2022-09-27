@@ -21,6 +21,7 @@ object MethodHandleTools:
       case '[Byte]   => "B"
       case '[Double] => "D"
       case '[Float]  => "F"
+      case '[Unit]   => "O"
       case '[Object] => "O"
 
   def invokeArguments[R](mh: Expr[MethodHandle], exprs: Expr[Any]*)(using
@@ -35,7 +36,11 @@ object MethodHandleTools:
     val arity = exprs.size
     val callName = (exprs.map(exprNameMapping) :+ returnMapping[R]).mkString
 
-    val mod = Symbol.requiredPackage("fr.hammons.slinc").declarations.find(_.name == s"MethodHandleArity$arity")
+    val mod = Symbol
+      .requiredPackage("fr.hammons.slinc")
+      .declarations
+      .find(_.name == s"MethodHandleArity$arity")
+      .map(_.companionModule)
 
     val backupMod = TypeRepr
       .of[MethodHandleFacade]
@@ -43,11 +48,12 @@ object MethodHandleTools:
       .getOrElse(report.errorAndAbort("This class should exist!!"))
       .companionModule
 
-    val methodSymbol = mod.flatMap(_.declaredMethods
-      .find(_.name == callName))
+    val methodSymbol = mod.flatMap(
+      _.declaredMethods
+        .find(_.name == callName)
+    )
 
     methodSymbol.foreach(println)
-
 
     val backupSymbol =
       backupMod.declaredMethods.find(_.name.endsWith(arity.toString()))
@@ -92,30 +98,23 @@ object MethodHandleTools:
         )
     )
 
-    val exprs = methodSymbols
+    val methodHandles = methodSymbols
       .map(
-        MacroHelpers.getInputsAndOutputType(_)
+        Descriptor.fromDefDef
       )
       .zipWithIndex
-      .map { case ((is, o), addressIdx) =>
-        val inputs = Expr.ofSeq(is.map { case '{ ${ _ }: a } =>
-          LayoutI.getLayoutFor[a]
-        })
-        val oLayout = o match
-          case '[Unit] => '{ None }
-          case '[o] =>
-            val layout = LayoutI.getLayoutFor[o]
-            '{ Some($layout) }
-
+      .map { case (descriptor, addressIdx) =>
         '{
           $platformExpr
-            .getDowncall($inputs, $oLayout)
-            .bindTo($addresses(${ Expr(addressIdx) }))
+            .getDowncall(
+              $addresses(${ Expr(addressIdx) }),
+              $descriptor
+            )
             .nn
         }
       }
 
-    '{ IArray(${ Varargs(exprs) }*) }
+    '{ IArray(${ Varargs(methodHandles) }*) }
 
   inline def calculateMethodHandles[L](
       platformSpecific: LibraryI.PlatformSpecific,

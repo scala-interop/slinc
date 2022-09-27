@@ -18,8 +18,19 @@ object NativeOutCompatible:
   )(using Quotes, Type[R]): Expr[R] =
     Expr
       .summon[OutTransitionNeeded[R]]
-      .map(fn => '{ $fn.out($expr.asInstanceOf[Object]) })
+      .map{fn => 
+        val nExpr = 
+          if expr.isExprOf[Object] then 
+            expr.asExprOf[Object]
+          else 
+            '{$expr.asInstanceOf[Object]}
+        '{ $fn.out($nExpr) }
+      }
       .getOrElse(Type.of[R] match {
         case '[Unit] => '{ $expr; () }.asExprOf[R]
-        case _       => '{ $expr.asInstanceOf[R] }
+        case _       => 
+          if expr.isExprOf[R] then 
+            expr.asExprOf[R]
+          else 
+            '{ $expr.asInstanceOf[R] }
       })

@@ -5,7 +5,7 @@ import java.lang.invoke.MethodHandle
 import NativeInCompatible.PossiblyNeedsAllocator
 
 class LibraryI(platformSpecific: LibraryI.PlatformSpecific):
-  trait Library[L]:
+  trait Library[+L]:
     val handles: IArray[MethodHandle]
     val addresses: IArray[Object]
 
@@ -21,16 +21,10 @@ class LibraryI(platformSpecific: LibraryI.PlatformSpecific):
     }
 
 object LibraryI:
-  trait PlatformSpecific:
+  trait PlatformSpecific(layoutI: LayoutI):
     def getDowncall(
         address: Object,
-        layout: Seq[DataLayout],
-        ret: Option[DataLayout]
-    ): MethodHandle
-
-    def getDowncall(
-        layout: Seq[DataLayout],
-        ret: Option[DataLayout]
+        descriptor: Descriptor
     ): MethodHandle
 
     def getLookup(name: Option[String]): Lookup
@@ -198,7 +192,7 @@ object LibraryI:
             report.errorAndAbort(
               s"Cannot find library ${Type.show[l]}"
             )
-          case Some(exp) => '{ $exp.asInstanceOf[L[Any]] }
+          case Some(exp) => exp.asExprOf[L[Any]]
 
   inline def getLookup[L](platformSpecific: PlatformSpecific): Lookup = ${
     getLookupImpl[L]('platformSpecific)

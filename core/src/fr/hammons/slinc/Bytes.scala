@@ -9,6 +9,7 @@ object Bytes:
 
   extension (a: Bytes) 
     inline def +(b: Bytes): Bytes = a + b
+    inline def *(i: Int): Bytes = a * i
     inline def toLong: Long = a 
 
   given ToExpr[Bytes] with 

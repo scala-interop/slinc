@@ -1,6 +1,6 @@
 package fr.hammons.slinc
 
-class Slinc17(jitManager: JitManager) extends Slinc(LayoutI17,Scope17, Transitions17, Library17, jitManager)
+class Slinc17(jitManager: JitManager) extends Slinc(LayoutI17,Scope17(_), Transitions17, Library17(_), jitManager)
 
 object Slinc17:
   private val compiler = scala.quoted.staging.Compiler.make(getClass().getClassLoader().nn)

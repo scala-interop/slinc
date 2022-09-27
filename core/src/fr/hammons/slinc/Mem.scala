@@ -14,6 +14,7 @@ trait Mem:
   def write(v: Short, offset: Bytes): Unit
 
   def writeInt(v: Int, offset: Bytes): Unit
+  def writeIntArray(v: Array[Int], offset: Bytes): Unit 
 
   def write[A](v: A, offset: Bytes)(using Send[A]) =
     summon[Send[A]].to(this, offset, v)

@@ -4,11 +4,12 @@ import org.openjdk.jmh.annotations.*,
 Mode.{SampleTime, SingleShotTime, Throughput}
 import java.util.concurrent.TimeUnit
 import fr.hammons.slinc.Scope
+import scala.annotation.experimental
 
 case class A(a: Int, b: B, c: Int)
 case class B(a: Int, b: Int)
 
-trait TransferBenchmarkShape(val s: Slinc) {
+trait TransferBenchmarkShape(val s: Slinc):
   import s.{given, *}
 
   case class C(a: Int, b: D, c: Int)
@@ -46,4 +47,19 @@ trait TransferBenchmarkShape(val s: Slinc) {
   @Benchmark 
   def innerWrite =
     !cPtr = c
-}
+
+  @Benchmark
+  def allocateFnPointer = 
+    Scope.confined(
+      Ptr.upcall((a: Ptr[Int]) => !a + 1)
+    )
+
+
+  @Benchmark 
+  def allocateIntPointer =
+    Scope.confined(
+      Ptr.copy(3)
+    )
+
+  
+

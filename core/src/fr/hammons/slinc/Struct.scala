@@ -43,7 +43,7 @@ class StructI(layoutI: LayoutI, transitionI: TransitionsI, jitManager: JitManage
         receiver.from(mem, offset).asInstanceOf[A]
 
       final def in(a: A)(using alloc: Allocator): Object = 
-        val mem = alloc.allocate(this.layout)
+        val mem = alloc.allocate(this.layout, 1)
         to(mem, Bytes(0), a)
         transitionI.structMemIn(mem)
 

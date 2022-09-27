@@ -1,6 +1,7 @@
 package fr.hammons.slinc
 
 import fr.hammons.slinc.ScopeI.PlatformSpecific
+import java.lang.invoke.MethodHandle
 
 
 sealed trait Scope:
@@ -26,12 +27,12 @@ class ScopeI(platformSpecific: ScopeI.PlatformSpecific):
   given ConfinedScope = platformSpecific.createConfinedScope
 
 object ScopeI:
-  trait PlatformSpecific:
+  trait PlatformSpecific(layoutI: LayoutI):
     def createTempScope: TempScope
     def createGlobalScope: GlobalScope
     def createConfinedScope: ConfinedScope
 
 trait Allocator:
-  def allocate(layout: DataLayout): Mem
-  def upcall[Fn](function: Fn): Mem
+  def allocate(layout: DataLayout, num: Int): Mem
+  def upcall[Fn](descriptor: Descriptor, target: Fn): Mem
   def base: Object 

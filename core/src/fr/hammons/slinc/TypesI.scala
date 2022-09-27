@@ -5,6 +5,8 @@ class TypesI(protected val platformSpecific: TypesI.PlatformSpecific):
   type Int16 = Short
   type Int32 = Int
   type Int64 = Long
+  type UInt64 = Long 
+
   type CChar = Int8
   type CShort = Int16
   type CInt = Int32
@@ -22,6 +24,9 @@ object TypesI:
     extension (l: Int) def toCLong: CLong
 
     extension (l: Long) def toCLong: Option[CLong]
+
+    // type SizeT 
+    // given sizeTLayout: LayoutOf[SizeT]
 
   val platformTypes: LayoutI => TypesI = layout =>
     TypesI(PlatformX64Linux(layout))

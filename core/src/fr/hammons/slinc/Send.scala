@@ -137,3 +137,7 @@ object Send:
   given Send[Long] with
     inline def to(mem: Mem, offset: Bytes, value: Long) =
       mem.writeLong(value, offset)
+
+  given Send[Array[Int]] with 
+    def to(mem: Mem, offset: Bytes, value: Array[Int]) =
+      mem.writeIntArray(value, offset)
