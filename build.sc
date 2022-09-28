@@ -43,7 +43,7 @@ trait BaseModule extends ScalaModule with ScalafmtModule {
     "-Ykind-projector"
   )
 }
-object core extends BaseModule with PublishableModule with FacadeGenerationModule {
+object core extends BaseModule with PublishableModule with FacadeGenerationModule with BenchmarksModule {
 
   def pomSettings = pomTemplate("slinc-core")
 
@@ -51,6 +51,21 @@ object core extends BaseModule with PublishableModule with FacadeGenerationModul
 
   object test extends Tests with TestModule.Munit with JacocoTestModule {
     def ivyDeps = Agg(ivy"org.scalameta::munit:$munitVersion")
+  }
+
+  object benchmarks extends BaseModule  {
+    def moduleDeps = Seq(core)
+    override def scalaVersion = core.scalaVersion()
+    override def scalacOptions = core.scalacOptions
+
+    object test extends BenchmarkSources {
+      def jmhVersion = jmhV 
+      def forkArgs = super.forkArgs() ++ Seq(
+        "--add-modules=jdk.incubator.foreign",
+        "--enable-native-access=ALL-UNNAMED"
+      )
+
+    }
   }
 
 }
@@ -63,6 +78,7 @@ object j17 extends BaseModule with PublishableModule with BenchmarksModule {
 
   object test extends Tests with TestModule.Munit with JacocoTestModule {
     def ivyDeps = Agg(ivy"org.scalameta::munit:$munitVersion")
+    def moduleDeps = super.moduleDeps ++ Seq(core.test)
     def forkArgs = super.forkArgs() ++ Seq(
       "--add-modules=jdk.incubator.foreign",
       "--enable-native-access=ALL-UNNAMED"
@@ -75,6 +91,7 @@ object j17 extends BaseModule with PublishableModule with BenchmarksModule {
     override def scalaVersion = j17.scalaVersion
     override def scalacOptions = j17.scalacOptions
     object test extends Benchmarks {
+      def moduleDeps = Seq(j17.benchmarks, core.benchmarks.test)
       def jmhVersion = jmhV
       def forkArgs = super.forkArgs() ++ Seq(
         "--add-modules=jdk.incubator.foreign",

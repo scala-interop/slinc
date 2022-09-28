@@ -5,9 +5,19 @@ import os.Path
 trait BenchmarksModule extends Module with ScalaModule {
    private def self = this
 
+   trait BenchmarkSources extends ScalaModule {
+      override def scalaVersion = self.scalaVersion
+      override def moduleDeps: Seq[JavaModule] = Seq(self)
+      override def scalacOptions: Target[Seq[String]] = self.scalacOptions
+
+      def jmhVersion: Target[String]
+
+      def ivyDeps = Agg(ivy"org.openjdk.jmh:jmh-core:${jmhVersion()}")
+   }
+
    trait Benchmarks extends ScalaModule {
       override def scalaVersion: T[String] = self.scalaVersion
-      override def moduleDeps = Seq(self)
+      override def moduleDeps: Seq[JavaModule] = Seq(self)
       override def scalacOptions: Target[Seq[String]] = self.scalacOptions
 
       override def forkArgs: Target[Seq[String]] = self.forkArgs

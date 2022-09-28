@@ -55,19 +55,6 @@ trait BindingsBenchmarkShape(val s: Slinc):
     Cstd.div(5, 2)
 
   @Benchmark
-  def divSpecialized =
-    Scope.temp(alloc ?=>
-      summon[Receive[div_t]].from(
-        Mem17(
-          MethodHandleFacade
-            .call2Int(lib.handles(1), alloc.base, 5, 2)
-            .asInstanceOf[MemorySegment]
-        ),
-        0.toBytes
-      )
-    )
-
-  @Benchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   def qsort =
     Scope.confined {
