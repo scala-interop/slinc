@@ -15,7 +15,6 @@ class Allocator17(
     segmentAllocator: SegmentAllocator,
     scope: ResourceScope,
     linker: CLinker,
-    canClose: Boolean,
     layoutI: LayoutI
 ) extends Allocator:
   import layoutI.*
@@ -23,7 +22,14 @@ class Allocator17(
   type Id[A] = A
   override def upcall[Fn](descriptor: Descriptor, target: Fn): Mem =
     val size = descriptor.inputLayouts.size
-    val mh = MethodHandles.lookup.nn.findVirtual(Class.forName(s"scala.Function$size"), "apply", MethodType.genericMethodType(size)).nn.bindTo(target)
+    val mh = MethodHandles.lookup.nn
+      .findVirtual(
+        Class.forName(s"scala.Function$size"),
+        "apply",
+        MethodType.genericMethodType(size)
+      )
+      .nn
+      .bindTo(target)
     val fd = descriptor.outputLayout match
       case Some(r) =>
         FunctionDescriptor.of(
@@ -42,18 +48,12 @@ class Allocator17(
         .asSegment(LayoutI17.pointerLayout.size.toLong, scope)
         .nn
     )
-    // val size = inputs.size
-
-    // (returnLayout, inputs.headOption) match
-    //   case (None,None) => VoidHelper.methodTypeV()
-
-    // MethodHandles.lookup.nn.findVirtual(Class.forName(s"scala.Function$size"), "apply", MethodType.genericMethodType(size)).nn.bindTo(target)
-
-    // linker.upcallStub()
 
   override def allocate(layout: DataLayout, num: Int): Mem =
     Mem17(
-      segmentAllocator.allocate(layout.size.toLong * num, layout.alignment.toLong).nn
+      segmentAllocator
+        .allocate(layout.size.toLong * num, layout.alignment.toLong)
+        .nn
     )
   override def base: Object = segmentAllocator
 
@@ -63,14 +63,14 @@ class Scope17(layoutI: LayoutI) extends ScopeI.PlatformSpecific(layoutI):
     def apply[A](fn: (Allocator) ?=> A): A =
       val rs = ResourceScope.globalScope().nn
       given Allocator =
-        Allocator17(SegmentAllocator.arenaAllocator(rs).nn, rs, linker, false, layoutI)
+        Allocator17(SegmentAllocator.arenaAllocator(rs).nn, rs, linker, layoutI)
       fn
 
   def createConfinedScope: ConfinedScope = new ConfinedScope:
     def apply[A](fn: Allocator ?=> A): A =
       val rs = ResourceScope.newConfinedScope().nn
       given Allocator =
-        Allocator17(SegmentAllocator.arenaAllocator(rs).nn, rs, linker, false, layoutI)
+        Allocator17(SegmentAllocator.arenaAllocator(rs).nn, rs, linker, layoutI)
       val res = fn
       rs.close()
       res
@@ -81,7 +81,6 @@ class Scope17(layoutI: LayoutI) extends ScopeI.PlatformSpecific(layoutI):
         TempAllocator.localAllocator(),
         ResourceScope.globalScope().nn,
         linker,
-        false, 
         layoutI
       )
       val res = fn
