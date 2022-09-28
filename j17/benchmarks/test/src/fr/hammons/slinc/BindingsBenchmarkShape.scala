@@ -31,10 +31,7 @@ trait BindingsBenchmarkShape(val s: Slinc):
 
   val base = Seq.fill(10000)(Random.nextInt)
   val baseArr = base.toArray
-  val arr = Scope.global {
-    Ptr.copy(Array.range(0, 1024))
-  }
-
+  
   val upcall: Ptr[(Ptr[Int], Ptr[Int]) => Int] = Scope.global {
     Ptr.upcall((a, b) =>
       val aVal = !a
@@ -74,8 +71,9 @@ trait BindingsBenchmarkShape(val s: Slinc):
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   def qsort =
     Scope.confined {
+      val sortingArr = Ptr.copy(baseArr)
       Cstd.qsort(
-        Ptr.copy(baseArr),
+        sortingArr,
         10000,
         4,
         Ptr.upcall((a, b) =>
@@ -86,6 +84,7 @@ trait BindingsBenchmarkShape(val s: Slinc):
           else 1
         )
       )
+      sortingArr.asArray(10000)
     }
 
   @Benchmark

@@ -4,17 +4,23 @@ import scala.util.TupledFunction
 import scala.annotation.experimental
 import scala.annotation.targetName
 import scala.compiletime.{erasedValue, summonInline}
+import scala.reflect.ClassTag
 
 class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
   def `unary_!`(using receive: Receive[A]) = receive.from(mem, offset)
-  def asArray(size: Int)(using LayoutOf[A], Receive[A]) =
-    for i <- 0 until size
-    yield !this(i)
+  def asArray(size: Int)(using ClassTag[A])(using l: LayoutOf[A], r: Receive[A]) =
+    var i = 0 
+    val array = Array.ofDim[A](size)
+    while i < size do 
+      array(i) = r.from(mem, offset + (l.layout.size * i))
+      i+= 1
+
+    IArray.unsafeFromArray(array)
 
   def `unary_!_=`(value: A)(using send: Send[A]) = send.to(mem, offset, value)
   def apply(bytes: Bytes) = Ptr[A](mem, offset + bytes)
   def apply(index: Int)(using l: LayoutOf[A]) =
-    Ptr[A](mem, l.layout.size * index)
+    Ptr[A](mem, offset + (l.layout.size * index))
 
 object Ptr:
   def blank[A](using layout: LayoutOf[A], alloc: Allocator): Ptr[A] =
