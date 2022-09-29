@@ -38,10 +38,10 @@ final class TempAllocator:
          rs.nn()
          rs = null
 
-object TempAllocator:
-  private val allocator = ThreadLocal.withInitial(() => TempAllocator()).nn
-  def reset() = allocator.get.nn.reset()
-  def localAllocator(): SegmentAllocator = 
-   val all = allocator.get().nn
-   (bytesNeeded, alignment) => all.allocate(bytesNeeded, alignment)
-  private val powersOf2 = LazyList.iterate(1l)(_ << 1)
+private[slinc] object TempAllocator:
+  val allocator = ThreadLocal.withInitial(() => TempAllocator()).nn
+//   def reset() = allocator.get.nn.reset()
+//   def localAllocator(): SegmentAllocator = 
+//    val all = allocator.get().nn
+//    (bytesNeeded, alignment) => all.allocate(bytesNeeded, alignment)
+  val powersOf2 = LazyList.iterate(1l)(_ << 1)

@@ -9,8 +9,7 @@ import jdk.incubator.foreign.CLinker
 import jdk.incubator.foreign.SymbolLookup
 import jdk.incubator.foreign.Addressable
 
-class Library17(layoutI: LayoutI) extends LibraryI.PlatformSpecific(layoutI):
-  val linker = CLinker.getInstance().nn
+class Library17(layoutI: LayoutI, linker: CLinker) extends LibraryI.PlatformSpecific(layoutI):
   import layoutI.*
 
   override def getDowncall(address: Object, descriptor: Descriptor): MethodHandle = 
