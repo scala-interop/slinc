@@ -132,4 +132,3 @@ class JitManagerImpl(
   def jitNow(): Unit =
     jitAllNow.compareAndSet(false, true)
     while jitAllNow.get() do Thread.sleep(150)
-//def jitc2[F](atomicRef: AtomicReference[F])
