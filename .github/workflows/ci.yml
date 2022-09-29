@@ -22,18 +22,18 @@ jobs:
           java-version: ${{ matrix.jvm }}
       - run: ./mill core.test
       - run: ./mill j${{ matrix.jvm }}.test
-      - run: ./mill de.tobiasroeser.mill.jacoco.Jacoco/jacocoReportFull
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3 
-        with:
-          directory: out/de/tobiasroeser/mill/jacoco/Jacoco/jacocoReportFull.dest
-          flags: unittests
+      #- run: ./mill de.tobiasroeser.mill.jacoco.Jacoco/jacocoReportFull
+      # - name: Upload coverage to Codecov
+      #   uses: codecov/codecov-action@v3 
+      #   with:
+      #     directory: out/de/tobiasroeser/mill/jacoco/Jacoco/jacocoReportFull.dest
+      #     flags: unittests
   benchmarks:
     needs: unit-tests
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]          
-        jvm: [17]
+        jvm: [17,19]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
