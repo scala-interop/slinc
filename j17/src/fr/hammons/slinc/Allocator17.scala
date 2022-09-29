@@ -16,7 +16,7 @@ class Allocator17(
     scope: ResourceScope,
     linker: CLinker,
     layoutI: LayoutI
-) extends Allocator:
+) extends Allocator(layoutI):
   import layoutI.*
 
   override def upcall[Fn](descriptor: Descriptor, target: Fn): Mem =
