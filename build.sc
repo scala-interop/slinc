@@ -43,7 +43,11 @@ trait BaseModule extends ScalaModule with ScalafmtModule {
     "-Ykind-projector"
   )
 }
-object core extends BaseModule with PublishableModule with FacadeGenerationModule with BenchmarksModule {
+object core
+    extends BaseModule
+    with PublishableModule
+    with FacadeGenerationModule
+    with BenchmarksModule {
 
   def pomSettings = pomTemplate("slinc-core")
 
@@ -53,13 +57,13 @@ object core extends BaseModule with PublishableModule with FacadeGenerationModul
     def ivyDeps = Agg(ivy"org.scalameta::munit:$munitVersion")
   }
 
-  object benchmarks extends BaseModule  {
+  object benchmarks extends BaseModule {
     def moduleDeps = Seq(core)
     override def scalaVersion = core.scalaVersion()
     override def scalacOptions = core.scalacOptions
 
     object test extends BenchmarkSources {
-      def jmhVersion = jmhV 
+      def jmhVersion = jmhV
       def forkArgs = super.forkArgs() ++ Seq(
         "--add-modules=jdk.incubator.foreign",
         "--enable-native-access=ALL-UNNAMED"
@@ -74,7 +78,8 @@ object j17 extends BaseModule with PublishableModule with BenchmarksModule {
   def moduleDeps = Seq(core)
   def pomSettings = pomTemplate("slinc-java-17")
 
-  def javacOptions = super.javacOptions() ++ Seq("--add-modules=jdk.incubator.foreign")
+  def javacOptions =
+    super.javacOptions() ++ Seq("--add-modules=jdk.incubator.foreign")
 
   object test extends Tests with TestModule.Munit with JacocoTestModule {
     def ivyDeps = Agg(ivy"org.scalameta::munit:$munitVersion")
@@ -85,8 +90,8 @@ object j17 extends BaseModule with PublishableModule with BenchmarksModule {
     )
   }
 
-  //todo: remove this nasty hack needed for jacoco coverage reports
-  object benchmarks extends BaseModule{
+  // todo: remove this nasty hack needed for jacoco coverage reports
+  object benchmarks extends BaseModule {
     def moduleDeps = Seq(j17)
     override def scalaVersion = j17.scalaVersion
     override def scalacOptions = j17.scalacOptions
@@ -100,4 +105,35 @@ object j17 extends BaseModule with PublishableModule with BenchmarksModule {
     }
   }
 
+}
+
+object j19 extends BaseModule with PublishableModule with BenchmarksModule {
+  def moduleDeps = Seq(core)
+  def pomSettings = pomTemplate("slinc-java-19")
+
+  def javacOptions =
+    super.javacOptions() ++ Seq("--release", "19", "--enable-preview")
+
+  object test extends Tests with TestModule.Munit with JacocoTestModule {
+    def ivyDeps = Agg(ivy"org.scalameta::munit:$munitVersion")
+    def moduleDeps = super.moduleDeps ++ Seq(core.test)
+    def forkArgs = super.forkArgs() ++ Seq(
+      "--enable-preview", "--enable-native-access=ALL-UNNAMED"
+    )
+  }
+
+  object benchmarks extends BaseModule {
+    def moduleDeps = Seq(j19)
+    override def scalaVersion = j19.scalaVersion
+    override def scalacOptions = j19.scalacOptions 
+
+    object test extends Benchmarks {
+      def moduleDeps = Seq(j19.benchmarks, core.benchmarks.test)
+      def jmhVersion = jmhV
+      def forkArgs = super.forkArgs() ++ Seq(
+        "--enable-preview", "--enable-native-access=ALL-UNNAMED"
+      )
+    }
+
+  }
 }

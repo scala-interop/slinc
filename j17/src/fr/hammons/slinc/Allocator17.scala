@@ -19,7 +19,6 @@ class Allocator17(
 ) extends Allocator:
   import layoutI.*
 
-  type Id[A] = A
   override def upcall[Fn](descriptor: Descriptor, target: Fn): Mem =
     val size = descriptor.inputLayouts.size
     val mh = MethodHandles.lookup.nn

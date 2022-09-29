@@ -35,7 +35,7 @@ class Mem17(private[slinc] val mem: MemorySegment) extends Mem:
   override def readByte(offset: Bytes): Byte = ???
 
 
-  override def offset(bytes: Bytes): Mem = Mem17(mem)
+  override def offset(bytes: Bytes): Mem = Mem17(mem.asSlice(bytes.toLong).nn)
 
   def asBase: Object = mem
   def resize(bytes: Bytes): Mem = 

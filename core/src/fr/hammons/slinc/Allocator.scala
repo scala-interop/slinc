@@ -1,38 +1,24 @@
 package fr.hammons.slinc
 
 import fr.hammons.slinc.ScopeI.PlatformSpecific
-import java.lang.invoke.MethodHandle
+import java.lang.invoke.{MethodHandle, MethodType, MethodHandles}
 
-
-sealed trait Scope:
-  def apply[A](fn: Allocator ?=> A): A
-
-trait ConfinedScope extends Scope: 
-  def apply[A](fn: Allocator ?=> A): A
-
-trait TempScope extends Scope:
-  def apply[A](fn: Allocator ?=> A): A
-
-trait GlobalScope extends Scope:
-  def apply[A](fn: Allocator ?=> A): A
-
-object Scope:
-  def temp(using t: TempScope): TempScope = t
-  def confined(using c: ConfinedScope): ConfinedScope = c
-  def global(using g: GlobalScope): GlobalScope = g
-
-class ScopeI(platformSpecific: ScopeI.PlatformSpecific):
-  given TempScope = platformSpecific.createTempScope
-  given GlobalScope = platformSpecific.createGlobalScope
-  given ConfinedScope = platformSpecific.createConfinedScope
-
-object ScopeI:
-  trait PlatformSpecific(layoutI: LayoutI):
-    def createTempScope: TempScope
-    def createGlobalScope: GlobalScope
-    def createConfinedScope: ConfinedScope
-
-trait Allocator:
+trait Allocator(layoutI: LayoutI):
+  import layoutI.*
   def allocate(layout: DataLayout, num: Int): Mem
   def upcall[Fn](descriptor: Descriptor, target: Fn): Mem
-  def base: Object 
+  protected def methodHandleFromFn[Fn](descriptor: Descriptor, target: Fn): MethodHandle =
+    val size = descriptor.inputLayouts.size
+    val mh = MethodHandles.lookup.nn
+      .findVirtual(
+        Class.forName(s"scala.Function$size"),
+        "apply",
+        MethodType.genericMethodType(size)
+      )
+      .nn
+      .bindTo(target)
+      .nn
+      .asType(descriptor.toMethodType)
+      .nn
+    mh
+  def base: Object

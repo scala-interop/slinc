@@ -4,8 +4,6 @@ import org.openjdk.jmh.annotations.*,
 Mode.{SampleTime, SingleShotTime, Throughput}
 import java.util.concurrent.TimeUnit
 import fr.hammons.slinc.Scope
-import jdk.incubator.foreign.MemorySegment
-import jdk.incubator.foreign.SegmentAllocator
 import scala.util.Random
 
 case class div_t(quot: Int, rem: Int)
@@ -45,10 +43,6 @@ trait BindingsBenchmarkShape(val s: Slinc):
   @Benchmark
   def abs =
     Cstd.abs(6)
-
-  @Benchmark
-  def absUnboxed =
-    MethodHandleFacade.callExact(lib.handles(0), 6)
 
   @Benchmark
   def div =

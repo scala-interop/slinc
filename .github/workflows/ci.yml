@@ -2,12 +2,16 @@ name: SLinC CI
 on:
   push:
 
+env:
+  JACOCO_VERSION: 0.8.8
+
+
 jobs: 
   unit-tests:
     strategy: 
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        jvm: [17]
+        jvm: [17,19]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
