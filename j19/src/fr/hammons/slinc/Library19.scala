@@ -7,8 +7,7 @@ import java.lang.foreign.Addressable
 import dotty.tools.dotc.core.SymbolLoader
 import java.lang.foreign.SymbolLookup
 
-class Library19(layoutI: LayoutI) extends LibraryI.PlatformSpecific(layoutI):
-  val linker = Linker.nativeLinker().nn
+class Library19(layoutI: LayoutI, linker: Linker) extends LibraryI.PlatformSpecific(layoutI):
   import layoutI.*
 
   override def getDowncall(address: Object, descriptor: Descriptor): MethodHandle = 

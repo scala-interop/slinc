@@ -3,6 +3,7 @@ package fr.hammons.slinc
 import scala.quoted.*
 import java.lang.invoke.MethodHandle
 import NativeInCompatible.PossiblyNeedsAllocator
+import scala.annotation.nowarn
 
 class LibraryI(platformSpecific: LibraryI.PlatformSpecific):
   trait Library[+L]:
@@ -76,6 +77,7 @@ object LibraryI:
 
         }
 
+  @nowarn
   def getReturnType(using q: Quotes)(s: quotes.reflect.Symbol) =
     import quotes.reflect.*
     if s.isDefDef then
@@ -100,7 +102,7 @@ object LibraryI:
       else '{ (_: Allocator) => $exp }
     }
 
-  def bindingImpl[R, L[_] <: LibraryI#Library[_]](using
+  def bindingImpl[R, L[_] <: LibraryI#Library[?]](using
       Quotes,
       Type[R],
       Type[L]
@@ -139,9 +141,7 @@ object LibraryI:
         ._1
         .map(NativeInCompatible.handleInput)
 
-    val allocationlessInputs = inputs.collect { case e: Expr[Object] =>
-      e
-    }
+    val allocationlessInputs = inputs.filter(_.isExprOf[Object]).map(_.asExprOf[Object])
 
     val allocInputs = makeAllTakeAlloc(inputs)
 

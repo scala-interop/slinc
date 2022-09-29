@@ -65,11 +65,22 @@ object Receive:
       transforms: Expr[IArray[Tuple => Product]]
   )(using Quotes): Expr[Any] =
     layout match
-      case IntLayout(_, _, _) =>
+      case _: FloatLayout =>
+        '{ $mem.readFloat($structOffset) }
+      case _: DoubleLayout =>
+        '{ $mem.readDouble($structOffset) }
+      case _: IntLayout =>
         '{ $mem.readInt($structOffset) }
-
-      case LongLayout(_, _, _) =>
+      case _: LongLayout =>
         '{ $mem.readLong($structOffset) }
+      case _: ByteLayout =>
+        '{ $mem.readByte($structOffset) }
+      case _: ShortLayout =>
+        '{ $mem.readShort($structOffset) }
+      case _: PointerLayout =>
+        '{ $mem.readMem($structOffset) }
+      case u: UnionLayout =>
+        ???
       case structLayout @ StructLayout(_, _, children) =>
         val transformIndex = transformIndices(
           structLayout.clazz.getName().nn

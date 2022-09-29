@@ -20,9 +20,9 @@ class StructI(layoutI: LayoutI, transitionI: TransitionsI, jitManager: JitManage
 
       private val offsetsArray = IArray.from(layout.children.map(_.offset))
 
-      @volatile private var sender: Send[A] = uninitialized
+      private var sender: Send[A] = uninitialized
 
-      @volatile private var receiver: Receive[A] = uninitialized
+      private var receiver: Receive[A] = uninitialized
 
       jitManager.jitc(
         Send.compileTime[A](offsetsArray),

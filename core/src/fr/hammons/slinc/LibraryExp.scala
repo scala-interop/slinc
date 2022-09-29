@@ -4,6 +4,7 @@ import scala.quoted.*
 import xsbti.api.Def
 import scala.annotation.experimental
 import scala.reflect.ClassTag
+import scala.annotation.nowarn
 
 trait LibraryExp[L]:
   val instance: L
@@ -14,6 +15,7 @@ object LibraryExp:
     derivedImpl[L]('ct)
   }
 
+  @nowarn
   def firstSectionIsGeneric(using q: Quotes)(
       list: List[q.reflect.Symbol]
   ): Boolean =

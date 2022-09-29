@@ -4,6 +4,9 @@ import java.lang.foreign.MemorySegment
 import java.lang.foreign.ValueLayout, ValueLayout.*
 
 class Mem19(private[slinc] val mem: MemorySegment) extends Mem:
+
+  def readDouble(offset: Bytes): Double = mem.get(JAVA_DOUBLE, offset.toLong)
+
   override def readInt(offset: Bytes): Int = mem.get(JAVA_INT, offset.toLong)
 
   override def writeLong(v: Long, offset: Bytes): Unit = ???
@@ -39,5 +42,11 @@ class Mem19(private[slinc] val mem: MemorySegment) extends Mem:
   override def readByte(offset: Bytes): Byte = ???
 
   override def writeFloat(v: Float, offset: Bytes): Unit = ???
+
+  def writeByte(v: Byte, offset: Bytes): Unit = mem.set(JAVA_BYTE, offset.toLong, v)
+
+  def writeDouble(v: Double, offset: Bytes): Unit = mem.set(JAVA_DOUBLE, offset.toLong, v)
+
+  def writeShort(v: Short, offset: Bytes): Unit = mem.set(JAVA_SHORT, offset.toLong, v)
 
   override def readShort(offset: Bytes): Short = ???

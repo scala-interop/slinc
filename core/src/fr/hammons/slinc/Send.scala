@@ -34,6 +34,11 @@ object Send:
         }.tap(_.pipe(_.show).tap(println))
       ).asInstanceOf[Send[A]]
 
+  private def asExprOf[A](expr: Expr[Any])(using Quotes, Type[A]) =
+    import quotes.reflect.*
+    if expr.isExprOf[A] then expr.asExprOf[A]
+    else '{ $expr.asInstanceOf[A] }
+
   private def stagedHelper(
       layout: DataLayout,
       mem: Expr[Mem],
@@ -43,10 +48,12 @@ object Send:
     import quotes.reflect.*
 
     layout match
-      case IntLayout(_, _, _) =>
-        '{ $mem.writeInt($value.asInstanceOf[Int], $offset) }
-      case LongLayout(_, _, _) =>
-        '{ $mem.writeLong($value.asInstanceOf[Long], $offset) }
+      case _: IntLayout =>
+        '{ $mem.writeInt(${asExprOf[Int](value)}, $offset) }
+      case _: LongLayout =>
+        '{ $mem.writeLong(${asExprOf[Long](value)}, $offset) }
+      case _: FloatLayout =>
+        '{ $mem.writeFloat(${asExprOf[Float](value)}, $offset) }
       case structLayout @ StructLayout(_, _, children) =>
         val fields =
           if canBeUsedDirectly(structLayout.clazz) then
@@ -138,6 +145,6 @@ object Send:
     inline def to(mem: Mem, offset: Bytes, value: Long) =
       mem.writeLong(value, offset)
 
-  given Send[Array[Int]] with 
+  given Send[Array[Int]] with
     def to(mem: Mem, offset: Bytes, value: Array[Int]) =
       mem.writeIntArray(value, offset)
