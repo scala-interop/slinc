@@ -1,5 +1,6 @@
 package fr.hammons.slinc
 
+//todo: Should test this via calls to test c method bindings
 trait TypesSpec(val slinc: Slinc) extends munit.FunSuite:
   import slinc.{*, given}
   test("can create maximally sized CLongs") {
