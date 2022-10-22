@@ -21,12 +21,12 @@ trait TransferSpec(val slinc: Slinc) extends munit.FunSuite:
   }
 
   test("can read and write simple local/inner structs") {
-    case class X(a: Int, b: Int) derives Struct 
+    case class X(a: SizeT, b: Int) derives Struct 
     Scope.global{
       val mem = Ptr.blank[X]
 
-      !mem = X(2,3)
-      assertEquals(!mem, X(2,3))
+      !mem = X(2.toSizeT,3)
+      assertEquals(!mem, X(2.toSizeT,3))
     }
   }
 

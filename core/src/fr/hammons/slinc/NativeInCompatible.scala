@@ -24,15 +24,13 @@ object NativeInCompatible:
           .summon[InAllocatingTransitionNeeded[a]]
           .map(f =>
             (
-                '{ (alloc: Allocator) =>  $f.in($exp)(using alloc) }
+              '{ (alloc: Allocator) => $f.in($exp)(using alloc) }
             ): PossiblyNeedsAllocator
           )
-          .orElse{
-            
+          .orElse {
+
             Expr
               .summon[InTransitionNeeded[a]]
-              .map(f =>
-                '{ $f.in($exp) }: PossiblyNeedsAllocator
-              )
+              .map(f => '{ $f.in($exp) }: PossiblyNeedsAllocator)
           }
           .getOrElse(expr: PossiblyNeedsAllocator)

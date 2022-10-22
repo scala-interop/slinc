@@ -9,7 +9,7 @@ class Mem19(private[slinc] val mem: MemorySegment) extends Mem:
 
   override def readInt(offset: Bytes): Int = mem.get(JAVA_INT, offset.toLong)
 
-  override def writeLong(v: Long, offset: Bytes): Unit = ???
+  override def writeLong(v: Long, offset: Bytes): Unit = mem.set(JAVA_LONG, offset.toLong, v)
 
   override def writeIntArray(v: Array[Int], offset: Bytes): Unit =
     mem.asSlice(offset.toLong).nn.copyFrom(MemorySegment.ofArray(v))
@@ -29,7 +29,7 @@ class Mem19(private[slinc] val mem: MemorySegment) extends Mem:
 
   override def asBase: Object = mem
 
-  override def readLong(offset: Bytes): Long = ???
+  override def readLong(offset: Bytes): Long = mem.get(JAVA_LONG, offset.toLong)
 
   override def readFloat(offset: Bytes): Float = ???
 

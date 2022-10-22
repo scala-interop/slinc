@@ -10,7 +10,7 @@ trait BindingsSpec(val slinc: Slinc) extends munit.FunSuite:
     def abs(a: Int): Int = Library.binding
     def div(a: Int, b: Int): div_t = Library.binding
     def rand(): Int = Library.binding
-    def qsort[A](array: Ptr[A], num: Long, size: Long, fn: Ptr[(Ptr[A], Ptr[A]) => Int]): Unit = Library.binding
+    def qsort[A](array: Ptr[A], num: SizeT, size: SizeT, fn: Ptr[(Ptr[A], Ptr[A]) => Int]): Unit = Library.binding
 
   given Struct[div_t] = Struct.derived
 
@@ -31,7 +31,7 @@ trait BindingsSpec(val slinc: Slinc) extends munit.FunSuite:
     Scope.confined{
       val arr = Ptr.copy(testArray)
 
-      Cstd.qsort(arr, testArray.size, 4, Ptr.upcall((a,b) => 
+      Cstd.qsort(arr, testArray.size.toSizeT, 4.toSizeT, Ptr.upcall((a,b) => 
         val aVal = !a
         val bVal = !b
         if aVal < bVal then -1

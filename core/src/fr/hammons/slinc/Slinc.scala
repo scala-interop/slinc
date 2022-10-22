@@ -30,6 +30,7 @@ trait Slinc:
   export transitionsI.given
   export structI.Struct
   export scopeI.given
+  export ContextProof.given
 
   extension (l: Long) def toBytes = Bytes(l)
   

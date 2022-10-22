@@ -12,7 +12,7 @@ trait Receive[A]:
   def from(mem: Mem, offset: Bytes): A
 
 object Receive:
-  given [A]: Fn[Receive[A], (Mem, Bytes), A] with
+  given fnCompat[A]: Fn[Receive[A], (Mem, Bytes), A] with
     def andThen(fn: Receive[A], andThen: A => A): Receive[A] =
       (mem: Mem, offset: Bytes) => andThen(fn.from(mem, offset))
 

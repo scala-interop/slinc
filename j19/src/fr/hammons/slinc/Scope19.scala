@@ -7,13 +7,13 @@ import java.lang.foreign.SegmentAllocator
 class Scope19(layoutI: LayoutI, linker: Linker) extends ScopeI.PlatformSpecific(layoutI):
 
   override def createTempScope: TempScope = new TempScope:
+    given Allocator = Allocator19(
+      TempAllocator.localAllocator,
+      MemorySession.global().nn,
+      linker,
+      layoutI
+    )
     def apply[A](fn: Allocator ?=> A): A =
-      given Allocator = Allocator19(
-        TempAllocator.localAllocator(),
-        MemorySession.global().nn,
-        linker,
-        layoutI
-      )
       val res = fn
       TempAllocator.reset()
       res
