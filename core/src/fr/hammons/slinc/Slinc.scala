@@ -34,7 +34,6 @@ trait Slinc:
   export ContextProof.given
   export receiveI.given
 
-
   extension (l: Long) def toBytes = Bytes(l)
   
 

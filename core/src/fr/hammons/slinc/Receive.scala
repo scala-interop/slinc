@@ -22,22 +22,6 @@ trait Receive[A]:
   def from(mem: Mem, offset: Bytes): A
 
 object Receive:
-  trait PlatformSpecific(
-      libraryPs: LibraryI.PlatformSpecific,
-      layoutI: LayoutI,
-      transitionsI: TransitionsI
-  ):
-    import scala.compiletime.summonAll
-    import layoutI.given
-    inline given fnReceive[A](using Fn[A, ?, ?]): Receive[A] =
-      new Receive[A]:
-        def from(mem: Mem, offset: Bytes): A =
-          val descriptor = Descriptor.fromFunction[A]
-
-          MethodHandleTools.wrappedMH(
-            libraryPs.getDowncall(mem.asAddress, descriptor)
-          )
-
   given fnCompat[A]: Fn[Receive[A], (Mem, Bytes), A] with
     def andThen(fn: Receive[A], andThen: A => A): Receive[A] =
       (mem: Mem, offset: Bytes) => andThen(fn.from(mem, offset))
@@ -53,6 +37,9 @@ object Receive:
 
   given Receive[Long] with
     def from(mem: Mem, offset: Bytes): Long = mem.readLong(offset)
+
+  given Receive[Byte] with 
+    def from(mem: Mem, offset: Bytes): Byte = mem.readByte(offset)
 
   def staged[A <: Product](
       layout: StructLayout

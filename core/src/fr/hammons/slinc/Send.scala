@@ -49,11 +49,11 @@ object Send:
 
     layout match
       case _: IntLayout =>
-        '{ $mem.writeInt(${asExprOf[Int](value)}, $offset) }
+        '{ $mem.writeInt(${ asExprOf[Int](value) }, $offset) }
       case _: LongLayout =>
-        '{ $mem.writeLong(${asExprOf[Long](value)}, $offset) }
+        '{ $mem.writeLong(${ asExprOf[Long](value) }, $offset) }
       case _: FloatLayout =>
-        '{ $mem.writeFloat(${asExprOf[Float](value)}, $offset) }
+        '{ $mem.writeFloat(${ asExprOf[Float](value) }, $offset) }
       case structLayout @ StructLayout(_, _, children) =>
         val fields =
           if canBeUsedDirectly(structLayout.clazz) then
@@ -145,6 +145,9 @@ object Send:
     inline def to(mem: Mem, offset: Bytes, value: Long) =
       mem.writeLong(value, offset)
 
-  given Send[Array[Int]] with
+  given sendInt: Send[Array[Int]] with
     def to(mem: Mem, offset: Bytes, value: Array[Int]) =
       mem.writeIntArray(value, offset)
+
+  given sendByte: Send[Array[Byte]] with
+    def to(mem: Mem, offset: Bytes, value: Array[Byte]): Unit = mem.writeByteArray(value, offset)

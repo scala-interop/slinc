@@ -11,6 +11,7 @@ trait BindingsSpec(val slinc: Slinc) extends munit.FunSuite:
     def div(a: Int, b: Int): div_t = Library.binding
     def rand(): Int = Library.binding
     def qsort[A](array: Ptr[A], num: SizeT, size: SizeT, fn: Ptr[(Ptr[A], Ptr[A]) => Int]): Unit = Library.binding
+    def sprintf(ret: Ptr[Byte], string: Ptr[Byte], args: Variadic*): Unit = Library.binding
 
   given Struct[div_t] = Struct.derived
 
@@ -40,6 +41,17 @@ trait BindingsSpec(val slinc: Slinc) extends munit.FunSuite:
       ))
 
       assertEquals(arr.asArray(testArray.size).toSeq, testArray.sorted.toSeq)
+    }
+  }
+
+  test("sprintf") {
+    Scope.confined{
+      val format = Ptr.copy("%d %s %d")
+      val buffer = Ptr.blankArray[Byte](256)
+
+      assertEquals(format.copyIntoString(200), "%d %s %d")
+      Cstd.sprintf(buffer, format, 1, Ptr.copy("hello"), 2)
+      assertEquals(buffer.copyIntoString(256), "1 hello 2")
     }
   }
 

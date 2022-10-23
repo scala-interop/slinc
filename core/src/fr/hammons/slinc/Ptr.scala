@@ -8,12 +8,14 @@ import scala.reflect.ClassTag
 
 class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
   def `unary_!`(using receive: Receive[A]) = receive.from(mem, offset)
-  def asArray(size: Int)(using ClassTag[A])(using l: LayoutOf[A], r: Receive[A]) =
-    var i = 0 
+  def asArray(size: Int)(using
+      ClassTag[A]
+  )(using l: LayoutOf[A], r: Receive[A]) =
+    var i = 0
     val array = Array.ofDim[A](size)
-    while i < size do 
+    while i < size do
       array(i) = r.from(mem, offset + (l.layout.size * i))
-      i+= 1
+      i += 1
 
     IArray.unsafeFromArray(array)
 
@@ -23,11 +25,19 @@ class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
     Ptr[A](mem, offset + (l.layout.size * index))
 
 object Ptr:
+  extension (p: Ptr[Byte])
+    def copyIntoString(maxSize: Int)(using LayoutOf[Byte], Receive[Byte]) = 
+      var i = 0
+      while !p(i) != 0 do 
+        i += 1
+      
+      String(p.asArray(i).unsafeArray, "ASCII")
   def blank[A](using layout: LayoutOf[A], alloc: Allocator): Ptr[A] =
     this.blankArray[A](1)
 
-  
-  def blankArray[A](num: Int)(using layout: LayoutOf[A], alloc: Allocator): Ptr[A] =
+  def blankArray[A](
+      num: Int
+  )(using layout: LayoutOf[A], alloc: Allocator): Ptr[A] =
     Ptr[A](alloc.allocate(layout.layout, num), Bytes(0))
 
   def copy[A](
@@ -43,6 +53,10 @@ object Ptr:
     val mem = alloc.allocate(layout.layout, 1)
     send.to(mem, Bytes(0), a)
     Ptr[A](mem, Bytes(0))
+
+  def copy(string: String)(using Allocator, LayoutOf[Byte], Send[Array[Byte]]): Ptr[Byte] = copy(
+    string.getBytes("ASCII").nn :+ 0.toByte
+  )
 
   inline def upcall[A](inline a: A)(using alloc: Allocator) =
     val nFn = Fn.toNativeCompatible(a)

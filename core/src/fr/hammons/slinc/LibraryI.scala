@@ -8,13 +8,14 @@ import scala.annotation.nowarn
 class LibraryI(platformSpecific: LibraryI.PlatformSpecific):
   trait Library[+L]:
     val handles: IArray[MethodHandle]
+    val varGens: IArray[Seq[DataLayout] => MethodHandle]
     val addresses: IArray[Object]
 
   object Library:
     inline def derived[L]: Library[L] = new Library[L]:
       val lookup = LibraryI.getLookup[L](platformSpecific)
       val addresses = LibraryI.getMethodAddress[L](lookup)
-      val handles =
+      val (handles, varGens) =
         MethodHandleTools.calculateMethodHandles[L](platformSpecific, addresses)
 
     inline def binding[R]: R = ${
@@ -49,6 +50,8 @@ object LibraryI:
           case (TermParamClause(valDefs), i) if i == paramClauses.size - 1 =>
             valDefs.foreach { vd =>
               vd.tpt.tpe.asType match
+                case '[Seq[Variadic]] =>
+                  ()
                 case '[a] =>
                   Expr
                     .summon[NativeInCompatible[a]]
@@ -123,6 +126,7 @@ object LibraryI:
       )
 
     val methodHandle = '{ $library.handles($methodPositionExpr) }
+    val methodHandleGen = '{ $library.varGens($methodPositionExpr) }
     val address = '{ $library.addresses($methodPositionExpr) }
     checkMethodIsCompatible(methodSymbol)
 
@@ -139,45 +143,73 @@ object LibraryI:
       prefix ++ MacroHelpers
         .getInputsAndOutputType(methodSymbol)
         ._1
-        .map(NativeInCompatible.handleInput)
 
-    val allocationlessInputs = inputs.filter(_.isExprOf[Object]).map(_.asExprOf[Object])
+    val mappedInputs = inputs
+      .map(NativeInCompatible.handleInput)
+      .filter(!_.isExprOf[Seq[Variadic]])
 
-    val allocInputs = makeAllTakeAlloc(inputs)
+    val allocationlessInputs =
+      mappedInputs.filter(_.isExprOf[Object]).map(_.asExprOf[Object])
+
+    val allocInputs = makeAllTakeAlloc(mappedInputs)
 
     val code: Expr[R] =
-      if allocationlessInputs == inputs && !needsAllocator(methodSymbol) then
-        val invokation =
-          MethodHandleTools.invokeArguments[R](
-            methodHandle,
-            allocationlessInputs*
-          )
-        NativeOutCompatible.handleOutput[R](invokation).asExprOf[R]
-      else
-        val methodInvoke =
-          '{ (a: Allocator) =>
-            ${
-              MethodHandleTools.invokeArguments[R](
-                methodHandle,
-                allocInputs.map(exp => '{ $exp(a) }).map(Expr.betaReduce)*
-              )
-            }
-          }
+      if inputs.size == mappedInputs.size then
 
+        if allocationlessInputs == mappedInputs && !needsAllocator(methodSymbol)
+        then
+          val invokation =
+            MethodHandleTools.invokeArguments[R](
+              methodHandle,
+              allocationlessInputs
+            )
+          NativeOutCompatible.handleOutput[R](invokation).asExprOf[R]
+        else
+          val methodInvoke =
+            '{ (a: Allocator) =>
+              ${
+                MethodHandleTools.invokeArguments[R](
+                  methodHandle,
+                  allocInputs.map(exp => '{ $exp(a) }).map(Expr.betaReduce)
+                )
+              }
+            }
+
+          val scopeThing = Expr
+            .summon[TempScope]
+            .getOrElse(report.errorAndAbort("need temp allocator in scope"))
+          val subCode = '{
+            Scope.temp(using $scopeThing)((a: Allocator) ?=>
+              ${
+                NativeOutCompatible.handleOutput[R](Expr.betaReduce('{
+                  $methodInvoke(a)
+                }))
+              }
+            )
+          }
+          subCode
+      else
+        val varargs = inputs.last.asExprOf[Seq[Variadic]]
         val scopeThing = Expr
           .summon[TempScope]
           .getOrElse(report.errorAndAbort("need temp allocator in scope"))
-        val subCode = '{
+        '{
           Scope.temp(using $scopeThing)((a: Allocator) ?=>
             ${
-              NativeOutCompatible.handleOutput[R](Expr.betaReduce('{
-                $methodInvoke(a)
-              }))
+              val normalInputs = Expr.ofSeq(allocInputs.map(e => '{ $e(a) }))
+              val totalInputs = '{
+                $normalInputs ++ MethodHandleTools.getVariadicExprs($varargs)
+              }
+              NativeOutCompatible.handleOutput[R](
+                MethodHandleTools.invokeVariadicArguments(
+                  methodHandleGen,
+                  totalInputs,
+                  '{ MethodHandleTools.getVariadicContext($varargs) }
+                )
+              )
             }
           )
         }
-        subCode
-
     report.warning(code.asTerm.show(using Printer.TreeShortCode))
     code
 

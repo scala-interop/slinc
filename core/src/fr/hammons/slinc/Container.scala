@@ -7,6 +7,8 @@ import scala.compiletime.erasedValue
 import scala.compiletime.error
 import scala.quoted.*
 
+type Variadic = Container[LayoutOf *::: NativeInCompatible *::: End]
+
 sealed trait Capabilities
 sealed trait *:::[A[_], B <: Capabilities] extends Capabilities
 sealed trait End extends Capabilities

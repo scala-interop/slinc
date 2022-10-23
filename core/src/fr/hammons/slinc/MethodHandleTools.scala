@@ -24,62 +24,90 @@ object MethodHandleTools:
       case '[Unit]   => "O"
       case '[Object] => "O"
 
-  def invokeArguments[R](mh: Expr[MethodHandle], exprs: Expr[Any]*)(using
+
+  def invokeVariadicArguments(
+    mhGen: Expr[Seq[DataLayout] => MethodHandle],
+    exprs: Expr[Seq[Any]],
+    varArgDescriptors: Expr[Seq[DataLayout]]
+  )(using Quotes) =
+    '{
+      MethodHandleFacade.callVariadic(
+        $mhGen($varArgDescriptors),
+        $exprs*
+      )
+    }
+
+
+  def invokeArguments[R](
+      mh: Expr[MethodHandle],
+      exprs: Seq[Expr[Any]],
+  )(using
       Quotes,
       Type[R]
   ) =
     import quotes.reflect.*
 
-    // val mod =
-    //   TypeRepr.of[MethodHandleFacade].classSymbol.getOrElse(???).companionModule
+      val arity = exprs.size
+      val callName = (exprs.map(exprNameMapping) :+ returnMapping[R]).mkString
 
-    val arity = exprs.size
-    val callName = (exprs.map(exprNameMapping) :+ returnMapping[R]).mkString
+      val mod = Symbol
+        .requiredPackage("fr.hammons.slinc")
+        .declarations
+        .find(_.name == s"MethodHandleArity$arity")
+        .map(_.companionModule)
 
-    val mod = Symbol
-      .requiredPackage("fr.hammons.slinc")
-      .declarations
-      .find(_.name == s"MethodHandleArity$arity")
-      .map(_.companionModule)
+      val backupMod = TypeRepr
+        .of[MethodHandleFacade]
+        .classSymbol
+        .getOrElse(report.errorAndAbort("This class should exist!!"))
+        .companionModule
 
-    val backupMod = TypeRepr
-      .of[MethodHandleFacade]
-      .classSymbol
-      .getOrElse(report.errorAndAbort("This class should exist!!"))
-      .companionModule
-
-    val methodSymbol = mod.flatMap(
-      _.declaredMethods
-        .find(_.name == callName)
-    )
-
-    methodSymbol.foreach(println)
-
-    val backupSymbol =
-      backupMod.declaredMethods.find(_.name.endsWith(arity.toString()))
-
-    val call = methodSymbol
-      .map(ms =>
-        Apply(
-          Select(Ident(mod.get.termRef), ms),
-          mh.asTerm :: exprs.map(_.asTerm).toList
-        ).asExpr
+      val methodSymbol = mod.flatMap(
+        _.declaredMethods
+          .find(_.name == callName)
       )
-      .orElse(
-        backupSymbol.map(ms =>
+
+      methodSymbol.foreach(println)
+
+      val backupSymbol =
+        backupMod.declaredMethods.find(_.name.endsWith(arity.toString()))
+
+      val call = methodSymbol
+        .map(ms =>
           Apply(
-            Select(Ident(backupMod.termRef), ms),
+            Select(Ident(mod.get.termRef), ms),
             mh.asTerm :: exprs.map(_.asTerm).toList
           ).asExpr
         )
-      )
-      .getOrElse(
-        '{ MethodHandleFacade.callVariadic($mh, ${ Varargs(exprs) }*) }
-      )
+        .orElse(
+          backupSymbol.map(ms =>
+            Apply(
+              Select(Ident(backupMod.termRef), ms),
+              mh.asTerm :: exprs.map(_.asTerm).toList
+            ).asExpr
+          )
+        )
+        .getOrElse(
+          '{ MethodHandleFacade.callVariadic($mh, ${ Varargs(exprs) }*) }
+        )
 
-    val expr = call
-    report.info(expr.show)
-    expr
+      val expr = call
+      report.info(expr.show)
+      expr
+
+  inline def getVariadicContext(s: Seq[Variadic]) =
+    s.map(_.use[LayoutOf](l ?=> _ => l.layout))
+
+  inline def getVariadicExprs(s: Seq[Variadic]) = (alloc: Allocator) ?=>
+    s.map(
+      _.use[NativeInCompatible](nic ?=>
+        d =>
+          nic match
+            case i: InAllocatingTransitionNeeded[?] => i.in(d)
+            case i: InTransitionNeeded[?]           => i.in(d)
+            case i: NativeInCompatible[?]           => d.asInstanceOf[Object]
+      )
+    )
 
   def calculateMethodHandleImplementation[L](
       platformExpr: Expr[LibraryI.PlatformSpecific],
@@ -114,7 +142,29 @@ object MethodHandleTools:
         }
       }
 
-    '{ IArray(${ Varargs(methodHandles) }*) }
+    val varMethodHandleGens = methodSymbols
+      .map(
+        Descriptor.fromDefDef
+      )
+      .zipWithIndex
+      .map((descriptor, addressIdx) =>
+        '{ (varargsDesc: Seq[DataLayout]) =>
+          $platformExpr
+            .getDowncall(
+              $addresses(${ Expr(addressIdx) }),
+              $descriptor
+                .addVarargs(varargsDesc*)
+            )
+            .nn
+        }
+      )
+
+    '{
+      (
+        IArray(${ Varargs(methodHandles) }*),
+        IArray(${ Varargs(varMethodHandleGens) }*)
+      )
+    }
 
   inline def calculateMethodHandles[L](
       platformSpecific: LibraryI.PlatformSpecific,
@@ -148,6 +198,9 @@ object MethodHandleTools:
       (meth, params) =>
         retType.asType match
           case '[r] =>
-            invokeArguments[r](methodHandleExpr, params.map(_.asExpr)*).asTerm
+            invokeArguments[r](
+              methodHandleExpr,
+              params.map(_.asExpr),
+            ).asTerm
               .changeOwner(meth)
     ).asExprOf[A]
