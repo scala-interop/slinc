@@ -61,3 +61,10 @@ trait TransferSpec(val slinc: Slinc) extends munit.FunSuite:
       assertEquals(!mem, B(2,A(2,3),3))
     }
   }
+
+  test("can read function pointers") {
+    Scope.global{
+      val mem = Ptr.upcall((a: Int) => a + 1)
+      assertEquals((!mem).apply(4), 5)
+    }
+  }

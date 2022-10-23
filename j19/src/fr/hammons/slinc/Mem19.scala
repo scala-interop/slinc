@@ -4,6 +4,7 @@ import java.lang.foreign.MemorySegment
 import java.lang.foreign.ValueLayout, ValueLayout.*
 
 class Mem19(private[slinc] val mem: MemorySegment) extends Mem:
+  def asAddress: Object = mem.address().nn
 
   def readDouble(offset: Bytes): Double = mem.get(JAVA_DOUBLE, offset.toLong)
 

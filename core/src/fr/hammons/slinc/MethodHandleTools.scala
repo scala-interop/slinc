@@ -122,3 +122,32 @@ object MethodHandleTools:
   ) = ${
     calculateMethodHandleImplementation[L]('platformSpecific, 'addresses)
   }
+
+  inline def wrappedMH[A](methodHandle: MethodHandle) = ${
+    wrappedMHImpl[A]('methodHandle)
+  }
+
+  private def wrappedMHImpl[A](
+      methodHandleExpr: Expr[MethodHandle]
+  )(using Quotes, Type[A]) =
+    import quotes.reflect.*
+
+    val (inputTypes, retType) = TypeRepr.of[A] match
+      case AppliedType(_, args) =>
+        (args.init, args.last)
+      case _ => report.errorAndAbort(TypeRepr.of[A].show)
+
+    val paramNames = LazyList.iterate("a")(a => a ++ a)
+
+    Lambda(
+      Symbol.spliceOwner,
+      MethodType(paramNames.take(inputTypes.size).toList)(
+        _ => inputTypes,
+        _ => retType
+      ),
+      (meth, params) =>
+        retType.asType match
+          case '[r] =>
+            invokeArguments[r](methodHandleExpr, params.map(_.asExpr)*).asTerm
+              .changeOwner(meth)
+    ).asExprOf[A]

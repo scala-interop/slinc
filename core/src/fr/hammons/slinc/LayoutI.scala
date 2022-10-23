@@ -35,6 +35,9 @@ class LayoutI(platformSpecific: LayoutI.PlatformSpecific):
   given ptrGen: LayoutOf[Ptr] with
     val layout = platformSpecific.pointerLayout
 
+  given fnLayoutGen[A](using Fn[A, ?, ?]): LayoutOf[A] with
+    val layout = platformSpecific.pointerLayout
+
   extension (d: Descriptor)
     def toMethodType: MethodType =
       import platformSpecific.toCarrierType

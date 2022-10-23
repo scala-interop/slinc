@@ -24,6 +24,7 @@ trait Slinc:
   protected val typesI = TypesI.platformTypes(layoutI)
   protected val scopeI = ScopeI(scopePlatformSpecific)
   protected val libraryI = LibraryI(libraryIPlatformSpecific)
+  val receiveI = ReceiveI(libraryIPlatformSpecific, layoutI)
   export layoutI.{*, given}
   export typesI.{*, given}
   export libraryI.*
@@ -31,6 +32,8 @@ trait Slinc:
   export structI.Struct
   export scopeI.given
   export ContextProof.given
+  export receiveI.given
+
 
   extension (l: Long) def toBytes = Bytes(l)
   

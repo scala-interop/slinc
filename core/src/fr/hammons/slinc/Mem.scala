@@ -4,6 +4,7 @@ trait Mem:
   def offset(bytes: Bytes): Mem
   def resize(bytes: Bytes): Mem
   def asBase: Object
+  def asAddress: Object
 
   def write(v: Int, offset: Bytes): Unit
   def writeFloat(v: Float, offset: Bytes): Unit
