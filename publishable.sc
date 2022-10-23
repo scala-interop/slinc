@@ -2,7 +2,7 @@ import mill._, scalalib._, scalalib.publish._
 import $ivy.`de.tototec::de.tobiasroeser.mill.vcs.version::0.1.4`
 import de.tobiasroeser.mill.vcs.version.VcsVersion
 
-import $ivy.`com.github.lolgab::mill-mima_mill0.10:0.0.9`
+import $ivy.`com.github.lolgab::mill-mima_mill0.10:0.0.12`
 import com.github.lolgab.mill.mima._
 import upickle.default._
 
@@ -10,6 +10,7 @@ trait PublishableModule extends PublishModule with Mima {
    implicit val checkDirectionW: ReadWriter[CheckDirection] =
       upickle.default.macroRW[CheckDirection]
 
+   override def artifactName = T("slinc-" + millModuleSegments.parts.mkString("-"))
    def mimaPreviousVersions = Seq(
      os.proc("git", "describe", "--tags", "--abbrev=0")
         .call(cwd = os.pwd)
@@ -39,12 +40,12 @@ trait PublishableModule extends PublishModule with Mima {
 
    def pomTemplate(description: String) = PomSettings(
      description = description,
-     organization = "io.gitlab.mhammons",
-     url = "https://gitlab.io/mhammons/slinc",
-     licenses = Seq(License.`Apache-2.0`),
-     versionControl = VersionControl.gitlab("mhammons", "slinc"),
+     organization = "fr.hammons",
+     url = "https://github.com/markehammons/SLInC",
+     licenses = Seq(License.`AGPL-3.0-or-later`,License.`LGPL-3.0-or-later`),
+     versionControl = VersionControl.github("markehammons", "slinc"),
      developers = Seq(
-       Developer("mhammons", "Mark Hammons", "https://gitlab.io/mhammons")
+       Developer("markehammons", "Mark Hammons", "https://github.com/markehammons")
      )
    )
 

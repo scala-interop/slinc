@@ -5,9 +5,19 @@ import os.Path
 trait BenchmarksModule extends Module with ScalaModule {
    private def self = this
 
+   trait BenchmarkSources extends ScalaModule {
+      override def scalaVersion = self.scalaVersion
+      override def moduleDeps: Seq[JavaModule] = Seq(self)
+      override def scalacOptions: Target[Seq[String]] = self.scalacOptions
+
+      def jmhVersion: Target[String]
+
+      def ivyDeps = Agg(ivy"org.openjdk.jmh:jmh-core:${jmhVersion()}")
+   }
+
    trait Benchmarks extends ScalaModule {
       override def scalaVersion: T[String] = self.scalaVersion
-      override def moduleDeps = Seq(self)
+      override def moduleDeps: Seq[JavaModule] = Seq(self)
       override def scalacOptions: Target[Seq[String]] = self.scalacOptions
 
       override def forkArgs: Target[Seq[String]] = self.forkArgs
@@ -21,6 +31,7 @@ trait BenchmarksModule extends Module with ScalaModule {
             val (_, resources) = generateBenchmarkSources()
             Jvm.runSubprocess(
               "org.openjdk.jmh.Main",
+              jvmArgs = forkArgs(), //:+ "-Djmh.blackhole.autoDetect=true",
               classPath = (runClasspath() ++ generatorDeps())
                  .map(_.path) ++ Seq(compileGeneratedSources().path, resources),
               mainArgs = args,
@@ -29,6 +40,7 @@ trait BenchmarksModule extends Module with ScalaModule {
          }
 
       def compileGeneratedSources = T {
+         val pathSeperator = System.getProperty("path.separator")
          val dest = T.ctx.dest
          val (sourcesDir, _) = generateBenchmarkSources()
          val sources = os.walk(sourcesDir).filter(os.isFile)
@@ -38,7 +50,7 @@ trait BenchmarksModule extends Module with ScalaModule {
            "-cp",
            (runClasspath() ++ generatorDeps())
               .map(_.path.toString)
-              .mkString(":"),
+              .mkString(pathSeperator),
            "-d",
            dest
          ).call(dest)

@@ -1,1 +1,0 @@
-libraryDependencies = ['"io.gitlab.mhammons" % "slinc_3" % "0.0.0-46-cbecd3-DIRTYec0d57d7"']
