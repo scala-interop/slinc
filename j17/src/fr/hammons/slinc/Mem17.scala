@@ -6,7 +6,9 @@ import jdk.incubator.foreign.MemoryAccess
 class Mem17(private[slinc] val mem: MemorySegment) extends Mem:
   override def readDouble(offset: Bytes): Double = MemoryAccess.getDoubleAtOffset(mem, offset.toLong)
 
-  override def readLong(offset: Bytes): Long = ???
+  override def asAddress: Object = mem.address().nn
+
+  override def readLong(offset: Bytes): Long = MemoryAccess.getLongAtOffset(mem, offset.toLong)
 
   override def readFloat(offset: Bytes): Float = ???
 
@@ -29,15 +31,19 @@ class Mem17(private[slinc] val mem: MemorySegment) extends Mem:
 
   override def write(v: Int, offset: Bytes): Unit = ???
 
-  override def writeLong(v: Long, offset: Bytes): Unit = ???
+  override def writeLong(v: Long, offset: Bytes): Unit = MemoryAccess.setLongAtOffset(mem, offset.toLong, v)
 
   override def writeFloat(v: Float, offset: Bytes): Unit = ???
 
   override def writeByte(v: Byte, offset: Bytes): Unit = ???
+
+  override def writeByteArray(v: Array[Byte], offset: Bytes): Unit = 
+    mem.asSlice(offset.toLong).nn.copyFrom(MemorySegment.ofArray(v))
+
   override def writeDouble(v: Double, offset: Bytes): Unit = ???
   override def writeShort(v: Short, offset: Bytes): Unit = ???
 
-  override def readByte(offset: Bytes): Byte = ???
+  override def readByte(offset: Bytes): Byte = MemoryAccess.getByteAtOffset(mem, offset.toLong)
 
 
   override def offset(bytes: Bytes): Mem = Mem17(mem.asSlice(bytes.toLong).nn)
