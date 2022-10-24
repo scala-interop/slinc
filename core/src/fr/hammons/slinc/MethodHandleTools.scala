@@ -105,7 +105,9 @@ object MethodHandleTools:
           nic match
             case i: InAllocatingTransitionNeeded[?] => i.in(d)
             case i: InTransitionNeeded[?]           => i.in(d)
-            case i: NativeInCompatible[?]           => d.asInstanceOf[Object]
+            case i: NativeInCompatible[d.type]           => 
+              val res = d.asInstanceOf[Any]
+              res
       )
     )
 

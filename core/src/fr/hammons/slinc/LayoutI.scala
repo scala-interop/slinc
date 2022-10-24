@@ -5,6 +5,7 @@ import scala.deriving.Mirror
 import scala.reflect.ClassTag
 import scala.quoted.*
 import java.lang.invoke.MethodType
+import scala.annotation.varargs
 
 trait LayoutOf[A <: AnyKind]:
   val layout: DataLayout
@@ -42,20 +43,20 @@ class LayoutI(platformSpecific: LayoutI.PlatformSpecific):
     def toMethodType: MethodType =
       import platformSpecific.toCarrierType
       d match
-        case Descriptor(head +: tail, None) =>
+        case Descriptor(head +: tail, vargs, None) =>
           VoidHelper
-            .methodTypeV(toCarrierType(head), tail.map(toCarrierType)*)
+            .methodTypeV(toCarrierType(head), tail.concat(vargs).map(toCarrierType)*)
             .nn
-        case Descriptor(head +: tail, Some(r)) =>
+        case Descriptor(head +: tail, vargs, Some(r)) =>
           MethodType
             .methodType(
               toCarrierType(r),
               toCarrierType(head),
-              tail.map(toCarrierType)*
+              tail.concat(vargs).map(toCarrierType)*
             )
             .nn
-        case Descriptor(_, None) => VoidHelper.methodTypeV().nn
-        case Descriptor(_, Some(r)) =>
+        case Descriptor(_, _, None) => VoidHelper.methodTypeV().nn
+        case Descriptor(_, _, Some(r)) =>
           MethodType.methodType(toCarrierType(r)).nn
 
   given [A]: LayoutOf[Ptr[A]] = ptrGen.asInstanceOf[LayoutOf[Ptr[A]]]

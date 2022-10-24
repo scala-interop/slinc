@@ -4,10 +4,11 @@ import scala.quoted.*
 
 final case class Descriptor(
     inputLayouts: Seq[DataLayout],
+    variadicLayouts: Seq[DataLayout],
     outputLayout: Option[DataLayout]
 ):
   def addVarargs(args: DataLayout*) =
-    Descriptor(inputLayouts ++ args, outputLayout)
+    Descriptor(inputLayouts, args, outputLayout)
 
 object Descriptor:
   //grabs a description of a method from its definition. Ignores Seq[Variadic] arguments.
@@ -30,7 +31,7 @@ object Descriptor:
         val layout = LayoutI.getLayoutFor[o]
         '{ Some($layout) }
 
-    '{ Descriptor($inputLayouts, $outputLayout) }
+    '{ Descriptor($inputLayouts, Seq.empty,  $outputLayout) }
 
   inline def fromFunction[A] = ${
     fromFunctionImpl[A]
@@ -48,4 +49,4 @@ object Descriptor:
         val layout = LayoutI.getLayoutFor[o]
         '{ Some($layout) }
 
-    '{ Descriptor($inputLayouts, $outputLayout) }
+    '{ Descriptor($inputLayouts, Seq.empty, $outputLayout) }

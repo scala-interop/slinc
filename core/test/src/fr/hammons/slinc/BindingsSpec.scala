@@ -16,7 +16,7 @@ trait BindingsSpec(val slinc: Slinc) extends munit.FunSuite:
   given Struct[div_t] = Struct.derived
 
   test("abs") {
-    assertEquals(Cstd.abs(4), 4)
+    assertEquals(Cstd.abs(-4), 4)
   }
 
   test("div") {
@@ -46,14 +46,15 @@ trait BindingsSpec(val slinc: Slinc) extends munit.FunSuite:
 
   test("sprintf") {
     Scope.confined{
-      val format = Ptr.copy("%d %s %d")
+      val format = Ptr.copy("%i hello: %s %i")
       val buffer = Ptr.blankArray[Byte](256)
 
-      assertEquals(format.copyIntoString(200), "%d %s %d")
+      
+      assertEquals(format.copyIntoString(200), "%i hello: %s %i")
       Cstd.sprintf(buffer, format, 1, Ptr.copy("hello"), 2)
-      assertEquals(buffer.copyIntoString(256), "1 hello 2")
+      assertEquals(buffer.copyIntoString(256), "1 hello: hello 2")
     }
   }
-
+  
 object BindingsSpec:
   case class div_t(a: Int, b: Int)

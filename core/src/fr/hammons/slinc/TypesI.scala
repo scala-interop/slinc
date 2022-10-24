@@ -52,5 +52,5 @@ object TypesI:
       case (Arch.X64, OS.Linux)   => x64.Linux(layout)
       case (Arch.X64, OS.Windows) => x64.Windows(layout)
       case (Arch.X64, OS.Darwin) =>  x64.Mac(layout)
-      case _                      => ???
+      case _                      => x64.Mac(layout)
     TypesI(platform)
