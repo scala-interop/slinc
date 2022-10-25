@@ -8,14 +8,14 @@ class Scope19(layoutI: LayoutI, linker: Linker) extends ScopeI.PlatformSpecific(
 
   override def createTempScope: TempScope = new TempScope:
     given Allocator = Allocator19(
-      TempAllocator.localAllocator,
+      TempAllocator19.localAllocator,
       MemorySession.global().nn,
       linker,
       layoutI
     )
     def apply[A](fn: Allocator ?=> A): A =
       val res = fn
-      TempAllocator.reset()
+      TempAllocator19.reset()
       res
 
   override def createGlobalScope: GlobalScope = new GlobalScope:

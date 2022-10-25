@@ -4,8 +4,10 @@ import scala.concurrent.ExecutionContext
 import scala.quoted.staging.Compiler
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
-import dotty.tools.dotc.config.Platform
 import java.util.concurrent.ThreadFactory
+import scala.util.chaining.*
+import java.util.concurrent.atomic.AtomicReference
+import scala.compiletime.uninitialized
 
 trait Slinc:
   protected def jitManager: JitManager
@@ -37,3 +39,14 @@ trait Slinc:
   extension (l: Long) def toBytes = Bytes(l)
   
 
+object Slinc:
+  private val majorVersion = System.getProperty("java.version").nn.takeWhile(_.isDigit).pipe(vString => vString.toIntOption.getOrElse(throw Error(s"Major error occured. Couldn't parse the version number $vString")))
+
+  @volatile private var _runtime: Slinc | Null = uninitialized
+
+  inline def getRuntime(): Slinc = 
+    if _runtime == null then 
+      _runtime = SlincImpl.findImpls().getOrElse(majorVersion, throw Error(s"Sorry, an implementation for JVM $majorVersion couldn't be found. Please check that you've added dependencies on slinc-j$majorVersion, if it exists..."))()
+      _runtime.asInstanceOf[Slinc]
+    else 
+      _runtime.asInstanceOf[Slinc]

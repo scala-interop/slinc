@@ -118,22 +118,48 @@ object j19 extends BaseModule with PublishableModule with BenchmarksModule {
     def ivyDeps = Agg(ivy"org.scalameta::munit:$munitVersion")
     def moduleDeps = super.moduleDeps ++ Seq(core.test)
     def forkArgs = super.forkArgs() ++ Seq(
-      "--enable-preview", "--enable-native-access=ALL-UNNAMED"
+      "--enable-preview",
+      "--enable-native-access=ALL-UNNAMED"
     )
   }
 
   object benchmarks extends BaseModule {
     def moduleDeps = Seq(j19)
     override def scalaVersion = j19.scalaVersion
-    override def scalacOptions = j19.scalacOptions 
+    override def scalacOptions = j19.scalacOptions
 
     object test extends Benchmarks {
       def moduleDeps = Seq(j19.benchmarks, core.benchmarks.test)
       def jmhVersion = jmhV
       def forkArgs = super.forkArgs() ++ Seq(
-        "--enable-preview", "--enable-native-access=ALL-UNNAMED"
+        "--enable-preview",
+        "--enable-native-access=ALL-UNNAMED"
       )
     }
 
+  }
+}
+
+object `runtime-test` extends BaseModule with PublishableModule {
+
+  def pomSettings = pomTemplate("slinc-full")
+
+  override def ivyDeps = Agg(
+    ivy"fr.hammons::slinc-j17:${publishVersion()}",
+    ivy"fr.hammons::slinc-j19:${publishVersion()}"
+  )
+
+  object test extends Tests with TestModule.Munit {
+    def ivyDeps = Agg(ivy"org.scalameta::munit:$munitVersion")
+
+    def jvm = T.input{ System.getProperty("java.version")}
+    def moduleDeps = super.moduleDeps ++ Seq(core.test)
+    def forkArgs = super.forkArgs() ++ Seq(
+      "--enable-preview",
+      "--enable-native-access=ALL-UNNAMED"
+    ) ++ (if (jvm().startsWith("17")) {
+            println("adding")
+            Seq("--add-modules=jdk.incubator.foreign")
+          } else Seq.empty)
   }
 }

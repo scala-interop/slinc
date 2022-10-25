@@ -4,7 +4,7 @@ import java.lang.foreign.{MemorySession, MemorySegment}
 import java.lang.foreign.MemoryAddress
 import java.lang.foreign.SegmentAllocator
 
-final class TempAllocator:
+final class TempAllocator19:
   private val powersOf2 = LazyList.iterate(1L)(_ << 1).iterator
   private var ms: MemorySession = MemorySession.openConfined().nn 
   private var gc: MemorySession | Null = null 
@@ -42,8 +42,8 @@ final class TempAllocator:
       gc.nn.close()
       gc = null 
 
-object TempAllocator:
-  private val allocator = ThreadLocal.withInitial(() => TempAllocator()).nn
+object TempAllocator19:
+  private val allocator = ThreadLocal.withInitial(() => TempAllocator19()).nn
   def reset() = allocator.get.nn.reset()
   val localAllocator: SegmentAllocator = 
     (bytesNeeded, alignment) => allocator.get.nn.allocate(bytesNeeded, alignment)

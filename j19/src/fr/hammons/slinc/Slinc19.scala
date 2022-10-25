@@ -15,6 +15,7 @@ class Slinc19(_jitManager: JitManager, linker: Linker)
 
   protected def libraryIPlatformSpecific: LibraryI.PlatformSpecific = Library19(layoutI, linker)
 
+@SlincImpl(19)
 object Slinc19:
   private val compiler = scala.quoted.staging.Compiler.make(getClass().getClassLoader().nn)
   private val linker = Linker.nativeLinker().nn

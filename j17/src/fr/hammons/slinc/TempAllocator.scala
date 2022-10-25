@@ -2,7 +2,7 @@ package fr.hammons.slinc
 
 import jdk.incubator.foreign.{CLinker, ResourceScope, MemoryAddress, MemorySegment, SegmentAllocator}
 
-final class TempAllocator:
+final class TempAllocator17:
    private val powersOf2 = LazyList.iterate(1L)(_ << 1).iterator
    private var currentSegment =
       val next = powersOf2.next
@@ -38,8 +38,8 @@ final class TempAllocator:
          rs.nn()
          rs = null
 
-private[slinc] object TempAllocator:
-  val allocator = ThreadLocal.withInitial(() => TempAllocator()).nn
+private[slinc] object TempAllocator17:
+  val allocator = ThreadLocal.withInitial(() => TempAllocator17()).nn
 //   def reset() = allocator.get.nn.reset()
 //   def localAllocator(): SegmentAllocator = 
 //    val all = allocator.get().nn

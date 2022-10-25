@@ -23,7 +23,7 @@ class Scope17(layoutI: LayoutI, linker: CLinker) extends ScopeI.PlatformSpecific
 
   def createTempScope: TempScope = new TempScope:
     def apply[A](fn: Allocator ?=> A): A =
-      val allocator = TempAllocator.allocator.get().nn
+      val allocator = TempAllocator17.allocator.get().nn
       val segmentAllocator: SegmentAllocator = (bytesNeeded, alignment) => allocator.allocate(bytesNeeded, alignment)
       given Allocator = Allocator17(
         segmentAllocator,
