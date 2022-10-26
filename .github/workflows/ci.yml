@@ -21,20 +21,24 @@ jobs:
           java-version: |
             17
             19
-      - run: ./mill core.test
+      - name: Core tests
+        run: ./mill core.test
         env: 
           JAVA_HOME: ${{ env.JAVA_HOME_17_X64}}
-      - run: ./mill j17.test 
+          
+      - name: Java 17 Implementation test
+        run: ./mill j17.test 
         env: 
-          JAVA_HOME: ${{ env.JAVA_HOME_17_X64 }}
+          JAVA_HOME: ${{ env.JAVA_HOME_17_X64}}
 
-      - run: ./mill j19.test 
+      - name: Java 19 Implementation test
+        run: ./mill j19.test 
       - run: ./mill de.tobiasroeser.mill.jacoco.Jacoco/jacocoReportFull
-      # - name: Upload coverage to Codecov
-      #   uses: codecov/codecov-action@v3 
-      #   with:
-      #     directory: out/de/tobiasroeser/mill/jacoco/Jacoco/jacocoReportFull.dest
-      #     flags: unittests
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3 
+        with:
+          directory: out/de/tobiasroeser/mill/jacoco/Jacoco/jacocoReportFull.dest
+          flags: unittests
   # benchmarks:
   #   needs: unit-tests
   #   strategy:
