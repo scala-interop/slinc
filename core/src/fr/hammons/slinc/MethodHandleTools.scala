@@ -67,8 +67,6 @@ object MethodHandleTools:
           .find(_.name == callName)
       )
 
-      methodSymbol.foreach(println)
-
       val backupSymbol =
         backupMod.declaredMethods.find(_.name.endsWith(arity.toString()))
 

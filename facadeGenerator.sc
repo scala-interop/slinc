@@ -27,7 +27,6 @@ trait FacadeGenerationModule extends JavaModule {
 
     val builtArgumentList = buildArgumentList(arity, adaptiveTypeList(arity)).take(14000)
 
-    println(builtArgumentList.size)
     for {
       argumentList <- builtArgumentList
       returnType = argumentList.head

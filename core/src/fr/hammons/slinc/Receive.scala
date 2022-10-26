@@ -66,7 +66,7 @@ object Receive:
               implementation('{ fns }, '{ mem }, '{ structOffset })
             }
 
-        }.tap(_.pipe(_.show).tap(println))
+        }
       }(transformsArray).asInstanceOf[Receive[A]]
   end staged
 

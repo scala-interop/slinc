@@ -31,7 +31,7 @@ object Send:
               ${
                 stagedHelper(layout, 'mem, 'offset, 'value)
               }
-        }.tap(_.pipe(_.show).tap(println))
+        }
       ).asInstanceOf[Send[A]]
 
   private def asExprOf[A](expr: Expr[Any])(using Quotes, Type[A]) =

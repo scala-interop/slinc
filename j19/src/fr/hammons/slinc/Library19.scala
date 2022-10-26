@@ -44,7 +44,6 @@ class Library19(layoutI: LayoutI, linker: Linker)
 
   override def getLookup(name: Option[String]): Lookup =
     import scala.jdk.OptionConverters.*
-    println("special")
 
     name match
       case Some(n) =>
@@ -52,7 +51,6 @@ class Library19(layoutI: LayoutI, linker: Linker)
           if Files.exists(Paths.get(n)) then
             System.load(Paths.get(n).nn.toRealPath().nn.toString())
           else
-            println(System.getProperty("user.dir"))
             System.loadLibrary(n)
           val l = SymbolLookup.loaderLookup().nn
           def lookup(name: String) =
