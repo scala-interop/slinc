@@ -21,8 +21,13 @@ jobs:
           java-version: |
             17
             19
-      - run: JAVA_HOME=$JAVA_HOME_17_x64 ./mill core.test
-      - run: JAVA_HOME=$JAVA_HOME_17_x64 ./mill j17.test 
+      - run: ./mill core.test
+        env: 
+          JAVA_HOME: ${{ env.JAVA_HOME_17_X64}}
+      - run: ./mill j17.test 
+        env: 
+          JAVA_HOME: ${{ env.JAVA_HOME_17_X64 }}
+
       - run: ./mill j19.test 
       - run: ./mill de.tobiasroeser.mill.jacoco.Jacoco/jacocoReportFull
       # - name: Upload coverage to Codecov
