@@ -11,7 +11,7 @@ final case class Descriptor(
     Descriptor(inputLayouts, args, outputLayout)
 
 object Descriptor:
-  //grabs a description of a method from its definition. Ignores Seq[Variadic] arguments.
+  // grabs a description of a method from its definition. Ignores Seq[Variadic] arguments.
   def fromDefDef(using q: Quotes)(symbol: q.reflect.Symbol) =
     val (inputRefs, outputType) = MacroHelpers.getInputsAndOutputType(symbol)
 
@@ -31,7 +31,7 @@ object Descriptor:
         val layout = LayoutI.getLayoutFor[o]
         '{ Some($layout) }
 
-    '{ Descriptor($inputLayouts, Seq.empty,  $outputLayout) }
+    '{ Descriptor($inputLayouts, Seq.empty, $outputLayout) }
 
   inline def fromFunction[A] = ${
     fromFunctionImpl[A]

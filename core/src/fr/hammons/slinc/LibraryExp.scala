@@ -39,15 +39,18 @@ object LibraryExp:
       Symbol.newMethod(
         cls,
         s.name,
-        if s.paramSymss.size == 1 then 
-          generateMethodType(Nil, Nil, s.paramSymss(0), LibraryI.getReturnType(s))
-        else if s.paramSymss.size == 2 then 
+        if s.paramSymss.size == 1 then
+          generateMethodType(
+            Nil,
+            Nil,
+            s.paramSymss(0),
+            LibraryI.getReturnType(s)
+          )
+        else if s.paramSymss.size == 2 then
           generatePolyType(s.paramSymss, LibraryI.getReturnType(s))
-        else 
-          report.errorAndAbort("Too many clauses!!")
+        else report.errorAndAbort("Too many clauses!!")
       )
     else report.errorAndAbort("Cannot override this symbol, it's not a method.")
-
 
   def generatePolyType(using
       q: Quotes

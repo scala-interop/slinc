@@ -70,10 +70,15 @@ object Fn:
           .map { case (p, '[a]) =>
             NativeOutCompatible.handleOutput[a](p).asTerm
           }
-          .pipe{terms => 
-            outputType.asType match 
+          .pipe { terms =>
+            outputType.asType match
               case '[r] =>
-                NativeInCompatible.handleInput(Expr.betaReduce(Apply(select, terms).asExprOf[r])).asTerm.changeOwner(meth)
+                NativeInCompatible
+                  .handleInput(
+                    Expr.betaReduce(Apply(select, terms).asExprOf[r])
+                  )
+                  .asTerm
+                  .changeOwner(meth)
           }
     ).asExpr
 

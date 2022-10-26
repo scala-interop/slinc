@@ -21,7 +21,7 @@ class Allocator17(
 
   override def upcall[Fn](descriptor: Descriptor, target: Fn): Mem =
     val size = descriptor.inputLayouts.size
-    val mh = methodHandleFromFn(descriptor,target)
+    val mh = methodHandleFromFn(descriptor, target)
     val fd = descriptor.outputLayout match
       case Some(r) =>
         FunctionDescriptor.of(

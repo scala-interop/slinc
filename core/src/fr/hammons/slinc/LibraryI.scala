@@ -255,7 +255,7 @@ object LibraryI:
       '{
         val s = $method
         $l.lookup(s)
-          //.getOrElse(throw Error(s"Can't find method ${s}"))
+        // .getOrElse(throw Error(s"Can't find method ${s}"))
       }
     )
 

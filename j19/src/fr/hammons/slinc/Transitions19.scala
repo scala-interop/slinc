@@ -9,7 +9,7 @@ object Transitions19 extends TransitionsI.PlatformSpecific:
     obj.asInstanceOf[MemorySegment]
   )
 
-  val inMem: InTransitionNeeded[Mem] = new InTransitionNeeded[Mem]: 
+  val inMem: InTransitionNeeded[Mem] = new InTransitionNeeded[Mem]:
     def in(a: Mem): Object = a.asBase
 
   val outMem: OutTransitionNeeded[Mem] = new OutTransitionNeeded[Mem]:
@@ -21,8 +21,13 @@ object Transitions19 extends TransitionsI.PlatformSpecific:
   val outPointer: OutTransitionNeeded[Mem] = new OutTransitionNeeded[Mem]:
     import scala.language.unsafeNulls
     def out(obj: Object): Mem = Mem19(
-      MemorySegment.ofAddress(obj.asInstanceOf[MemoryAddress], Int.MaxValue, MemorySession.global())
+      MemorySegment.ofAddress(
+        obj.asInstanceOf[MemoryAddress],
+        Int.MaxValue,
+        MemorySession.global()
+      )
     )
-  
-  val allocatorIn: InTransitionNeeded[Allocator] = new InTransitionNeeded[Allocator]:
-    def in(a: Allocator): Object = a.base
+
+  val allocatorIn: InTransitionNeeded[Allocator] =
+    new InTransitionNeeded[Allocator]:
+      def in(a: Allocator): Object = a.base

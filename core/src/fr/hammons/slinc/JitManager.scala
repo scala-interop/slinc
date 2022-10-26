@@ -22,22 +22,28 @@ object NoJitManager extends JitManager:
   def jitc[F, Input <: Tuple, Output](
       lowSpeed: F,
       highSpeed: JitCompiler => F,
-      atomicRef: F => Unit,
+      atomicRef: F => Unit
   )(using f: Fn[F, Input, Output]): Unit = atomicRef(lowSpeed)
 
   def jitNow(): Unit = ()
-  
+
 class InstantJitManager(compiler: Compiler) extends JitManager:
 
   override def jitNow(): Unit = ???
 
   given Compiler = compiler
-  def jitc[F, Input <: Tuple, Output](lowSpeed: F, highSpeed: JitCompiler => F, atomicRef: F => Unit)(using f: Fn[F, Input, Output]): Unit = atomicRef(highSpeed([A] => (fn: ((Quotes) ?=> Expr[A])) => run(fn)))
+  def jitc[F, Input <: Tuple, Output](
+      lowSpeed: F,
+      highSpeed: JitCompiler => F,
+      atomicRef: F => Unit
+  )(using f: Fn[F, Input, Output]): Unit = atomicRef(
+    highSpeed([A] => (fn: ((Quotes) ?=> Expr[A])) => run(fn))
+  )
 trait JitManager:
   def jitc[F, Input <: Tuple, Output](
       lowSpeed: F,
       highSpeed: JitCompiler => F,
-      atomicRef: F => Unit,
+      atomicRef: F => Unit
   )(using f: Fn[F, Input, Output]): Unit
   def jitNow(): Unit
 
@@ -107,7 +113,7 @@ class JitManagerImpl(
   def jitc[F, Input <: Tuple, Output](
       lowSpeed: F,
       highSpeed: JitCompiler => F,
-      atomicRef: F => Unit,
+      atomicRef: F => Unit
   )(using f: Fn[F, Input, Output]): Unit =
     val counter = AtomicInteger(0)
     atomicRef(

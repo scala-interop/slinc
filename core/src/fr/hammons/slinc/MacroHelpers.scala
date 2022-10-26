@@ -1,7 +1,6 @@
 package fr.hammons.slinc
 
 import scala.quoted.*
-import dotty.tools.dotc.core.Types.TypeRef.apply
 
 object MacroHelpers:
   def widenExpr(t: Expr[?])(using Quotes) =
@@ -9,11 +8,9 @@ object MacroHelpers:
     t match
       case '{ $a: a } =>
         TypeRepr.of[a].widen.asType match
-          case '[b] => 
+          case '[b] =>
             val b = a.asExprOf[b]
-            '{$b: b}
-
-
+            '{ $b: b }
 
   def getClassSymbol[L](using Quotes, Type[L]) =
     import quotes.reflect.*
@@ -32,8 +29,7 @@ object MacroHelpers:
     if s.isDefDef then s
     else findOwningMethod(s.owner)
 
-
-  def getMethodSymbols(using q: Quotes)(s: q.reflect.Symbol) = 
+  def getMethodSymbols(using q: Quotes)(s: q.reflect.Symbol) =
     s.declaredMethods.filter(_.name != "writeReplace")
 
   def getInputsAndOutputType(using
@@ -50,17 +46,17 @@ object MacroHelpers:
 
             inputs -> ret.tpe.asType
 
-  def assertIsFunction[A](using Quotes, Type[A]) = 
+  def assertIsFunction[A](using Quotes, Type[A]) =
     import quotes.reflect.*
-    if !TypeRepr.of[A].typeSymbol.name.startsWith("Function") then 
-      report.errorAndAbort(s"Function input required for this method, got ${Type.show[A]} instead", Position.ofMacroExpansion)
-  
-  def getInputTypesAndOutputTypes[A](using Quotes, Type[A]) = 
+    if !TypeRepr.of[A].typeSymbol.name.startsWith("Function") then
+      report.errorAndAbort(
+        s"Function input required for this method, got ${Type.show[A]} instead",
+        Position.ofMacroExpansion
+      )
+
+  def getInputTypesAndOutputTypes[A](using Quotes, Type[A]) =
     import quotes.reflect.*
     assertIsFunction[A]
 
     val args = TypeRepr.of[A].typeArgs.map(_.asType)
     args.init -> args.last
-
-
-

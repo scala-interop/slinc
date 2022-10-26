@@ -33,6 +33,9 @@ class LayoutI(platformSpecific: LayoutI.PlatformSpecific):
   given LayoutOf[Byte] with
     val layout = platformSpecific.byteLayout
 
+  given LayoutOf[Double] with
+    val layout = platformSpecific.doubleLayout
+
   given ptrGen: LayoutOf[Ptr] with
     val layout = platformSpecific.pointerLayout
 
@@ -45,7 +48,10 @@ class LayoutI(platformSpecific: LayoutI.PlatformSpecific):
       d match
         case Descriptor(head +: tail, vargs, None) =>
           VoidHelper
-            .methodTypeV(toCarrierType(head), tail.concat(vargs).map(toCarrierType)*)
+            .methodTypeV(
+              toCarrierType(head),
+              tail.concat(vargs).map(toCarrierType)*
+            )
             .nn
         case Descriptor(head +: tail, vargs, Some(r)) =>
           MethodType

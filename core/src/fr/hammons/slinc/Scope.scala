@@ -3,7 +3,7 @@ package fr.hammons.slinc
 sealed trait Scope:
   def apply[A](fn: Allocator ?=> A): A
 
-trait ConfinedScope extends Scope: 
+trait ConfinedScope extends Scope:
   def apply[A](fn: Allocator ?=> A): A
 
 trait TempScope extends Scope:

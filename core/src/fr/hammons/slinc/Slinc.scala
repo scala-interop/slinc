@@ -38,17 +38,34 @@ trait Slinc:
   export ContextProof.given
   export receiveI.given
 
+  def sizeOf[A](using l: LayoutOf[A]) = l.layout.size.toLong.maybeAs[SizeT]
+
   extension (l: Long) def toBytes = Bytes(l)
-  
 
 object Slinc:
-  private val majorVersion = System.getProperty("java.version").nn.takeWhile(_.isDigit).pipe(vString => vString.toIntOption.getOrElse(throw Error(s"Major error occured. Couldn't parse the version number $vString")))
+  private val majorVersion = System
+    .getProperty("java.version")
+    .nn
+    .takeWhile(_.isDigit)
+    .pipe(vString =>
+      vString.toIntOption.getOrElse(
+        throw Error(
+          s"Major error occured. Couldn't parse the version number $vString"
+        )
+      )
+    )
 
   @volatile private var _runtime: Slinc | Null = uninitialized
 
-  inline def getRuntime(): Slinc = 
-    if _runtime == null then 
-      _runtime = SlincImpl.findImpls().getOrElse(majorVersion, throw Error(s"Sorry, an implementation for JVM $majorVersion couldn't be found. Please check that you've added dependencies on slinc-j$majorVersion, if it exists..."))()
+  inline def getRuntime(): Slinc =
+    if _runtime == null then
+      _runtime = SlincImpl
+        .findImpls()
+        .getOrElse(
+          majorVersion,
+          throw Error(
+            s"Sorry, an implementation for JVM $majorVersion couldn't be found. Please check that you've added dependencies on slinc-j$majorVersion, if it exists..."
+          )
+        )()
       _runtime.asInstanceOf[Slinc]
-    else 
-      _runtime.asInstanceOf[Slinc]
+    else _runtime.asInstanceOf[Slinc]

@@ -9,5 +9,3 @@ object StaticArray:
   inline def ofDim[A, Size <: Int](using ClassTag[A]) = StaticArray(
     Array.ofDim[A](constValue[Size])
   )
-
-  

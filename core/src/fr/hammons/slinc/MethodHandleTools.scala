@@ -15,8 +15,8 @@ object MethodHandleTools:
 
   def returnMapping[R](using Quotes, Type[R]) =
     import quotes.reflect.*
-  
-    TypeRepr.of[R].dealias.asType match 
+
+    TypeRepr.of[R].dealias.asType match
       case '[Int]    => "I"
       case '[Short]  => "S"
       case '[Long]   => "L"
@@ -25,13 +25,12 @@ object MethodHandleTools:
       case '[Float]  => "F"
       case '[Unit]   => "O"
       case '[Object] => "O"
-      case _ => "O"
-
+      case _         => "O"
 
   def invokeVariadicArguments(
-    mhGen: Expr[Seq[DataLayout] => MethodHandle],
-    exprs: Expr[Seq[Any]],
-    varArgDescriptors: Expr[Seq[DataLayout]]
+      mhGen: Expr[Seq[DataLayout] => MethodHandle],
+      exprs: Expr[Seq[Any]],
+      varArgDescriptors: Expr[Seq[DataLayout]]
   )(using Quotes) =
     '{
       MethodHandleFacade.callVariadic(
@@ -40,61 +39,60 @@ object MethodHandleTools:
       )
     }
 
-
   def invokeArguments[R](
       mh: Expr[MethodHandle],
-      exprs: Seq[Expr[Any]],
+      exprs: Seq[Expr[Any]]
   )(using
       Quotes,
       Type[R]
   ) =
     import quotes.reflect.*
 
-      val arity = exprs.size
-      val callName = (exprs.map(exprNameMapping) :+ returnMapping[R]).mkString
+    val arity = exprs.size
+    val callName = (exprs.map(exprNameMapping) :+ returnMapping[R]).mkString
 
-      val mod = Symbol
-        .requiredPackage("fr.hammons.slinc")
-        .declarations
-        .find(_.name == s"MethodHandleArity$arity")
-        .map(_.companionModule)
+    val mod = Symbol
+      .requiredPackage("fr.hammons.slinc")
+      .declarations
+      .find(_.name == s"MethodHandleArity$arity")
+      .map(_.companionModule)
 
-      val backupMod = TypeRepr
-        .of[MethodHandleFacade]
-        .classSymbol
-        .getOrElse(report.errorAndAbort("This class should exist!!"))
-        .companionModule
+    val backupMod = TypeRepr
+      .of[MethodHandleFacade]
+      .classSymbol
+      .getOrElse(report.errorAndAbort("This class should exist!!"))
+      .companionModule
 
-      val methodSymbol = mod.flatMap(
-        _.declaredMethods
-          .find(_.name == callName)
+    val methodSymbol = mod.flatMap(
+      _.declaredMethods
+        .find(_.name == callName)
+    )
+
+    val backupSymbol =
+      backupMod.declaredMethods.find(_.name.endsWith(arity.toString()))
+
+    val call = methodSymbol
+      .map(ms =>
+        Apply(
+          Select(Ident(mod.get.termRef), ms),
+          mh.asTerm :: exprs.map(_.asTerm).toList
+        ).asExpr
       )
-
-      val backupSymbol =
-        backupMod.declaredMethods.find(_.name.endsWith(arity.toString()))
-
-      val call = methodSymbol
-        .map(ms =>
+      .orElse(
+        backupSymbol.map(ms =>
           Apply(
-            Select(Ident(mod.get.termRef), ms),
+            Select(Ident(backupMod.termRef), ms),
             mh.asTerm :: exprs.map(_.asTerm).toList
           ).asExpr
         )
-        .orElse(
-          backupSymbol.map(ms =>
-            Apply(
-              Select(Ident(backupMod.termRef), ms),
-              mh.asTerm :: exprs.map(_.asTerm).toList
-            ).asExpr
-          )
-        )
-        .getOrElse(
-          '{ MethodHandleFacade.callVariadic($mh, ${ Varargs(exprs) }*) }
-        )
+      )
+      .getOrElse(
+        '{ MethodHandleFacade.callVariadic($mh, ${ Varargs(exprs) }*) }
+      )
 
-      val expr = call
-      report.info(expr.show)
-      expr
+    val expr = call
+    report.info(expr.show)
+    expr
 
   inline def getVariadicContext(s: Seq[Variadic]) =
     s.map(_.use[LayoutOf](l ?=> _ => l.layout))
@@ -106,7 +104,7 @@ object MethodHandleTools:
           nic match
             case i: InAllocatingTransitionNeeded[?] => i.in(d)
             case i: InTransitionNeeded[?]           => i.in(d)
-            case i: NativeInCompatible[d.type]           => 
+            case i: NativeInCompatible[d.type] =>
               val res = d.asInstanceOf[Any]
               res
       )
@@ -203,7 +201,7 @@ object MethodHandleTools:
           case '[r] =>
             invokeArguments[r](
               methodHandleExpr,
-              params.map(_.asExpr),
+              params.map(_.asExpr)
             ).asTerm
               .changeOwner(meth)
     ).asExprOf[A]

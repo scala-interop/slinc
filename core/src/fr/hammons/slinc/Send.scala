@@ -54,6 +54,12 @@ object Send:
         '{ $mem.writeLong(${ asExprOf[Long](value) }, $offset) }
       case _: FloatLayout =>
         '{ $mem.writeFloat(${ asExprOf[Float](value) }, $offset) }
+      case _: ShortLayout =>
+        '{ $mem.writeShort(${ asExprOf[Short](value) }, $offset) }
+      case _: ByteLayout =>
+        '{ $mem.writeByte(${ asExprOf[Byte](value) }, $offset) }
+      case _: DoubleLayout =>
+        '{ $mem.writeDouble(${ asExprOf[Double](value) }, $offset) }
       case structLayout @ StructLayout(_, _, children) =>
         val fields =
           if canBeUsedDirectly(structLayout.clazz) then
@@ -145,9 +151,22 @@ object Send:
     inline def to(mem: Mem, offset: Bytes, value: Long) =
       mem.writeLong(value, offset)
 
+  given Send[Double] with
+    def to(mem: Mem, offset: Bytes, value: Double) =
+      mem.writeDouble(value, offset)
+
+  given Send[Short] with
+    def to(mem: Mem, offset: Bytes, value: Short) =
+      mem.writeShort(value, offset)
+
+  given Send[Byte] with
+    def to(mem: Mem, offset: Bytes, value: Byte) =
+      mem.writeByte(value, offset)
+
   given sendInt: Send[Array[Int]] with
     def to(mem: Mem, offset: Bytes, value: Array[Int]) =
       mem.writeIntArray(value, offset)
 
   given sendByte: Send[Array[Byte]] with
-    def to(mem: Mem, offset: Bytes, value: Array[Byte]): Unit = mem.writeByteArray(value, offset)
+    def to(mem: Mem, offset: Bytes, value: Array[Byte]): Unit =
+      mem.writeByteArray(value, offset)

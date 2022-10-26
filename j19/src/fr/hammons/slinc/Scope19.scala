@@ -4,7 +4,8 @@ import java.lang.foreign.Linker
 import java.lang.foreign.MemorySession
 import java.lang.foreign.SegmentAllocator
 
-class Scope19(layoutI: LayoutI, linker: Linker) extends ScopeI.PlatformSpecific(layoutI):
+class Scope19(layoutI: LayoutI, linker: Linker)
+    extends ScopeI.PlatformSpecific(layoutI):
 
   override def createTempScope: TempScope = new TempScope:
     given Allocator = Allocator19(

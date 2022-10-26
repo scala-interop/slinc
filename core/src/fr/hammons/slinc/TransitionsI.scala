@@ -7,8 +7,8 @@ class TransitionsI(platformSpecific: TransitionsI.PlatformSpecific):
 
   private val genPtrOutTransition = new OutTransitionNeeded[Ptr[Any]]:
     def out(a: Object): Ptr[Any] =
-      Ptr[Any](platformSpecific.outPointer.out(a), Bytes(0))      
-  
+      Ptr[Any](platformSpecific.outPointer.out(a), Bytes(0))
+
   given [A]: InTransitionNeeded[Ptr[A]] =
     genPtrInTransition.asInstanceOf[InTransitionNeeded[Ptr[A]]]
 

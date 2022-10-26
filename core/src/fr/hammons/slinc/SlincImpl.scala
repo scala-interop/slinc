@@ -22,12 +22,14 @@ object SlincImpl:
               ) =>
             s -> version
         }.headOption
-      }.filter((symbol, _) => symbol.declaredField("default").exists)
+      }
+      .filter((symbol, _) => symbol.declaredField("default").exists)
       .map((s, v) =>
         val versionExpr = Expr(v)
         val slincRef = Ref(s.declaredField("default")).asExprOf[Slinc]
 
-        '{$versionExpr -> (() => $slincRef)}       
-      ).toSeq
+        '{ $versionExpr -> (() => $slincRef) }
+      )
+      .toSeq
     val list = Expr.ofList(syms)
-    '{$list.toMap}
+    '{ $list.toMap }

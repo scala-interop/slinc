@@ -7,7 +7,10 @@ trait Allocator(layoutI: LayoutI):
   import layoutI.*
   def allocate(layout: DataLayout, num: Int): Mem
   def upcall[Fn](descriptor: Descriptor, target: Fn): Mem
-  protected def methodHandleFromFn[Fn](descriptor: Descriptor, target: Fn): MethodHandle =
+  protected def methodHandleFromFn[Fn](
+      descriptor: Descriptor,
+      target: Fn
+  ): MethodHandle =
     val size = descriptor.inputLayouts.size
     val mh = MethodHandles.lookup.nn
       .findVirtual(

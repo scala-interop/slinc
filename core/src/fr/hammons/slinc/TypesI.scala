@@ -31,32 +31,36 @@ object TypesI:
     type ConvertibleTo[A] = Convertible[*, A]
     type ConvertibleFrom[A] = Convertible[A, *]
 
-    type :->[A] = [B] =>> Convertible[B,A]
-    type <-:[A] = [B] =>> Convertible[A,B]
-    type :?->[A] = [B] =>> PotentiallyConvertible[B,A]
-    type <-?:[A] = [B] =>> PotentiallyConvertible[A,B]
-    type PotentiallyConvertibleTo[A] = PotentiallyConvertible[*,A]
-    type PotentiallyConvertibleFrom[A] = PotentiallyConvertible[A,*]
+    type :->[A] = [B] =>> Convertible[B, A]
+    type <-:[A] = [B] =>> Convertible[A, B]
+    type :?->[A] = [B] =>> PotentiallyConvertible[B, A]
+    type <-?:[A] = [B] =>> PotentiallyConvertible[A, B]
+    type PotentiallyConvertibleTo[A] = PotentiallyConvertible[*, A]
+    type PotentiallyConvertibleFrom[A] = PotentiallyConvertible[A, *]
     type StandardCapabilities = LayoutOf *::: NativeInCompatible *:::
       NativeOutCompatible *::: Send *::: Receive *::: End
 
     type CLong
-    given cLongProof
-        : ContextProof[:->[Long] *::: <-:[Int] *::: <-?:[Long] *::: :?->[Int] *::: StandardCapabilities, CLong]
+    type CLongProof = ContextProof[
+      :->[Long] *::: <-:[Int] *::: <-?:[Long] *::: :?->[Int] *:::
+        StandardCapabilities,
+      CLong
+    ]
 
+    given cLongProof: CLongProof
     type SizeT
-    given sizeTProof: ContextProof[StandardCapabilities, SizeT]
 
-    extension (l: Int) def toSizeT: SizeT
-    extension (l: Long) def toSizeT: Option[SizeT]
-
-    // type SizeT
-    // given sizeTLayout: LayoutOf[SizeT]
+    type SizeTProof = ContextProof[
+      :->[Long] *::: <-:[Int] *::: <-?:[Long] *::: :?->[Int] *:::
+        StandardCapabilities,
+      SizeT
+    ]
+    given sizeTProof: SizeTProof
 
   val platformTypes: LayoutI => TypesI = layout =>
     val platform = (arch, os) match
       case (Arch.X64, OS.Linux)   => x64.Linux(layout)
       case (Arch.X64, OS.Windows) => x64.Windows(layout)
-      case (Arch.X64, OS.Darwin) =>  x64.Mac(layout)
+      case (Arch.X64, OS.Darwin)  => x64.Mac(layout)
       case _                      => x64.Mac(layout)
     TypesI(platform)

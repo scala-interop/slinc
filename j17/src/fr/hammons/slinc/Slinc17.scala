@@ -12,7 +12,8 @@ class Slinc17(_jitManager: JitManager, linker: CLinker) extends Slinc:
 
 @SlincImpl(17)
 object Slinc17:
-  private val compiler = scala.quoted.staging.Compiler.make(getClass().getClassLoader().nn)
+  private val compiler =
+    scala.quoted.staging.Compiler.make(getClass().getClassLoader().nn)
   private val linker = CLinker.getInstance().nn
   val default = Slinc17(JitManagerImpl(compiler), linker)
   val noJit = Slinc17(NoJitManager, linker)

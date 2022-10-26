@@ -8,8 +8,8 @@ trait Downcall[T <: Tuple, R]:
 
 class DowncallI(platform: DowncallI.PlatformSpecific):
 
-  inline given idc[T <: Tuple, R]: Downcall[T,R] = new Downcall[T,R]: 
-    val mh = 
+  inline given idc[T <: Tuple, R]: Downcall[T, R] = new Downcall[T, R]:
+    val mh =
       platform.getDowncall(
         getDowncallHelper[T],
         summonFrom {

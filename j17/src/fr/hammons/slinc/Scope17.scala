@@ -4,7 +4,8 @@ import jdk.incubator.foreign.CLinker
 import jdk.incubator.foreign.ResourceScope
 import jdk.incubator.foreign.SegmentAllocator
 
-class Scope17(layoutI: LayoutI, linker: CLinker) extends ScopeI.PlatformSpecific(layoutI):
+class Scope17(layoutI: LayoutI, linker: CLinker)
+    extends ScopeI.PlatformSpecific(layoutI):
   def createGlobalScope: GlobalScope = new GlobalScope:
     def apply[A](fn: (Allocator) ?=> A): A =
       val rs = ResourceScope.globalScope().nn
@@ -24,7 +25,8 @@ class Scope17(layoutI: LayoutI, linker: CLinker) extends ScopeI.PlatformSpecific
   def createTempScope: TempScope = new TempScope:
     def apply[A](fn: Allocator ?=> A): A =
       val allocator = TempAllocator17.allocator.get().nn
-      val segmentAllocator: SegmentAllocator = (bytesNeeded, alignment) => allocator.allocate(bytesNeeded, alignment)
+      val segmentAllocator: SegmentAllocator = (bytesNeeded, alignment) =>
+        allocator.allocate(bytesNeeded, alignment)
       given Allocator = Allocator17(
         segmentAllocator,
         ResourceScope.globalScope().nn,

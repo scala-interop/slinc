@@ -50,8 +50,7 @@ class Library19(layoutI: LayoutI, linker: Linker)
         new Lookup:
           if Files.exists(Paths.get(n)) then
             System.load(Paths.get(n).nn.toRealPath().nn.toString())
-          else
-            System.loadLibrary(n)
+          else System.loadLibrary(n)
           val l = SymbolLookup.loaderLookup().nn
           def lookup(name: String) =
             l.lookup(name)
@@ -61,4 +60,10 @@ class Library19(layoutI: LayoutI, linker: Linker)
       case None =>
         new Lookup:
           val l = linker.defaultLookup().nn
-          def lookup(name: String) = l.lookup(name).nn.toScala.getOrElse(throw Error(s"Lookup of $name in standard library failed"))
+          def lookup(name: String) = l
+            .lookup(name)
+            .nn
+            .toScala
+            .getOrElse(
+              throw Error(s"Lookup of $name in standard library failed")
+            )

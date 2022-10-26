@@ -13,12 +13,12 @@ import fr.hammons.slinc.Receive
 class Windows(layoutI: LayoutI) extends TypesI.PlatformSpecific:
   import layoutI.given
   type CLong = Int
-  given cLongProof: ContextProof[:->[Long] *::: <-:[Int] *::: <-?:[Long] *::: :?->[Int] *::: StandardCapabilities, CLong] = ContextProof()
+  given cLongProof: ContextProof[
+    :->[Long] *::: <-:[Int] *::: <-?:[Long] *::: :?->[Int] *:::
+      StandardCapabilities,
+    CLong
+  ] = ContextProof()
 
   type SizeT = Long
-  override given sizeTProof: ContextProof[StandardCapabilities, SizeT] = ContextProof()
-
-  extension (l: Long) override def toSizeT: Option[SizeT] = Some(l)
-
-  extension (l: Int) override def toSizeT: SizeT = l
-
+  override given sizeTProof: SizeTProof =
+    ContextProof()

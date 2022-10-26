@@ -9,7 +9,7 @@ import scala.util.chaining.*
 import scala.deriving.Mirror
 
 class ReceiveI(val libraryPs: LibraryI.PlatformSpecific, layoutI: LayoutI):
-  inline given fnReceive[A](using Fn[A,?,?]): Receive[A] = 
+  inline given fnReceive[A](using Fn[A, ?, ?]): Receive[A] =
     new Receive[A]:
       def from(mem: Mem, offset: Bytes): A =
         val descriptor = Descriptor.fromFunction[A]
@@ -38,8 +38,17 @@ object Receive:
   given Receive[Long] with
     def from(mem: Mem, offset: Bytes): Long = mem.readLong(offset)
 
-  given Receive[Byte] with 
+  given Receive[Byte] with
     def from(mem: Mem, offset: Bytes): Byte = mem.readByte(offset)
+
+  given Receive[Float] with
+    def from(mem: Mem, offset: Bytes): Float = mem.readFloat(offset)
+
+  given Receive[Double] with
+    def from(mem: Mem, offset: Bytes): Double = mem.readDouble(offset)
+
+  given Receive[Short] with
+    def from(mem: Mem, offset: Bytes): Short = mem.readShort(offset)
 
   def staged[A <: Product](
       layout: StructLayout

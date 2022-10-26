@@ -4,20 +4,29 @@ import scala.reflect.ClassTag
 
 import scala.deriving.Mirror.ProductOf
 import jdk.incubator.foreign.CLinker.*
-import jdk.incubator.foreign.{MemoryLayout, ValueLayout, GroupLayout, MemorySegment, MemoryAddress},
-MemoryLayout.PathElement
+import jdk.incubator.foreign.{
+  MemoryLayout,
+  ValueLayout,
+  GroupLayout,
+  MemorySegment,
+  MemoryAddress
+}, MemoryLayout.PathElement
 import scala.util.chaining.*
 import scala.jdk.OptionConverters.*
 import scala.jdk.CollectionConverters.*
 
 object LayoutI17 extends LayoutI.PlatformSpecific:
 
-  def toCarrierType(dataLayout: DataLayout): Class[?] = 
-    dataLayout match 
-      case IntLayout(_,_,_) => classOf[Int]
-      case _: LongLayout => classOf[Long]
-      case _: StructLayout  => classOf[MemorySegment]
-      case _: PointerLayout => classOf[MemoryAddress]
+  def toCarrierType(dataLayout: DataLayout): Class[?] =
+    dataLayout match
+      case IntLayout(_, _, _) => classOf[Int]
+      case _: LongLayout      => classOf[Long]
+      case _: StructLayout    => classOf[MemorySegment]
+      case _: PointerLayout   => classOf[MemoryAddress]
+      case _: FloatLayout     => classOf[Float]
+      case _: DoubleLayout    => classOf[Double]
+      case _: ShortLayout     => classOf[Short]
+      case _: ByteLayout      => classOf[Byte]
 
   override val floatLayout: FloatLayout =
     FloatLayout(None, Bytes(C_FLOAT.nn.byteSize()), ByteOrder.HostDefault)
@@ -61,28 +70,49 @@ object LayoutI17 extends LayoutI.PlatformSpecific:
             C_INT.nn.withName(name).nn
           case None =>
             C_INT.nn
-      case PointerLayout(name, _, _) => 
-        name match 
-          case Some(name) => 
+      case PointerLayout(name, _, _) =>
+        name match
+          case Some(name) =>
             C_POINTER.nn.withName(name).nn
           case None =>
             C_POINTER.nn
 
-      case LongLayout(name,_,_) => 
-        name match 
-          case Some(name) => 
+      case LongLayout(name, _, _) =>
+        name match
+          case Some(name) =>
             C_LONG_LONG.nn.withName(name).nn
           case None =>
             C_LONG_LONG.nn
+
+      case b: ByteLayout =>
+        b.name match
+          case None        => C_CHAR.nn
+          case Some(value) => C_CHAR.nn.withName(value).nn
+
+      case d: DoubleLayout =>
+        d.name match
+          case None        => C_DOUBLE.nn
+          case Some(value) => C_DOUBLE.nn.withName(value).nn
+
+      case f: FloatLayout =>
+        f.name match
+          case None        => C_FLOAT.nn
+          case Some(value) => C_FLOAT.nn.withName(value).nn
+
+      case s: ShortLayout =>
+        s.name match
+          case None        => C_SHORT.nn
+          case Some(value) => C_SHORT.nn.withName(value).nn
+
       case StructLayout(name, size, children) =>
         val childLayouts = children.map {
           case StructMember(childLayout, name, _) =>
             dataLayout2MemoryLayout(childLayout).withName(name).nn
         }
         val base = MemoryLayout.structLayout(childLayouts*).nn
-        name match 
+        name match
           case Some(name) => base.withName(name).nn
-          case _ => base
+          case _          => base
   override val pointerLayout: PointerLayout =
     PointerLayout(None, Bytes(C_POINTER.nn.byteSize()), ByteOrder.HostDefault)
 

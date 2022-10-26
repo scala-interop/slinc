@@ -46,21 +46,52 @@ object ContextProof:
     case ? *::: rest => 1 + IndexOf[rest, A]
     case End         => -1155213512
 
-  inline given [A, Cap <: Capabilities, N <: Int](using c: ContextProof[Cap,A], l: LocationInCap[LayoutOf, Cap, N]): LayoutOf[A] = c.tup.productElement(constValue[N]).asInstanceOf[LayoutOf[A]]
+  inline given [A, Cap <: Capabilities, N <: Int](using
+      c: ContextProof[Cap, A],
+      l: LocationInCap[LayoutOf, Cap, N]
+  ): LayoutOf[A] = c.tup.productElement(constValue[N]).asInstanceOf[LayoutOf[A]]
 
-  inline given [A, Cap <: Capabilities, N <: Int](using c: ContextProof[Cap, A], l: LocationInCap[NativeInCompatible,Cap,N]): NativeInCompatible[A] = c.tup.productElement(constValue[N]).asInstanceOf[NativeInCompatible[A]]
+  inline given [A, Cap <: Capabilities, N <: Int](using
+      c: ContextProof[Cap, A],
+      l: LocationInCap[NativeInCompatible, Cap, N]
+  ): NativeInCompatible[A] =
+    c.tup.productElement(constValue[N]).asInstanceOf[NativeInCompatible[A]]
 
-  inline given [A, Cap <: Capabilities, N <: Int](using c: ContextProof[Cap, A], l: LocationInCap[Send, Cap, N]): Send[A] = c.tup.productElement(constValue[N]).asInstanceOf[Send[A]]
+  inline given [A, Cap <: Capabilities, N <: Int](using
+      c: ContextProof[Cap, A],
+      l: LocationInCap[Send, Cap, N]
+  ): Send[A] = c.tup.productElement(constValue[N]).asInstanceOf[Send[A]]
 
-  inline given [A, Cap <: Capabilities, N <: Int](using c: ContextProof[Cap, A], l: LocationInCap[Receive, Cap, N]): Receive[A] = c.tup.productElement(constValue[N]).asInstanceOf[Receive[A]]
+  inline given [A, Cap <: Capabilities, N <: Int](using
+      c: ContextProof[Cap, A],
+      l: LocationInCap[Receive, Cap, N]
+  ): Receive[A] = c.tup.productElement(constValue[N]).asInstanceOf[Receive[A]]
 
-  inline given [A, B, Cap <: Capabilities, N <: Int](using c: ContextProof[Cap, A], l: LocationInCap[Convertible[*,B], Cap, N]): Convertible[A,B] = c.tup.productElement(constValue[N]).asInstanceOf[Convertible[A,B]]
+  inline given [A, B, Cap <: Capabilities, N <: Int](using
+      c: ContextProof[Cap, A],
+      l: LocationInCap[Convertible[*, B], Cap, N]
+  ): Convertible[A, B] =
+    c.tup.productElement(constValue[N]).asInstanceOf[Convertible[A, B]]
 
-  inline given [A,B, Cap <: Capabilities, N <: Int](using c: ContextProof[Cap, A], l: LocationInCap[Convertible[B,*], Cap, N]): Convertible[B,A] = c.tup.productElement(constValue[N]).asInstanceOf[Convertible[B,A]]
+  inline given [A, B, Cap <: Capabilities, N <: Int](using
+      c: ContextProof[Cap, A],
+      l: LocationInCap[Convertible[B, *], Cap, N]
+  ): Convertible[B, A] =
+    c.tup.productElement(constValue[N]).asInstanceOf[Convertible[B, A]]
 
-  inline given [A,B, Cap <: Capabilities, N <: Int](using c: ContextProof[Cap, A], l: LocationInCap[PotentiallyConvertible[*,B], Cap, N]): PotentiallyConvertible[A,B] = c.tup.productElement(constValue[N]).asInstanceOf[PotentiallyConvertible[A,B]]
+  inline given [A, B, Cap <: Capabilities, N <: Int](using
+      c: ContextProof[Cap, A],
+      l: LocationInCap[PotentiallyConvertible[*, B], Cap, N]
+  ): PotentiallyConvertible[A, B] = c.tup
+    .productElement(constValue[N])
+    .asInstanceOf[PotentiallyConvertible[A, B]]
 
-  inline given [A, B, Cap <: Capabilities, N <: Int](using c: ContextProof[Cap, A], l: LocationInCap[PotentiallyConvertible[B,*], Cap, N]): PotentiallyConvertible[B, A] = c.tup.productElement(constValue[N]).asInstanceOf[PotentiallyConvertible[B,A]]
+  inline given [A, B, Cap <: Capabilities, N <: Int](using
+      c: ContextProof[Cap, A],
+      l: LocationInCap[PotentiallyConvertible[B, *], Cap, N]
+  ): PotentiallyConvertible[B, A] = c.tup
+    .productElement(constValue[N])
+    .asInstanceOf[PotentiallyConvertible[B, A]]
 
   // inline given [A, Cap <: Capabilities, B[A] >: ToSum[Cap,A], N <: Int](using c: => ContextProof[Cap,A], l: => LocationInCap[B,Cap,N])(using ToSum[Cap,A] <:< B[A]): B[A] = ???
 

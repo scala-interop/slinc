@@ -51,10 +51,9 @@ class Library17(layoutI: LayoutI, linker: CLinker)
     name match
       case Some(n) =>
         new Lookup:
-          if Files.exists(Paths.get(n)) then 
+          if Files.exists(Paths.get(n)) then
             System.load(Paths.get(n).nn.toRealPath().nn.toString())
-          else 
-            System.loadLibrary(n)
+          else System.loadLibrary(n)
           val l = SymbolLookup.loaderLookup().nn
           def lookup(name: String) = l
             .lookup(name)

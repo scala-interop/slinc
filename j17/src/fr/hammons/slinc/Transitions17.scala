@@ -19,7 +19,9 @@ object Transitions17 extends TransitionsI.PlatformSpecific:
   val outPointer: OutTransitionNeeded[Mem] = new OutTransitionNeeded[Mem]:
     import scala.language.unsafeNulls
     def out(obj: Object): Mem = Mem17(
-      MemorySegment.globalNativeSegment().asSlice(obj.asInstanceOf[MemoryAddress])
+      MemorySegment
+        .globalNativeSegment()
+        .asSlice(obj.asInstanceOf[MemoryAddress])
     )
 
   val allocatorIn: InTransitionNeeded[Allocator] =
