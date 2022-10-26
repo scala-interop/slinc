@@ -23,14 +23,15 @@ trait BindingsSpec(val slinc: Slinc) extends ScalaCheckSuite:
       assertEquals(Cstd.abs(i), i.abs)
     }
   }
+
   test("abs") {
-    
     assertEquals(Cstd.abs(-4), 4)
   }
 
   property("labs gives back absolute CLongs") {
     forAll{ (i: Int) =>
-      assertEquals(Cstd.labs(i.as[CLong]).as[Long], i.toLong.abs)
+      if i != Int.MinValue then
+        assertEquals(Cstd.labs(i.as[CLong]).as[Long], i.toLong.abs)
     }
   }
 
