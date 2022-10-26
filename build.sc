@@ -42,6 +42,14 @@ trait BaseModule extends ScalaModule with ScalafmtModule {
     "-source:future",
     "-Ykind-projector"
   )
+
+  trait BaseTest extends Tests with TestModule.Munit with JacocoTestModule {
+    def ivyDeps = Agg(
+      ivy"org.scalameta::munit:$munitVersion",
+      ivy"org.scalameta::munit-scalacheck:$munitVersion"
+    )
+
+  }
 }
 object core
     extends BaseModule
@@ -53,9 +61,7 @@ object core
 
   def specializationArity = 4
 
-  object test extends Tests with TestModule.Munit with JacocoTestModule {
-    def ivyDeps = Agg(ivy"org.scalameta::munit:$munitVersion")
-  }
+  object test extends BaseTest
 
   object benchmarks extends BaseModule {
     def moduleDeps = Seq(core)
@@ -81,8 +87,7 @@ object j17 extends BaseModule with PublishableModule with BenchmarksModule {
   def javacOptions =
     super.javacOptions() ++ Seq("--add-modules=jdk.incubator.foreign")
 
-  object test extends Tests with TestModule.Munit with JacocoTestModule {
-    def ivyDeps = Agg(ivy"org.scalameta::munit:$munitVersion")
+  object test extends BaseTest {
     def moduleDeps = super.moduleDeps ++ Seq(core.test)
     def forkArgs = super.forkArgs() ++ Seq(
       "--add-modules=jdk.incubator.foreign",
@@ -114,8 +119,7 @@ object j19 extends BaseModule with PublishableModule with BenchmarksModule {
   def javacOptions =
     super.javacOptions() ++ Seq("--release", "19", "--enable-preview")
 
-  object test extends Tests with TestModule.Munit with JacocoTestModule {
-    def ivyDeps = Agg(ivy"org.scalameta::munit:$munitVersion")
+  object test extends BaseTest {
     def moduleDeps = super.moduleDeps ++ Seq(core.test)
     def forkArgs = super.forkArgs() ++ Seq(
       "--enable-preview",
@@ -140,26 +144,26 @@ object j19 extends BaseModule with PublishableModule with BenchmarksModule {
   }
 }
 
-object `runtime-test` extends BaseModule with PublishableModule {
+// object `runtime-test` extends BaseModule with PublishableModule {
 
-  def pomSettings = pomTemplate("slinc-full")
+//   def pomSettings = pomTemplate("slinc-full")
 
-  override def ivyDeps = Agg(
-    ivy"fr.hammons::slinc-j17:${publishVersion()}",
-    ivy"fr.hammons::slinc-j19:${publishVersion()}"
-  )
+//   override def ivyDeps = Agg(
+//     ivy"fr.hammons::slinc-j17:${publishVersion()}",
+//     ivy"fr.hammons::slinc-j19:${publishVersion()}"
+//   )
 
-  object test extends Tests with TestModule.Munit {
-    def ivyDeps = Agg(ivy"org.scalameta::munit:$munitVersion")
+//   object test extends Tests with TestModule.Munit {
+//     def ivyDeps = Agg(ivy"org.scalameta::munit:$munitVersion")
 
-    def jvm = T.input{ System.getProperty("java.version")}
-    def moduleDeps = super.moduleDeps ++ Seq(core.test)
-    def forkArgs = super.forkArgs() ++ Seq(
-      "--enable-preview",
-      "--enable-native-access=ALL-UNNAMED"
-    ) ++ (if (jvm().startsWith("17")) {
-            println("adding")
-            Seq("--add-modules=jdk.incubator.foreign")
-          } else Seq.empty)
-  }
-}
+//     def jvm = T.input{ System.getProperty("java.version")}
+//     def moduleDeps = super.moduleDeps ++ Seq(core.test)
+//     def forkArgs = super.forkArgs() ++ Seq(
+//       "--enable-preview",
+//       "--enable-native-access=ALL-UNNAMED"
+//     ) ++ (if (jvm().startsWith("17")) {
+//             println("adding")
+//             Seq("--add-modules=jdk.incubator.foreign")
+//           } else Seq.empty)
+//   }
+// }

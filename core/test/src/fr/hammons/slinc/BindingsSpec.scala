@@ -2,8 +2,10 @@ package fr.hammons.slinc
 
 import fr.hammons.slinc.BindingsSpec.div_t
 import scala.util.Random
+import munit.ScalaCheckSuite
+import org.scalacheck.Prop.*
 
-trait BindingsSpec(val slinc: Slinc) extends munit.FunSuite:
+trait BindingsSpec(val slinc: Slinc) extends ScalaCheckSuite:
   import slinc.{given, *}
 
   object Cstd derives Library:
@@ -15,8 +17,26 @@ trait BindingsSpec(val slinc: Slinc) extends munit.FunSuite:
 
   given Struct[div_t] = Struct.derived
 
+  property("abs gives back absolute integers") {
+    forAll{ (i: Int) =>
+      assertEquals(Cstd.abs(i), i.abs)
+    }
+  }
   test("abs") {
+    
     assertEquals(Cstd.abs(-4), 4)
+  }
+
+  //todo: improve this test
+  property("div calculates quotient and remainder") {
+    forAll{
+      (a: Int, b: Int) =>
+        if a != 0 && b != 0 && a != Int.MinValue then 
+          val result = Cstd.div(a,b)
+
+          assertEquals(result.quot, a/b)
+          assertEquals(result.rem, a%b)
+    }
   }
 
   test("div") {
@@ -27,6 +47,24 @@ trait BindingsSpec(val slinc: Slinc) extends munit.FunSuite:
     assertNotEquals(Cstd.rand(), Cstd.rand())
   }
 
+  property("qsort should sort"){
+    forAll{
+      (arr: Array[Int]) =>
+        Scope.confined{
+          val cArr = Ptr.copy(arr)
+          
+          Cstd.qsort(cArr, arr.size.toSizeT, 4.toSizeT, Ptr.upcall((a, b) =>
+            val aVal = !a 
+            val bVal = !b 
+            if aVal < bVal then -1 
+            else if aVal == bVal then 0 
+            else 1
+          ))
+
+          assertEquals(cArr.asArray(arr.length).toSeq, arr.sorted.toSeq)
+        }
+    }
+  }
   test("qsort") {
     val testArray = Random.shuffle(Array.fill(1024)(Random.nextInt())).toArray
     Scope.confined{
@@ -44,6 +82,22 @@ trait BindingsSpec(val slinc: Slinc) extends munit.FunSuite:
     }
   }
 
+  property("sprintf should format") {
+    forAll{
+      (i: Int, s: String) =>
+        Scope.confined{
+          val format = Ptr.copy("%i %s")
+          val buffer = Ptr.blankArray[Byte](256)
+
+          //ascii chars only
+          val modS = s.filter(c => c < 127 && c > 31)
+          assertEquals(format.copyIntoString(200), "%i %s")
+          Cstd.sprintf(buffer, format, i, Ptr.copy(modS))
+          assertEquals(buffer.copyIntoString(256), s"$i $modS")
+        }
+    }
+  }
+
   test("sprintf") {
     Scope.confined{
       val format = Ptr.copy("%i hello: %s %i")
@@ -57,4 +111,4 @@ trait BindingsSpec(val slinc: Slinc) extends munit.FunSuite:
   }
   
 object BindingsSpec:
-  case class div_t(a: Int, b: Int)
+  case class div_t(quot: Int, rem: Int)
