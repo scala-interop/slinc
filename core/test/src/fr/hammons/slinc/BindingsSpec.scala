@@ -10,6 +10,7 @@ trait BindingsSpec(val slinc: Slinc) extends ScalaCheckSuite:
 
   object Cstd derives Library:
     def abs(a: Int): Int = Library.binding
+    def labs(l: CLong): CLong = Library.binding
     def div(a: Int, b: Int): div_t = Library.binding
     def rand(): Int = Library.binding
     def qsort[A](array: Ptr[A], num: SizeT, size: SizeT, fn: Ptr[(Ptr[A], Ptr[A]) => Int]): Unit = Library.binding
@@ -25,6 +26,12 @@ trait BindingsSpec(val slinc: Slinc) extends ScalaCheckSuite:
   test("abs") {
     
     assertEquals(Cstd.abs(-4), 4)
+  }
+
+  property("labs gives back absolute CLongs") {
+    forAll{ (i: Int) =>
+      assertEquals(Cstd.labs(i.as[CLong]).as[Long], i.toLong.abs)
+    }
   }
 
   //todo: improve this test

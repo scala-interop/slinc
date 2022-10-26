@@ -30,6 +30,8 @@ trait Slinc:
   export layoutI.{*, given}
   export typesI.{*, given}
   export libraryI.*
+  export Convertible.as
+  export PotentiallyConvertible.maybeAs
   export transitionsI.given
   export structI.Struct
   export scopeI.given

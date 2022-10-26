@@ -14,7 +14,9 @@ object MethodHandleTools:
     else "O"
 
   def returnMapping[R](using Quotes, Type[R]) =
-    Type.of[R] match
+    import quotes.reflect.*
+  
+    TypeRepr.of[R].dealias.asType match 
       case '[Int]    => "I"
       case '[Short]  => "S"
       case '[Long]   => "L"
@@ -23,6 +25,7 @@ object MethodHandleTools:
       case '[Float]  => "F"
       case '[Unit]   => "O"
       case '[Object] => "O"
+      case _ => "O"
 
 
   def invokeVariadicArguments(

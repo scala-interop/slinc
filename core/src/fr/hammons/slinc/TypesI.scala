@@ -28,15 +28,21 @@ trait CompatibilityProof[A, Name]:
   given aNativeOutCompatible: NativeOutCompatible[A]
 object TypesI:
   trait PlatformSpecific:
+    type ConvertibleTo[A] = Convertible[*, A]
+    type ConvertibleFrom[A] = Convertible[A, *]
+
+    type :->[A] = [B] =>> Convertible[B,A]
+    type <-:[A] = [B] =>> Convertible[A,B]
+    type :?->[A] = [B] =>> PotentiallyConvertible[B,A]
+    type <-?:[A] = [B] =>> PotentiallyConvertible[A,B]
+    type PotentiallyConvertibleTo[A] = PotentiallyConvertible[*,A]
+    type PotentiallyConvertibleFrom[A] = PotentiallyConvertible[A,*]
     type StandardCapabilities = LayoutOf *::: NativeInCompatible *:::
       NativeOutCompatible *::: Send *::: Receive *::: End
 
     type CLong
     given cLongProof
-        : ContextProof[LayoutOf *::: NativeInCompatible *::: End, CLong]
-    extension (l: Int) def toCLong: CLong
-
-    extension (l: Long) def toCLong: Option[CLong]
+        : ContextProof[:->[Long] *::: <-:[Int] *::: <-?:[Long] *::: :?->[Int] *::: StandardCapabilities, CLong]
 
     type SizeT
     given sizeTProof: ContextProof[StandardCapabilities, SizeT]

@@ -11,12 +11,9 @@ import fr.hammons.slinc.NativeInCompatible
 class Mac(layoutI: LayoutI) extends TypesI.PlatformSpecific:
   import layoutI.given 
 
+
   type CLong = Long 
-  override given cLongProof: ContextProof[LayoutOf *::: NativeInCompatible *::: End, CLong] = ContextProof()
-
-  extension (l: Long) override def toCLong: Option[CLong] = Some(l)
-
-  extension (l: Int) override def toCLong: CLong = l
+  override given cLongProof: ContextProof[:->[Long] *::: <-:[Int] *::: <-?:[Long] *::: :?->[Int] *::: StandardCapabilities, CLong] = ContextProof()
 
   type SizeT = Long
   override given sizeTProof: ContextProof[StandardCapabilities, SizeT] = ContextProof()

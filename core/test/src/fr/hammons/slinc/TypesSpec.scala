@@ -6,9 +6,9 @@ trait TypesSpec(val slinc: Slinc) extends munit.FunSuite:
   test("can create maximally sized CLongs") {
     val size = summon[LayoutOf[CLong]].layout.size
     val x = if size == 4.toBytes then
-      Some(Int.MaxValue.toCLong)
+      Some(Int.MaxValue.as[CLong])
     else if size == 8.toBytes then 
-      Long.MaxValue.toCLong 
+      Long.MaxValue.maybeAs[CLong] 
     else None
 
     assert(x.isDefined)
