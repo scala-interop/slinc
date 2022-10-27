@@ -15,7 +15,7 @@ trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
 
   given Struct[TransferSpec.A] = Struct.derived
   given Struct[TransferSpec.B] = Struct.derived
-  given Struct[TransferSpec.C] = Struct.derived
+  given Struct[TransferSpec.C] = Struct.derived  
 
   test("can read and write jvm ints") {
     Scope.global {
@@ -90,15 +90,6 @@ trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
       !mem = B(2, A(2, 3), 3)
       assertEquals(!mem, B(2, A(2, 3), 3))
     }
-  }
-
-  Scope.confined {
-
-    val ts = TransferSpec.C(1, 2, 3, 4, 5, 6)
-
-    val mem = Ptr.blank[TransferSpec.C]
-    !mem = ts
-    assertEquals(!mem, ts)
   }
 
   property("can read/write structs with all primitive types") {

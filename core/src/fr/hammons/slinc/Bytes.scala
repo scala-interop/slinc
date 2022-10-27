@@ -11,6 +11,7 @@ object Bytes:
     inline def +(b: Bytes): Bytes = a + b
     inline def *(i: Int): Bytes = a * i
     inline def toLong: Long = a
+    inline def toBits: Long = a * 8
 
   given ToExpr[Bytes] with
     def apply(t: Bytes)(using Quotes) = ToExpr.LongToExpr[Long].apply(t)
