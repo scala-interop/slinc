@@ -8,7 +8,10 @@ import mill.contrib.buildinfo.BuildInfo
 import com.github.lolgab.mill.mima._
 
 import $ivy.`de.tototec::de.tobiasroeser.mill.jacoco_mill0.10:0.0.2`
-import de.tobiasroeser.mill.jacoco.JacocoTestModule
+import de.tobiasroeser.mill.jacoco.JacocoTestModule 
+
+import $ivy.`com.lihaoyi::mill-contrib-scoverage:`
+import mill.contrib.scoverage.ScoverageModule
 
 object v {
   val munit = "1.0.0-M6"
@@ -18,8 +21,9 @@ object v {
   val scoverage = "1.4.0"
 }
 
-trait BaseModule extends ScalaModule with ScalafmtModule {
+trait BaseModule extends ScoverageModule with ScalafmtModule {
   def scalaVersion = "3.2.0"
+  def scoverageVersion = "2.0.7"
 
   val munitVersion = "1.0.0-M6"
   val jmhV = "1.33"
@@ -43,7 +47,7 @@ trait BaseModule extends ScalaModule with ScalafmtModule {
     "-Ykind-projector"
   )
 
-  trait BaseTest extends Tests with TestModule.Munit with JacocoTestModule {
+  trait BaseTest extends ScoverageTests with TestModule.Munit  {
     def ivyDeps = Agg(
       ivy"org.scalameta::munit:$munitVersion",
       ivy"org.scalameta::munit-scalacheck:$munitVersion"
@@ -117,7 +121,7 @@ object j19 extends BaseModule with PublishableModule with BenchmarksModule {
   def pomSettings = pomTemplate("slinc-java-19")
 
   def javacOptions =
-    super.javacOptions() ++ Seq("--release", "19", "--enable-preview")
+    super.javacOptions() ++ Seq("--release", "17", "--enable-preview")
 
   object test extends BaseTest {
     def moduleDeps = super.moduleDeps ++ Seq(core.test)
