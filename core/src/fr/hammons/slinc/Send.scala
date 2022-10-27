@@ -15,12 +15,6 @@ object Send:
       (mem: Mem, offset: Bytes, value: A) =>
         andThen(function.to(mem, offset, value))
 
-    @targetName("complexAndThen")
-    def andThen[ZZ](
-        function: Send[A],
-        andThen: Unit => ZZ
-    ): FnCalc[(Mem, Bytes, A), ZZ] = (mem: Mem, offset: Bytes, value: A) =>
-      andThen(function.to(mem, offset, value))
 
   def staged[A <: Product](layout: StructLayout): JitCompiler => Send[A] =
     (jitCompiler: JitCompiler) =>

@@ -1,4 +1,4 @@
-package fr.hammons.slinc
+package fr.hammons.slinc.types
 
 private[slinc] enum Arch:
   case I386

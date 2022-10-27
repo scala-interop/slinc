@@ -26,12 +26,6 @@ object Receive:
     def andThen(fn: Receive[A], andThen: A => A): Receive[A] =
       (mem: Mem, offset: Bytes) => andThen(fn.from(mem, offset))
 
-    @targetName("complexAndThen")
-    def andThen[ZZ](
-        fn: Receive[A],
-        andThen: A => ZZ
-    ): FnCalc[(Mem, Bytes), ZZ] = (mem, offset) => andThen(fn.from(mem, offset))
-
   given Receive[Int] with
     def from(mem: Mem, offset: Bytes): Int = mem.readInt(offset)
 

@@ -1,4 +1,4 @@
-package fr.hammons.slinc
+package fr.hammons.slinc.container
 
 import scala.compiletime.ops.int.{S, +}
 import scala.compiletime.constValue
@@ -9,6 +9,7 @@ import scala.util.NotGiven
 import scala.collection.immutable.LazyList.cons
 import scala.compiletime.codeOf
 import scala.quoted.*
+import fr.hammons.slinc.*
 
 //opaque type ContextProof[C <: Capabilities, A] = ContextProof.ToTuple[C, A]
 class ContextProof[C <: Capabilities, A](val tup: ContextProof.ToTuple[C, A])
@@ -45,7 +46,7 @@ object ContextProof:
     case A *::: rest => 0
     case ? *::: rest => 1 + IndexOf[rest, A]
     case End         => -1155213512
-
+ 
   inline given [A, Cap <: Capabilities, N <: Int](using
       c: ContextProof[Cap, A],
       l: LocationInCap[LayoutOf, Cap, N]
@@ -92,21 +93,3 @@ object ContextProof:
   ): PotentiallyConvertible[B, A] = c.tup
     .productElement(constValue[N])
     .asInstanceOf[PotentiallyConvertible[B, A]]
-
-  // inline given [A, Cap <: Capabilities, B[A] >: ToSum[Cap,A], N <: Int](using c: => ContextProof[Cap,A], l: => LocationInCap[B,Cap,N])(using ToSum[Cap,A] <:< B[A]): B[A] = ???
-
-  // transparent inline given [A, Cap <: Capabilities](using
-  //     c: ContextProof[Cap, A]
-  // ): LayoutOf[A] = c.get[LayoutOf]
-
-  // transparent inline given [A, Cap <: Capabilities](using
-  //     c: ContextProof[Cap, A]
-  // ): NativeInCompatible[A] = c.get[NativeInCompatible]
-
-  // transparent inline given [A, Cap <: Capabilities](using c: ContextProof[Cap,A]): Send[A] = c.get[Send]
-
-  // transparent inline given [A, Cap <: Capabilities](using c: ContextProof[Cap, A]): Receive[A] = c.get[Receive]
-  // inline def apply[A] =
-  //   const
-
-  // given [A,B[_], Rest <: Capabilities](using ContextProof[])
