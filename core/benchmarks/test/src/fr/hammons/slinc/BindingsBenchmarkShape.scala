@@ -18,7 +18,7 @@ trait BindingsBenchmarkShape(val s: Slinc):
     def qsort[A](
         array: Ptr[A],
         num: Long,
-        size: Long,
+        size: SizeT,
         fn: Ptr[(Ptr[A], Ptr[A]) => A]
     ): Unit = Library.binding
 
@@ -56,7 +56,7 @@ trait BindingsBenchmarkShape(val s: Slinc):
       Cstd.qsort(
         sortingArr,
         10000,
-        4,
+        4.as[SizeT],
         Ptr.upcall((a, b) =>
           val aVal = !a
           val bVal = !b
