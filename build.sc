@@ -60,6 +60,14 @@ object core
   def javacOptions =
     super.javacOptions() ++ Seq("--release", "17")
 
+  override def scalaDocOptions = T {
+    super.scalaDocOptions() ++ Seq(
+      "-project-logo", 
+      (millSourcePath / "docs" / "_assets" / "images" / "logo.svg").toString,
+      "-project", "slinc"
+    )
+  }
+
 
   def pomSettings = pomTemplate("slinc-core")
 
