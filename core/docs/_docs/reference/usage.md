@@ -1,3 +1,7 @@
+---
+title: Usage
+---
+
 ## Introduction to Library Definitions
 
 All bindings by Slinc take place in library objects, groups of like methods that reflect C functions. When defining a library object, name is not particularly important. One merely defines an object that derives `Library`. Method bindings are done via a method binding with a name matching the C function in question, and parameters with types that match the C function in question.
@@ -54,6 +58,32 @@ Since the C standard says that `long` is at least 32-bits long, `as` is availabl
 
 The C types are meant to be analogues to the primitive types defined for C. In the table above, a number have equivalents to JVM types right now, but that may change in future versions of Slinc. If your wish is to write platform independent bindings to C libraries, then you should use the C types and forgo the standard JVM primitives. Usage of the standard JVM primitives will make your bindings brittle and platform specific at some point.
 
+## Pointers
+
+Pointers are represented in Slinc with the `Ptr` type. For example, `Ptr[Int]` is a pointer to native memory that should be readable as a JVM Int.
+
+The pointer class' operations are powered by three type classes:
+
+* `LayoutOf` - this type class provides layout information about the type in question, if it exists.
+* `Send` - this type class shows how to copy data of type `A` from the JVM into native memory.
+* `Receive` - this type class shows how to copy data of type `A` from native memory into the JVM heap.
+
+The list of operations available on a `Ptr[A]`:
+
+* `apply(n: Bytes)` - offsets the pointer by `n` bytes
+* `to[A]` - casts the pointer to type `A`
+* `!ptr` - dereferences a pointer (requires `Receive[A]` be defined)
+* `!ptr = 5` - copy data into a pointer  (requires `Send[A]` be defined)
+* `Ptr.blank[A](n: Int)` - create a blank space in native memory that can store `n` consecutive instances of `A` (requires `LayoutOf[A]` be defined)
+* `Ptr.copy[A](a: A)` - create a copy of `a` in native memory (requires `Send[A]`)
+* `Ptr.asArray(size: Int)` - attempts to copy the data at the pointer into an Array of size `size` (requires `Receive[A]`). This is a very dangerous operation that can crash your program if you don't have all the data you need. 
+
 ## Structs
 
-In C, structs are a common construct kind of like classes in the JVM. 
+The analog for C structs in Slinc are case classes that derive the `Struct` type class. An example analog for the div_t struct in the C standard library is defined as such:
+
+```scala
+case class div_t(quot: Int, rem: Int) derives Struct
+```
+
+These struct analogs can be composed with any type that has a Send and/or Receive defined for it.
