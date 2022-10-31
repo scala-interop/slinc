@@ -7,6 +7,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with: 
+          lfs: true
       - uses: coursier/cache-action@v6 
       - uses: actions/setup-java@v3
         with:
