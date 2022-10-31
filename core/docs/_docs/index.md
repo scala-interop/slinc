@@ -1,9 +1,6 @@
-![workflow status](https://github.com/markehammons/slinc/actions/workflows/ci.yml/badge.svg)![Maven Central](https://img.shields.io/maven-central/v/io.gitlab.mhammons/slinc_3)
-
-```
-S     Lin     C
-Scala Link to C
-```
+---
+layout: index
+---
 
 Slinc is a Scala 3 library that allows users to interoperate with C code via Java 17+'s foreign api. 
 
@@ -47,12 +44,3 @@ object MyLib derives Library:
 ```
 
 This library relies on the user importing the runtime from `fr.hammons.slinc.runtime`.
-
-
-
-### JVM support
-
-
-Please note that the main location for this repository is [gitlab](https://gitlab.com/mhammons/slinc). Please look there for the issue tracker and other things.
-
-The documentation website for Slinc can be found [here](https://mhammons.gitlab.io/slinc)
