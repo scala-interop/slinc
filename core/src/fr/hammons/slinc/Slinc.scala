@@ -39,6 +39,8 @@ trait Slinc:
   export container.ContextProof.given
   export receiveI.given
 
+  export types.os
+
   def sizeOf[A](using l: LayoutOf[A]) = l.layout.size.toLong.maybeAs[SizeT]
 
   def Null[A] = scopePlatformSpecific.nullPtr[A]

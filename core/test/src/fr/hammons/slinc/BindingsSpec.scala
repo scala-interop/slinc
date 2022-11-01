@@ -6,6 +6,7 @@ import munit.ScalaCheckSuite
 import org.scalacheck.Prop.*
 import org.scalacheck.Gen
 import org.scalacheck.Arbitrary
+import fr.hammons.slinc.types.OS
 
 trait BindingsSpec(val slinc: Slinc) extends ScalaCheckSuite:
   import slinc.{given, *}
@@ -23,7 +24,6 @@ trait BindingsSpec(val slinc: Slinc) extends ScalaCheckSuite:
     ): Unit = Library.binding
     def sprintf(ret: Ptr[Byte], string: Ptr[Byte], args: Variadic*): Unit =
       Library.binding
-    def time(timer: Ptr[TimeT]): TimeT = Library.binding
 
   given Struct[div_t] = Struct.derived
 
@@ -133,14 +133,23 @@ trait BindingsSpec(val slinc: Slinc) extends ScalaCheckSuite:
   }
 
   test("time") {
-    val current = System.currentTimeMillis() / 1000
-    val time = Cstd.time(Null[TimeT]).maybeAs[Long]
-    assert(
-      time.map(_ - current).map(_.abs).forall(_ < 5),
-      time.map(_ - current).map(_.abs)
-    )
 
-    assertEquals(Cstd.time(Null[TimeT]).maybeAs[Long], Some(current))
+    val current = System.currentTimeMillis() / 1000
+    val time = if os == OS.Windows then
+      object Time derives Library:
+        def _time64(timer: Ptr[TimeT]): TimeT = Library.binding
+
+      Time._time64(Null[TimeT])
+    else
+      object Time derives Library:
+        def time(timer: Ptr[TimeT]): TimeT = Library.binding
+
+      Time.time(Null[TimeT])
+
+    assert(
+      time.maybeAs[Long].map(_ - current).map(_.abs).forall(_ < 5),
+      time.maybeAs[Long].map(_ - current).map(_.abs)
+    )
   }
 
 object BindingsSpec:
