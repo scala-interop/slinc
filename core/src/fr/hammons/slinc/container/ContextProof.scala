@@ -1,95 +1,25 @@
 package fr.hammons.slinc.container
 
-import scala.compiletime.ops.int.{S, +}
+import scala.compiletime.ops.int.+
 import scala.compiletime.constValue
 import scala.compiletime.summonAll
 import scala.compiletime.erasedValue
 import scala.compiletime.error
-import scala.util.NotGiven
-import scala.collection.immutable.LazyList.cons
-import scala.compiletime.codeOf
 import scala.quoted.*
-import fr.hammons.slinc.*
 
-//opaque type ContextProof[C <: Capabilities, A] = ContextProof.ToTuple[C, A]
 class ContextProof[C <: Capabilities, A](val tup: ContextProof.ToTuple[C, A])
 
 object ContextProof:
   inline def apply[C <: Capabilities, A](): ContextProof[C, A] =
     new ContextProof(summonAll[ToTuple[C, A]])
 
+  
+
   type ToTuple[A <: Capabilities, T] <: Tuple = A match
     case head *::: tail => head[T] *: ToTuple[tail, T]
-    case End            => EmptyTuple
+    case End            => EmptyTuple 
 
-  type ToUnion[A <: Capabilities, B] = A match
-    case head *::: tail => head[B] | ToUnion[tail, B]
-    case End            => Nothing
-
-  type ToSum[A <: Capabilities, B] = A match
-    case head *::: tail => head[B] & ToSum[tail, B]
-    case End            => Nothing
-
-  inline def fetchable[C[_], A <: Capabilities]: Boolean =
-    inline erasedValue[A] match
-      case _: (C *::: ?)    => true
-      case _: (? *::: rest) => fetchable[C, rest]
-      case _: End           => false
-
-  inline def fetchIdx[C[_], A <: Capabilities]: Int =
-    inline erasedValue[A] match
-      case _: (C *::: ?)    => 0
-      case _: (? *::: rest) => fetchIdx[C, rest] + 1
-      case _: End           => error("ended")
-
-  type IndexOf[Caps, A[_]] <: Int = Caps match
-    case A *::: rest => 0
-    case ? *::: rest => 1 + IndexOf[rest, A]
-    case End         => -1155213512
- 
-  inline given [A, Cap <: Capabilities, N <: Int](using
-      c: ContextProof[Cap, A],
-      l: LocationInCap[LayoutOf, Cap, N]
-  ): LayoutOf[A] = c.tup.productElement(constValue[N]).asInstanceOf[LayoutOf[A]]
-
-  inline given [A, Cap <: Capabilities, N <: Int](using
-      c: ContextProof[Cap, A],
-      l: LocationInCap[NativeInCompatible, Cap, N]
-  ): NativeInCompatible[A] =
-    c.tup.productElement(constValue[N]).asInstanceOf[NativeInCompatible[A]]
-
-  inline given [A, Cap <: Capabilities, N <: Int](using
-      c: ContextProof[Cap, A],
-      l: LocationInCap[Send, Cap, N]
-  ): Send[A] = c.tup.productElement(constValue[N]).asInstanceOf[Send[A]]
-
-  inline given [A, Cap <: Capabilities, N <: Int](using
-      c: ContextProof[Cap, A],
-      l: LocationInCap[Receive, Cap, N]
-  ): Receive[A] = c.tup.productElement(constValue[N]).asInstanceOf[Receive[A]]
-
-  inline given [A, B, Cap <: Capabilities, N <: Int](using
-      c: ContextProof[Cap, A],
-      l: LocationInCap[Convertible[*, B], Cap, N]
-  ): Convertible[A, B] =
-    c.tup.productElement(constValue[N]).asInstanceOf[Convertible[A, B]]
-
-  inline given [A, B, Cap <: Capabilities, N <: Int](using
-      c: ContextProof[Cap, A],
-      l: LocationInCap[Convertible[B, *], Cap, N]
-  ): Convertible[B, A] =
-    c.tup.productElement(constValue[N]).asInstanceOf[Convertible[B, A]]
-
-  inline given [A, B, Cap <: Capabilities, N <: Int](using
-      c: ContextProof[Cap, A],
-      l: LocationInCap[PotentiallyConvertible[*, B], Cap, N]
-  ): PotentiallyConvertible[A, B] = c.tup
-    .productElement(constValue[N])
-    .asInstanceOf[PotentiallyConvertible[A, B]]
-
-  inline given [A, B, Cap <: Capabilities, N <: Int](using
-      c: ContextProof[Cap, A],
-      l: LocationInCap[PotentiallyConvertible[B, *], Cap, N]
-  ): PotentiallyConvertible[B, A] = c.tup
-    .productElement(constValue[N])
-    .asInstanceOf[PotentiallyConvertible[B, A]]
+  inline given reducedProof[A, Cap <: Capabilities, C[_], N <: Int](using 
+    c: ContextProof[Cap, A],
+    l: LocationInCap[C, Cap, N]
+  ): ContextProof[C *::: End, A] = new ContextProof((c.tup.productElement(constValue[N]).asInstanceOf[C[A]]) *: EmptyTuple)

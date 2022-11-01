@@ -5,6 +5,7 @@ import scala.annotation.targetName
 import scala.deriving.Mirror
 import scala.compiletime.{erasedValue, summonInline}
 import scala.util.chaining.*
+import fr.hammons.slinc.container.{ContextProof, *:::, End}
 
 trait Send[A]:
   def to(mem: Mem, offset: Bytes, value: A): Unit
@@ -14,6 +15,8 @@ object Send:
     def andThen(function: Send[A], andThen: Unit => Unit): Send[A] =
       (mem: Mem, offset: Bytes, value: A) =>
         andThen(function.to(mem, offset, value))
+
+  given [A](using c: ContextProof[Send *::: End, A]): Send[A] = c.tup.head
 
 
   def staged[A <: Product](layout: StructLayout): JitCompiler => Send[A] =

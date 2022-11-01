@@ -6,13 +6,13 @@ import fr.hammons.slinc.*
 import fr.hammons.slinc.container.*
 
 class TypesI protected[slinc] (protected val platformSpecific: TypesI.PlatformSpecific):
-  /** Fixed type referencing an 8-bit integer. Equivalent to [[Byte]] */
+  /** Fixed-size type referencing an 8-bit integer. Equivalent to [[Byte]] */
   type Int8 = Byte
-  /** Fixed type referencing a 16-bit integer. Equivalent to [[Short]] */
+  /** Fixed-size type referencing a 16-bit integer. Equivalent to [[Short]] */
   type Int16 = Short
-  /** Fixed type referencing a 32-bit integer. Equivalent to [[Int]] */
+  /** Fixed-size type referencing a 32-bit integer. Equivalent to [[Int]] */
   type Int32 = Int
-  /** Fixed type referencing a 64-bit integer. Equivalent to [[Long]] */
+  /** Fixed-size type referencing a 64-bit integer. Equivalent to [[Long]] */
   type Int64 = Long
 
   type CChar = Int8

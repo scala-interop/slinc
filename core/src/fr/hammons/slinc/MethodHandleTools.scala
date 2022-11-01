@@ -2,6 +2,7 @@ package fr.hammons.slinc
 
 import scala.quoted.*
 import java.lang.invoke.MethodHandle
+import scala.compiletime.asMatchable
 
 object MethodHandleTools:
   def exprNameMapping(expr: Expr[Any])(using Quotes): String =
@@ -71,7 +72,7 @@ object MethodHandleTools:
     val backupSymbol =
       backupMod.declaredMethods.find(_.name.endsWith(arity.toString()))
 
-    val call = methodSymbol
+    methodSymbol
       .map(ms =>
         Apply(
           Select(Ident(mod.get.termRef), ms),
@@ -89,11 +90,7 @@ object MethodHandleTools:
       .getOrElse(
         '{ MethodHandleFacade.callVariadic($mh, ${ Varargs(exprs) }*) }
       )
-
-    val expr = call
-    report.info(expr.show)
-    expr
-
+ 
   inline def getVariadicContext(s: Seq[Variadic]) =
     s.map(_.use[LayoutOf](l ?=> _ => l.layout))
 
@@ -104,7 +101,7 @@ object MethodHandleTools:
           nic match
             case i: InAllocatingTransitionNeeded[?] => i.in(d)
             case i: InTransitionNeeded[?]           => i.in(d)
-            case i: NativeInCompatible[d.type] =>
+            case i: NativeInCompatible[?] =>
               val res = d.asInstanceOf[Any]
               res
       )
@@ -183,7 +180,7 @@ object MethodHandleTools:
   )(using Quotes, Type[A]) =
     import quotes.reflect.*
 
-    val (inputTypes, retType) = TypeRepr.of[A] match
+    val (inputTypes, retType) = TypeRepr.of[A].asMatchable match
       case AppliedType(_, args) =>
         (args.init, args.last)
       case _ => report.errorAndAbort(TypeRepr.of[A].show)

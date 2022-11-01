@@ -1,7 +1,6 @@
 package fr.hammons.slinc
 
 import scala.quoted.*
-import xsbti.api.Def
 import scala.annotation.experimental
 import scala.reflect.ClassTag
 import scala.annotation.nowarn
@@ -111,10 +110,8 @@ object LibraryExp:
     )
     val block = Block(List(clsDef), newCls).asExprOf[L]
 
-    val code = '{
+    '{
       new LibraryExp[L]:
-        val instance = ${ block }
+        val instance = $block
     }
 
-    report.warning(code.show)
-    code

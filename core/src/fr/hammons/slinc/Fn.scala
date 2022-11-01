@@ -60,7 +60,6 @@ object Fn:
           }
     ).asExpr
 
-    report.info(Expr.betaReduce(lambda).show)
     Expr.betaReduce(lambda)
 
   given [Z]: Fn[() => Z, EmptyTuple, Z] with

@@ -1,6 +1,7 @@
 package fr.hammons.slinc
 
 import scala.quoted.*
+import container.{ContextProof, *:::, End}
 
 trait NativeOutCompatible[A]
 
@@ -12,6 +13,8 @@ object NativeOutCompatible:
   given NativeOutCompatible[Char] with {}
   given NativeOutCompatible[Float] with {}
   given NativeOutCompatible[Double] with {}
+
+  given [A](using c: ContextProof[NativeOutCompatible *::: End, A]): NativeOutCompatible[A] = c.tup.head
 
   def handleOutput[R](
       expr: Expr[Any | Null]
