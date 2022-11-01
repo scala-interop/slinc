@@ -1,0 +1,37 @@
+name: Publish Docs
+on: 
+  workflow_dispatch
+    
+jobs:
+  build: 
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with: 
+          lfs: true
+      - uses: coursier/cache-action@v6 
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: 17
+      - name: Build docs
+        run: ./mill core.docJar
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v1.0.4
+        with: 
+          path: out/core/docJar.dest/javadoc
+  deploy: 
+    needs: build 
+    permissions:
+      pages: write 
+      id-token: write 
+    environment: 
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest 
+    steps:
+      - name: Deploy to GitHub Pages 
+        id: deployment 
+        uses: actions/deploy-pages@v1.2.2
+

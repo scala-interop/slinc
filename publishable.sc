@@ -41,7 +41,7 @@ trait PublishableModule extends PublishModule with Mima {
    def pomTemplate(description: String) = PomSettings(
      description = description,
      organization = "fr.hammons",
-     url = "https://github.com/markehammons/SLInC",
+     url = "https://github.com/markehammons/slinc",
      licenses = Seq(License.`AGPL-3.0-or-later`,License.`LGPL-3.0-or-later`),
      versionControl = VersionControl.github("markehammons", "slinc"),
      developers = Seq(
