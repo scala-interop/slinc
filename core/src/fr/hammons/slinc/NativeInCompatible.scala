@@ -12,7 +12,6 @@ object NativeInCompatible:
   given NativeInCompatible[Double] with {}
   given NativeInCompatible[Byte] with {}
   given NativeInCompatible[Short] with {}
-  given NativeInCompatible[Char] with {}
 
   given [A](using c: ContextProof[NativeInCompatible *::: End, A]): NativeInCompatible[A] = c.tup.head
 
