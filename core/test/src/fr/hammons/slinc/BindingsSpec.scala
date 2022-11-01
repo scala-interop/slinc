@@ -23,6 +23,7 @@ trait BindingsSpec(val slinc: Slinc) extends ScalaCheckSuite:
     ): Unit = Library.binding
     def sprintf(ret: Ptr[Byte], string: Ptr[Byte], args: Variadic*): Unit =
       Library.binding
+    def time(timer: Ptr[TimeT]): TimeT = Library.binding
 
   given Struct[div_t] = Struct.derived
 
@@ -129,6 +130,17 @@ trait BindingsSpec(val slinc: Slinc) extends ScalaCheckSuite:
       Cstd.sprintf(buffer, format, 1, Ptr.copy("hello"), 2)
       assertEquals(buffer.copyIntoString(256), "1 hello: hello 2")
     }
+  }
+
+  test("time") {
+    val current = System.currentTimeMillis() / 1000
+    val time = Cstd.time(Null[TimeT]).maybeAs[Long]
+    assert(
+      time.map(_ - current).map(_.abs).forall(_ < 5),
+      time.map(_ - current).map(_.abs)
+    )
+
+    assertEquals(Cstd.time(Null[TimeT]).maybeAs[Long], Some(current))
   }
 
 object BindingsSpec:

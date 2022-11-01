@@ -90,7 +90,7 @@ object MethodHandleTools:
       .getOrElse(
         '{ MethodHandleFacade.callVariadic($mh, ${ Varargs(exprs) }*) }
       )
- 
+
   inline def getVariadicContext(s: Seq[Variadic]) =
     s.map(_.use[LayoutOf](l ?=> _ => l.layout))
 

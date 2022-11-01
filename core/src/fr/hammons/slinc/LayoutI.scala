@@ -16,7 +16,6 @@ object LayoutOf:
       c: ContextProof[LayoutOf *::: End, A]
   ): LayoutOf[A] = c.tup.head
 
-
 trait LayoutOfStruct[A <: Product] extends LayoutOf[A]:
   val layout: DataLayout
 

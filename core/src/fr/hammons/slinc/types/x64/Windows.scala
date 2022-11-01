@@ -12,3 +12,7 @@ private[slinc] class Windows(layoutI: LayoutI) extends TypesI.PlatformSpecific:
   type SizeT = Long
   override given sizeTProof: SizeTProof =
     ContextProof()
+
+  type TimeT = Long
+  override given timeTProof: TimeTProof =
+    ContextProof()

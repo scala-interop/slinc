@@ -18,7 +18,6 @@ object Send:
 
   given [A](using c: ContextProof[Send *::: End, A]): Send[A] = c.tup.head
 
-
   def staged[A <: Product](layout: StructLayout): JitCompiler => Send[A] =
     (jitCompiler: JitCompiler) =>
       jitCompiler(
@@ -168,10 +167,9 @@ object Send:
     def to(mem: Mem, offset: Bytes, value: Array[Byte]): Unit =
       mem.writeByteArray(value, offset)
 
-  given sendArrayA[A](using s: Send[A], l: LayoutOf[A]): Send[Array[A]] with 
+  given sendArrayA[A](using s: Send[A], l: LayoutOf[A]): Send[Array[A]] with
     def to(mem: Mem, offset: Bytes, value: Array[A]): Unit =
-      var i = 0 
-      while i < value.length do 
-        s.to(mem, offset + (l.layout.size*i), value(i))
+      var i = 0
+      while i < value.length do
+        s.to(mem, offset + (l.layout.size * i), value(i))
         i += 1
-      

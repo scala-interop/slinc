@@ -14,3 +14,6 @@ private[types] class Linux(layoutI: LayoutI) extends TypesI.PlatformSpecific:
 
   override given sizeTProof: SizeTProof =
     ContextProof()
+
+  type TimeT = Long
+  given timeTProof: TimeTProof = ContextProof()

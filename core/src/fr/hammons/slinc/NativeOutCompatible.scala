@@ -14,7 +14,9 @@ object NativeOutCompatible:
   given NativeOutCompatible[Float] with {}
   given NativeOutCompatible[Double] with {}
 
-  given [A](using c: ContextProof[NativeOutCompatible *::: End, A]): NativeOutCompatible[A] = c.tup.head
+  given [A](using
+      c: ContextProof[NativeOutCompatible *::: End, A]
+  ): NativeOutCompatible[A] = c.tup.head
 
   def handleOutput[R](
       expr: Expr[Any | Null]

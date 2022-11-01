@@ -41,6 +41,8 @@ trait Slinc:
 
   def sizeOf[A](using l: LayoutOf[A]) = l.layout.size.toLong.maybeAs[SizeT]
 
+  def Null[A] = scopePlatformSpecific.nullPtr[A]
+
   extension (l: Long) def toBytes = Bytes(l)
 
 object Slinc:

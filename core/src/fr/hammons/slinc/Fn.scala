@@ -6,7 +6,6 @@ import scala.util.TupledFunction
 import scala.annotation.experimental
 import scala.util.chaining.*
 
-
 trait Fn[F, Inputs <: Tuple, Output]:
   type Function = F
   // val eq: =:=[F, FnCalc[Inputs, Output]]

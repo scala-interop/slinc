@@ -18,6 +18,8 @@ class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
   def apply(index: Int)(using l: LayoutOf[A]) =
     Ptr[A](mem, offset + (l.layout.size * index))
 
+  def castTo[A]: Ptr[A] = this.asInstanceOf[Ptr[A]]
+
 object Ptr:
   extension (p: Ptr[Byte])
     def copyIntoString(maxSize: Int)(using LayoutOf[Byte]) =
@@ -57,15 +59,3 @@ object Ptr:
     val nFn = Fn.toNativeCompatible(a)
     val descriptor = Descriptor.fromFunction[A]
     Ptr[A](alloc.upcall(descriptor, nFn), Bytes(0))
-
-  // @experimental
-  // inline def upcallExp[A, B <: Tuple, R, C](a: A)(using alloc: Allocator, fnTuple: TupledFunction[A,B => R], fnTuple2: TupledFunction[C, Tuple.Map[B, NativeOut] => NativeOut[R]]): Ptr[A] =
-  //   val ret = inline erasedValue[R] match
-  //     case _: Unit => None
-  //     case _ => Some(summonInline[LayoutOf[R]].layout)
-
-  //   Fn.contramap[A,NativeOut](a, [D] => (i: NativeOut[D]) =>
-  //      i.asInstanceOf[D]
-  //   )
-
-  //   Ptr[A](alloc.upcall(LayoutI.tupLayouts[B], ret, a), Bytes(0))

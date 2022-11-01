@@ -15,7 +15,7 @@ class JitManagerSpec extends munit.FunSuite:
 
     var code: (() => Int) | Null = null
     import scala.language.unsafeNulls
-    jitManager.jitc(() => 1, _('{() => 2}), code = _)
+    jitManager.jitc(() => 1, _('{ () => 2 }), code = _)
     assertEquals(code(), 1)
   }
 
@@ -26,27 +26,29 @@ class JitManagerSpec extends munit.FunSuite:
 
     var code: (() => Int) | Null = null
     import scala.language.unsafeNulls
-    jitManager.jitc(() => 1, _('{() => 2}), code = _)
-    for 
-      i <- 0 until 4
+    jitManager.jitc(() => 1, _('{ () => 2 }), code = _)
+    for i <- 0 until 4
     yield code()
 
-    Await.result(Future{
-      var changed = false 
-      while !changed do
-        changed = code() != 1
-        Thread.sleep(100)
-    }, 15.seconds)
+    Await.result(
+      Future {
+        var changed = false
+        while !changed do
+          changed = code() != 1
+          Thread.sleep(100)
+      },
+      15.seconds
+    )
     assertEquals(code(), 2)
   }
 
   test("instant jit immediately compiles code") {
     val compiler = Compiler.make(getClass().getClassLoader().nn)
-    val instantJit = 
+    val instantJit =
       InstantJitManager(compiler)
     var code: (() => Int) | Null = null
     import scala.language.unsafeNulls
-    instantJit.jitc(() => 1, _('{() => 2}), code = _)
+    instantJit.jitc(() => 1, _('{ () => 2 }), code = _)
 
     assertEquals(code(), 2)
   }
@@ -54,10 +56,8 @@ class JitManagerSpec extends munit.FunSuite:
   test("no jit manager never compiles code") {
     var code: (() => Int) | Null = null
     import scala.language.unsafeNulls
-    NoJitManager.jitc(() => 1, _('{() => 2}), code = _)
+    NoJitManager.jitc(() => 1, _('{ () => 2 }), code = _)
 
-    for 
-      _ <- 0 until 1000
-    yield 
-      assertEquals(code(), 1)
+    for _ <- 0 until 1000
+    yield assertEquals(code(), 1)
   }

@@ -137,12 +137,12 @@ object LayoutI19 extends LayoutI.PlatformSpecific:
 
   override def toCarrierType(dataLayout: DataLayout): Class[?] =
     dataLayout match
-      case _: ByteLayout => ValueLayout.JAVA_BYTE.nn.carrier().nn
-      case _: ShortLayout => ValueLayout.JAVA_SHORT.nn.carrier().nn
+      case _: ByteLayout    => ValueLayout.JAVA_BYTE.nn.carrier().nn
+      case _: ShortLayout   => ValueLayout.JAVA_SHORT.nn.carrier().nn
       case _: IntLayout     => ValueLayout.JAVA_INT.nn.carrier().nn
       case _: LongLayout    => ValueLayout.JAVA_LONG.nn.carrier().nn
-      case _: FloatLayout => ValueLayout.JAVA_FLOAT.nn.carrier().nn
-      case _: DoubleLayout => ValueLayout.JAVA_DOUBLE.nn.carrier().nn
+      case _: FloatLayout   => ValueLayout.JAVA_FLOAT.nn.carrier().nn
+      case _: DoubleLayout  => ValueLayout.JAVA_DOUBLE.nn.carrier().nn
       case _: PointerLayout => ValueLayout.ADDRESS.nn.carrier().nn
       case _: StructLayout  => classOf[MemorySegment]
-      case _: UnionLayout => classOf[MemorySegment]
+      case _: UnionLayout   => classOf[MemorySegment]

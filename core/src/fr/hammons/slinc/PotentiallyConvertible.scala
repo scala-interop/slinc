@@ -17,12 +17,12 @@ object PotentiallyConvertible:
     def to(a: Long): Option[Long] = Some(a)
 
   transparent inline given [A, B, Cap <: Capabilities](using
-      c: ContextProof[PotentiallyConvertible[*, B] *::: End, A],
+      c: ContextProof[PotentiallyConvertible[*, B] *::: End, A]
   ): PotentiallyConvertible[A, B] = c.tup.head
 
-  transparent inline given [A, B, Cap <: Capabilities](using 
-    c: ContextProof[PotentiallyConvertible[B,*] *::: End, A]
-  ): PotentiallyConvertible[B,A] = c.tup.head
+  transparent inline given [A, B, Cap <: Capabilities](using
+      c: ContextProof[PotentiallyConvertible[B, *] *::: End, A]
+  ): PotentiallyConvertible[B, A] = c.tup.head
   given PotentiallyConvertible[Int, Int] with
     def to(a: Int): Option[Int] = Some(a)
 

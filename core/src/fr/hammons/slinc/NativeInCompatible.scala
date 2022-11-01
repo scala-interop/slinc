@@ -13,7 +13,9 @@ object NativeInCompatible:
   given NativeInCompatible[Byte] with {}
   given NativeInCompatible[Short] with {}
 
-  given [A](using c: ContextProof[NativeInCompatible *::: End, A]): NativeInCompatible[A] = c.tup.head
+  given [A](using
+      c: ContextProof[NativeInCompatible *::: End, A]
+  ): NativeInCompatible[A] = c.tup.head
 
   type PossiblyNeedsAllocator = (Expr[Allocator => Any]) | Expr[Any]
   def handleInput(

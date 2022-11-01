@@ -44,7 +44,7 @@ trait BaseModule extends ScalaModule with ScalafmtModule {
     //"-Ycc"
     )
 
-  trait BaseTest extends Tests with TestModule.Munit with JacocoTestModule {
+  trait BaseTest extends Tests with TestModule.Munit with JacocoTestModule with ScalafmtModule {
     def ivyDeps = Agg(
       ivy"org.scalameta::munit:$munitVersion",
       ivy"org.scalameta::munit-scalacheck:$munitVersion"
