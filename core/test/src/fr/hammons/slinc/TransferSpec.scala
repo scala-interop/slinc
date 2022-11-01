@@ -114,3 +114,27 @@ trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
       }
     }
   }
+
+  property("can read/write arrays of Int") {
+    forAll{ (arr: Array[Int]) => 
+      Scope.confined{
+        val mem = Ptr.copy(arr)
+        assertEquals(mem.asArray(arr.length).toSeq, arr.toSeq)
+      }
+    }
+  }
+
+  val genA = for 
+    a <- Arbitrary.arbitrary[Int]
+    b <- Arbitrary.arbitrary[Int]
+  yield TransferSpec.A(a,b)
+
+  property("can read/write arrays of A") {
+    forAll(Gen.containerOf[Array, TransferSpec.A](genA)){ (arr: Array[TransferSpec.A]) => 
+      Scope.confined{
+        val mem = Ptr.copy(arr)
+
+        assertEquals(mem.asArray(arr.length).toSeq, arr.toSeq)
+      }
+    }
+  }

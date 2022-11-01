@@ -56,3 +56,8 @@ class Mem17(private[slinc] val mem: MemorySegment) extends Mem:
   def asBase: Object = mem
   def resize(bytes: Bytes): Mem =
     Mem17(mem.address().nn.asSegment(bytes.toLong, mem.scope().nn).nn)
+
+  def readIntArray(offset: Bytes, size: Int): Array[Int] = 
+    val arr = Array.ofDim[Int](size)
+    MemorySegment.ofArray(arr).nn.copyFrom(mem)
+    arr

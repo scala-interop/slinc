@@ -167,3 +167,11 @@ object Send:
   given sendByte: Send[Array[Byte]] with
     def to(mem: Mem, offset: Bytes, value: Array[Byte]): Unit =
       mem.writeByteArray(value, offset)
+
+  given sendArrayA[A](using s: Send[A], l: LayoutOf[A]): Send[Array[A]] with 
+    def to(mem: Mem, offset: Bytes, value: Array[A]): Unit =
+      var i = 0 
+      while i < value.length do 
+        s.to(mem, offset + (l.layout.size*i), value(i))
+        i += 1
+      

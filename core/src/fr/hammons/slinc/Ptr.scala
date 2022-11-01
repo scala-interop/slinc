@@ -10,14 +10,8 @@ class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
   def `unary_!`(using receive: Receive[A]) = receive.from(mem, offset)
   def asArray(size: Int)(using
       ClassTag[A]
-  )(using l: LayoutOf[A], r: Receive[A]) =
-    var i = 0
-    val array = Array.ofDim[A](size)
-    while i < size do
-      array(i) = r.from(mem, offset + (l.layout.size * i))
-      i += 1
-
-    IArray.unsafeFromArray(array)
+  )(using l: LayoutOf[A], r: ReceiveBulk[A]) =
+    r.from(mem, offset, size)
 
   def `unary_!_=`(value: A)(using send: Send[A]) = send.to(mem, offset, value)
   def apply(bytes: Bytes) = Ptr[A](mem, offset + bytes)
@@ -26,7 +20,7 @@ class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
 
 object Ptr:
   extension (p: Ptr[Byte])
-    def copyIntoString(maxSize: Int)(using LayoutOf[Byte], Receive[Byte]) =
+    def copyIntoString(maxSize: Int)(using LayoutOf[Byte]) =
       var i = 0
       while !p(i) != 0 do i += 1
 

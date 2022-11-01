@@ -12,7 +12,7 @@ trait LayoutOf[A <: AnyKind]:
   val layout: DataLayout
 
 object LayoutOf:
-  inline given [A, Cap <: Capabilities, N <: Int](using
+  inline given [A](using
       c: ContextProof[LayoutOf *::: End, A]
   ): LayoutOf[A] = c.tup.head
 
