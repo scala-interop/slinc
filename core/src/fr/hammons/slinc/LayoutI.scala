@@ -6,9 +6,15 @@ import scala.reflect.ClassTag
 import scala.quoted.*
 import java.lang.invoke.MethodType
 import scala.annotation.varargs
+import container.*
 
 trait LayoutOf[A <: AnyKind]:
   val layout: DataLayout
+
+object LayoutOf:
+  given [A](using
+      c: ContextProof[LayoutOf *::: End, A]
+  ): LayoutOf[A] = c.tup.head
 
 trait LayoutOfStruct[A <: Product] extends LayoutOf[A]:
   val layout: DataLayout

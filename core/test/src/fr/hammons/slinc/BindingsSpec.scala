@@ -6,6 +6,7 @@ import munit.ScalaCheckSuite
 import org.scalacheck.Prop.*
 import org.scalacheck.Gen
 import org.scalacheck.Arbitrary
+import fr.hammons.slinc.types.OS
 
 trait BindingsSpec(val slinc: Slinc) extends ScalaCheckSuite:
   import slinc.{given, *}
@@ -129,6 +130,26 @@ trait BindingsSpec(val slinc: Slinc) extends ScalaCheckSuite:
       Cstd.sprintf(buffer, format, 1, Ptr.copy("hello"), 2)
       assertEquals(buffer.copyIntoString(256), "1 hello: hello 2")
     }
+  }
+
+  test("time") {
+
+    val current = System.currentTimeMillis() / 1000
+    val time = if os == OS.Windows then
+      object Time derives Library:
+        def _time64(timer: Ptr[TimeT]): TimeT = Library.binding
+
+      Time._time64(Null[TimeT])
+    else
+      object Time derives Library:
+        def time(timer: Ptr[TimeT]): TimeT = Library.binding
+
+      Time.time(Null[TimeT])
+
+    assert(
+      time.maybeAs[Long].map(_ - current).map(_.abs).forall(_ < 5),
+      time.maybeAs[Long].map(_ - current).map(_.abs)
+    )
   }
 
 object BindingsSpec:

@@ -19,7 +19,7 @@ object v {
 }
 
 trait BaseModule extends ScalaModule with ScalafmtModule {
-  def scalaVersion = "3.2.0"
+  def scalaVersion = "3.2.1"
 
   val munitVersion = "1.0.0-M6"
   val jmhV = "1.33"
@@ -40,10 +40,11 @@ trait BaseModule extends ScalaModule with ScalafmtModule {
     "-Yexplicit-nulls",
     "-Ysafe-init",
     "-source:future",
-    "-Ykind-projector"
-  )
+    "-Ykind-projector",
+    //"-Ycc"
+    )
 
-  trait BaseTest extends Tests with TestModule.Munit with JacocoTestModule {
+  trait BaseTest extends Tests with TestModule.Munit with JacocoTestModule with ScalafmtModule {
     def ivyDeps = Agg(
       ivy"org.scalameta::munit:$munitVersion",
       ivy"org.scalameta::munit-scalacheck:$munitVersion"

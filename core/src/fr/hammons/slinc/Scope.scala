@@ -27,3 +27,4 @@ object ScopeI:
     def createTempScope: TempScope
     def createGlobalScope: GlobalScope
     def createConfinedScope: ConfinedScope
+    def nullPtr[A]: Ptr[A]

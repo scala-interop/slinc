@@ -1,5 +1,7 @@
 package fr.hammons.slinc
 
+import container.*
+
 trait PotentiallyConvertible[A, B]:
   def to(a: A): Option[B]
 
@@ -14,6 +16,13 @@ object PotentiallyConvertible:
   given PotentiallyConvertible[Long, Long] with
     def to(a: Long): Option[Long] = Some(a)
 
+  transparent inline given [A, B, Cap <: Capabilities](using
+      c: ContextProof[PotentiallyConvertible[*, B] *::: End, A]
+  ): PotentiallyConvertible[A, B] = c.tup.head
+
+  transparent inline given [A, B, Cap <: Capabilities](using
+      c: ContextProof[PotentiallyConvertible[B, *] *::: End, A]
+  ): PotentiallyConvertible[B, A] = c.tup.head
   given PotentiallyConvertible[Int, Int] with
     def to(a: Int): Option[Int] = Some(a)
 

@@ -1,4 +1,4 @@
-package fr.hammons.slinc
+package fr.hammons.slinc.container
 
 import scala.reflect.ClassTag
 import scala.util.Try
@@ -6,17 +6,6 @@ import scala.util.Success
 import scala.compiletime.erasedValue
 import scala.compiletime.error
 import scala.quoted.*
-
-type Variadic = Container[LayoutOf *::: NativeInCompatible *::: End]
-
-sealed trait Capabilities
-sealed trait *:::[A[_], B <: Capabilities] extends Capabilities
-sealed trait End extends Capabilities
-
-type -*[B <: Capabilities, A[_]] <: Capabilities = B match
-  case A *::: rest => rest
-  case a *::: rest => a *::: (rest -* A)
-  case End         => End
 
 class Data[A](a: A):
   type B = A
