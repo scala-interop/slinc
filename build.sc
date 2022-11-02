@@ -63,8 +63,8 @@ object core
 
   override def scalaDocOptions = T {
     super.scalaDocOptions() ++ Seq(
-      "-project-logo", 
-      (millSourcePath / "docs" / "_assets" / "images" / "logo.svg").toString,
+      // "-project-logo", 
+      // (millSourcePath / "docs" / "_assets" / "images" / "logo.svg").toString,
       "-project", "slinc"
     )
   }

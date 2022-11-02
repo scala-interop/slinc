@@ -1,4 +1,5 @@
-![workflow status](https://github.com/markehammons/slinc/actions/workflows/ci.yml/badge.svg)![Maven Central](https://img.shields.io/maven-central/v/io.gitlab.mhammons/slinc_3)
+![workflow status](https://github.com/markehammons/slinc/actions/workflows/ci.yml/badge.svg)
+![Maven Central](https://img.shields.io/maven-central/v/fr.hammons/slinc-runtime_3)
 
 ```
 S     Lin     C
@@ -11,7 +12,7 @@ It's designed to make use of Scala's type system, macros, and runtime multi-stag
 
 ## Quickstart 
 
-Slinc is published to Maven Central for Scala 3. It is built to take advantage of the cutting edge of Scala functionality and features, so your project will most certainly need to track the latest Scala version if you want to use the latest version of Slinc. Currently, the Scala version in use is `3.2.0`. 
+Slinc is published to Maven Central for Scala 3. It is built to take advantage of the cutting edge of Scala functionality and features, so your project will most certainly need to track the latest Scala version if you want to use the latest version of Slinc. Currently, the Scala version in use is `3.2.1`. 
 
 In order to test Slinc quick, one can use scala-cli:
 
