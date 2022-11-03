@@ -168,15 +168,18 @@ Scope.global{
 }
 ```
 
-`Ptr` also has helper methods `blankArray[A](size: Int)`
+`Ptr` also has other helper methods:
 
+* `Ptr.blankArray[A](size: Int)` - creates `Ptr[A]` with space enough for `size` elements of `A` to be stored
+* `Ptr.upcall[A](a: A)` - create a function pointer that can be passed into C
+* `extension (p: Ptr[Byte]) def copyIntoString(maxSize: Int)` - Creates a `String` that is at maximum `maxSize` characters long. Format default is ASCII.
 
 ## Structs
 
 The analog for C structs in Slinc are case classes that derive the `Struct` type class. An example analog for the div_t struct in the C standard library is defined as such:
 
 ```scala
-case class div_t(quot: Int, rem: Int) derives Struct
+case class div_t(quot: CInt, rem: CI,nt) derives Struct
 ```
 
-These struct analogs can be composed with any type that has a Send and/or Receive defined for it.
+These struct analogs can be composed with other struct analogs or primitive types to create more complex types.
