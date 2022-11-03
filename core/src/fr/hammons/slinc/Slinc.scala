@@ -41,7 +41,7 @@ trait Slinc:
 
   export types.os
 
-  def sizeOf[A](using l: LayoutOf[A]) = l.layout.size.toLong.maybeAs[SizeT]
+  def sizeOf[A](using l: LayoutOf[A]) = l.layout.size.toLong.toInt.as[SizeT]
 
   def Null[A] = scopePlatformSpecific.nullPtr[A]
 

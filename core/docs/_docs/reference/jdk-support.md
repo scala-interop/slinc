@@ -15,7 +15,3 @@ Slinc currently supports the following JDKs and Platforms:
 |19|MacOS|x64|✓ |
 |19|MacOS|AArch64|?|
 
-
-* Eclipse Temurin 17.0.4.1
-* Eclipse Temurin 19
-
