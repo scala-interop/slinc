@@ -25,6 +25,8 @@ class TypesI protected[slinc] (
   type CShort = Int16
   type CInt = Int32
   type CLongLong = Int64
+  type CFloat = Float
+  type CDouble = Double
 
   /** Type representing C's long type
     * @note

@@ -9,6 +9,11 @@ import com.github.lolgab.mill.mima._
 
 import $ivy.`de.tototec::de.tobiasroeser.mill.jacoco_mill0.10:0.0.2`
 import de.tobiasroeser.mill.jacoco.JacocoTestModule
+import de.tobiasroeser.mill.jacoco.JacocoReportModule
+
+object Jacoco extends Module with JacocoReportModule {
+  override lazy val jacocoVersion = T.input("0.8.8")
+}
 
 object v {
   val munit = "1.0.0-M6"
@@ -46,6 +51,7 @@ trait BaseModule extends ScalaModule with ScalafmtModule {
     )
 
   trait BaseTest extends Tests with TestModule.Munit with JacocoTestModule with ScalafmtModule {
+    override val jacocoReportModule = Jacoco
     def ivyDeps = Agg(
       ivy"org.scalameta::munit:$munitVersion",
       ivy"org.scalameta::munit-scalacheck:$munitVersion"
