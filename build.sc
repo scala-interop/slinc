@@ -41,6 +41,7 @@ trait BaseModule extends ScalaModule with ScalafmtModule {
     "-Ysafe-init",
     "-source:future",
     "-Ykind-projector",
+    "-Vprofile"
     //"-Ycc"
     )
 

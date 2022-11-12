@@ -43,6 +43,12 @@ trait BindingsSpec(val slinc: Slinc) extends ScalaCheckSuite:
     }
   }
 
+  test("labs") {
+    platformFocus(types.x64.Linux){
+      assertEquals(Cstd.labs(-13l): Long, 13l)
+    }.getOrElse(assert(false, os))
+  }
+
   property("div calculates quotient and remainder") {
     val validIntRange =
       Gen.oneOf(Gen.choose(Int.MinValue + 1, -1), Gen.choose(1, Int.MaxValue))

@@ -4,6 +4,7 @@ import scala.annotation.targetName
 import scala.compiletime.constValue
 import fr.hammons.slinc.*
 import fr.hammons.slinc.container.*
+import dotty.tools.dotc.config.Platform
 
 class TypesI protected[slinc] (
     protected val platformSpecific: TypesI.PlatformSpecific
@@ -36,6 +37,49 @@ class TypesI protected[slinc] (
   given platformSpecific.SizeTProof = platformSpecific.sizeTProof
   given platformSpecific.TimeTProof = platformSpecific.timeTProof
 
+  type ConversionPair[A, B] = (
+      ContextProof[Conversion[A, *] *::: End, B],
+      ContextProof[Conversion[*, A] *::: End, B]
+  )
+
+  type ConversionPair2[A, B, C] = Conversion[A, B] ?=> Conversion[B, A] ?=> C
+
+  inline def proveEqFor[A, B, C](
+      cfn: Conversion[A, B] ?=> Conversion[B, A] ?=> C
+  ): C =
+    given Conversion[A, B] = _.asInstanceOf[B]
+    given Conversion[B, A] = _.asInstanceOf[A]
+    cfn
+
+  def x64LinuxFocus[A](
+      cfn: ContextSet[
+        (
+            SingleProof[Convertible[types.x64.Linux.CLong, *], CLong],
+            SingleProof[Convertible[*, types.x64.Linux], CLong]
+        )
+      ] ?=> A
+  ): Option[A] =
+    ???
+  def platformFocus[Platform <: HostDependentTypes & Singleton, B](p: Platform)(
+      cfn: ConversionPair2[
+        CLong,
+        p.CLong,
+        ConversionPair2[TimeT, p.TimeT, B]
+      ] // Tuple.Concat[
+      //   ConversionPair[SizeT, p.SizeT],
+      //   ConversionPair[TimeT, p.TimeT]
+      // ]]]
+  ): Option[B] =
+    val hdt = platformSpecific.hostDependentTypes
+    import platformSpecific.given
+    if hdt.eq(p) then
+      Some(proveEqFor[p.CLong, CLong, B] {
+        proveEqFor[p.TimeT, TimeT, B] {
+          cfn
+        }
+      })
+    else None
+
 object TypesI:
   type :->[A] = [B] =>> Convertible[B, A]
   type <-:[A] = [B] =>> Convertible[A, B]
@@ -44,9 +88,10 @@ object TypesI:
   type StandardCapabilities = LayoutOf *::: NativeInCompatible *:::
     NativeOutCompatible *::: Send *::: Receive *::: End
 
-  private[slinc] trait PlatformSpecific:
+  trait PlatformSpecific extends HostDependentTypes:
+    val hostDependentTypes: HostDependentTypes & Singleton
+
     // Type representing C's long type
-    type CLong
     type CLongProof = ContextProof[
       :->[Long] *::: <-:[Int] *::: <-?:[Long] *::: :?->[Int] *:::
         StandardCapabilities,
@@ -54,7 +99,6 @@ object TypesI:
     ]
 
     given cLongProof: CLongProof
-    type SizeT
 
     type SizeTProof = ContextProof[
       :->[Long] *::: <-:[Int] *::: <-?:[Long] *::: :?->[Int] *:::
@@ -63,7 +107,6 @@ object TypesI:
     ]
     given sizeTProof: SizeTProof
 
-    type TimeT
     type TimeTProof = ContextProof[
       :?->[Int] *::: <-?:[Int] *::: :?->[Long] *::: <-?:[Long] *:::
         StandardCapabilities,

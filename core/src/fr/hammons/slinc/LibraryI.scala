@@ -18,9 +18,10 @@ class LibraryI(platformSpecific: LibraryI.PlatformSpecific):
       val (handles, varGens) =
         MethodHandleTools.calculateMethodHandles[L](platformSpecific, addresses)
 
-    inline def binding[R]: R = ${
-      LibraryI.bindingImpl[R, Library]
-    }
+    inline def binding[R]: R = 
+      ${
+        LibraryI.bindingImpl[R, Library]
+      }
 
 object LibraryI:
   trait PlatformSpecific(layoutI: LayoutI):
