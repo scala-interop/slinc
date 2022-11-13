@@ -9,6 +9,7 @@ import scala.quoted.*
 
 class ContextProof[C <: Capabilities, A](val tup: ContextProof.ToTuple[C, A])
 
+type SingleProof[C[_], A]
 object ContextProof:
   inline def apply[C <: Capabilities, A](): ContextProof[C, A] =
     new ContextProof(summonAll[ToTuple[C, A]])
@@ -23,3 +24,8 @@ object ContextProof:
   ): ContextProof[C *::: End, A] = new ContextProof(
     (c.tup.productElement(constValue[N]).asInstanceOf[C[A]]) *: EmptyTuple
   )
+
+  // given conversionFromProof[A,B](using c: ContextProof[Conversion[*,B] *::: End, A]): Conversion[A,B] = c.tup.head
+  // given unconversionFromProof[A,B](using c: ContextProof[Conversion[B,*] *::: End,A]): Conversion[B,A] = c.tup.head
+
+  // given equalityProof[A,B](using c: ContextProof[=:=[A,*] *::: End, B]): =:=[A,B] = c.tup.head

@@ -15,46 +15,70 @@ The above defines a binding to the C standard library's `abs` method. Since the 
 
 ## Types
 
-In Slinc, you are allowed to use most of the primitive types to bind to C functions. However, these types don't all match C types. In fact, while the primitive types work the same on all platforms within Java, they do not work the same on all platforms in C. 
+In Slinc, you are allowed to use most of the primitive types to bind to C functions. These types should be used to represent Integer or Floating-point types of specific widths. Refer to the following table to see the corresponding byte-widths:
 
-For example, take the `labs` method from the standard library: `long labs(long l)`
+|JDK Primitive|Width|Kind|
+|---|---|---|
+|Byte|1 byte|Integer|
+|Short|2 bytes|Integer|
+|Int|4 bytes|Integer|
+|Long|8 bytes|Integer|
+|Float|4 bytes|Floating Point|
+|Double|8 bytes|Floating Point|
 
-Looking at this function, one might be tempted to write the following binding:
+When creating a binding, you should make sure the bit-width and kind of type matches the C function you're wanting to bind to.
+
+## Host dependent types
+
+Using the built in JVM primitives for a binding is quick and easy if you know the platform you're targeting well, but they will not result in a platform independent binding. It's for this reason you should use host dependent types. These types will map to the current platform wherever they're used, if you're running on a Slinc supported platform. Below is a table of host dependent types and their corresponding C types.
+
+|Slinc|C|
+|-----|-|
+|CChar|char|
+|CShort|short|
+|CInt|int|
+|CLong|long|
+|CLongLong|long long|
+|CFloat|float|
+|CDouble|double|
+|SizeT|size_t|
+|TimeT|time_t|
+
+
+Since these types are only guaranteed to be defined at runtime, interacting with them can be difficult. There are three ways at present to interact with these types:
+
+* Assured Conversion
+* Potential Conversion
+* Platform focus 
+
+### Assured Conversion 
+
+Assured conversion is done via the `.as` extension method on a compatible type, or to a compatible type. This method is generally available when there's some baseline guarantee about the kind and width of the type in question. For example, `CLong` is at minimum a 32-bit wide integer type, so `Int.as[CLong]` exists. It is also (for now) at maximum a 64-bit wide integer type, so `CLong.as[Long]` exists.
+
+### Potential Conversion
+
+Potential conversion is generally more available than the assured conversions. Potential conversion is done via the `maybeAs` extension method that will return an `Option` result indicating whether the conversion is valid on the current host.
+
+As an example, `Long.maybeAs[CLong]` will return `Some(l: CLong)` on X64 Linux, but `None` on X64 Windows. 
+
+### Platform Focus 
+
+The `platformFocus` method takes a platform instance and a section of code where the host dependent types have automatic conversions to and from their definitions on the host platform. As an example:
 
 ```scala
-object StdLib derives Library:
-  def labs(l: Long): Long = Library.binding
+def labs(l: CLong): CLong = Library.binding 
+
+platformFocus(x64.Linux){
+  //this line works here
+  labs(-13l) == -13l //true
+}
+
+//this line doesn't work here, cause outside of the above zone
+// CLong isn't equivalent to Long
+labs(-13l) == -13l
 ```
 
-However, while `Long` is always 64-bit on the JDK, it's 32-bit in C on Windows x64, meaning that this binding will fail to work on Windows. It is for this reason that Slinc defines the C types:
-
-|Slinc|C|JVM|
-|-----|-|----|
-|CChar|char|Byte|
-|CShort|short|Short|
-|CInt|int|Int|
-|CLong|long|?|
-|CLongLong|long long|Long|
-|CFloat|float|Float|
-|CDouble|double|Double|
-
-These base C types are meant to mirror C, and currently most have JVM equivalents.
-
-Now with with table, we have a much more appropriate binding for `labs`
-
-```scala
-object StdLib derives Library:
-  def labs(l: CLong): CLong = Library.binding
-```
-
-Now that we have the binding, let's try to use it: `StdLib.labs(???)`
-
-Looking at the table, the equivalent of `CLong` on the JVM is `?`. That is, it doesn't actually have an equivalent primitive type. On Windows x64, `CLong` is 32-bits wide, making it the equivalent of `Int`, but on Linux and Mac, it's 64-bits wide and is the equivalent of `Long`. In order to use `CLong` we need to convert from a Java primitive. The `as` and `maybeAs` extension methods on the primitives serve this purpose.
-
-* `4.as[CLong]` - The result type is `CLong`, and the conversion is certain to succeed.
-* `4.maybeAs[CLong]` - The result type is `Option[CLong]` and the conversion may fail (indicated by `None`).
-
-Since the C standard says that `long` is at least 32-bits long, `as` is available for `Int`, `Short`, and `Byte` types. All other primitive integer types can convert to `CLong` via the `maybeAs` method.
+The `platformFocus` method returns `Option[A]` where `A` is the return type of the platform focus zone. The method returns `None` if the platform selected for the zone doesn't match the host. This allows you to chain together platform specific code via `.orElse`.
 
 The C types are meant to be analogues to the primitive types defined for C. In the table above, a number have equivalents to JVM types right now, but that may change in future versions of Slinc. If your wish is to write platform independent bindings to C libraries, then you should use the C types and forgo the standard JVM primitives. Usage of the standard JVM primitives will make your bindings brittle and platform specific at some point.
 

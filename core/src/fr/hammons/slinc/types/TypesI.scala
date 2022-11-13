@@ -4,6 +4,7 @@ import scala.annotation.targetName
 import scala.compiletime.constValue
 import fr.hammons.slinc.*
 import fr.hammons.slinc.container.*
+import dotty.tools.dotc.config.Platform
 
 class TypesI protected[slinc] (
     protected val platformSpecific: TypesI.PlatformSpecific
@@ -36,6 +37,43 @@ class TypesI protected[slinc] (
   given platformSpecific.SizeTProof = platformSpecific.sizeTProof
   given platformSpecific.TimeTProof = platformSpecific.timeTProof
 
+  type ConversionPair[A, B] = (
+      ContextProof[Conversion[A, *] *::: End, B],
+      ContextProof[Conversion[*, A] *::: End, B]
+  )
+
+  type ConversionPair2[A, B, C] = Conversion[A, B] ?=> Conversion[B, A] ?=> C
+
+  inline def proveEqFor[A, B, C](
+      cfn: Conversion[A, B] ?=> Conversion[B, A] ?=> C
+  ): C =
+    given Conversion[A, B] = _.asInstanceOf[B]
+    given Conversion[B, A] = _.asInstanceOf[A]
+    cfn
+
+
+  class AssertionZone[A,B](valid: Boolean)(using Conversion[A,B], Conversion[B,A]):
+    def apply[R](cfn: Conversion[A,B] ?=> Conversion[B,A] ?=> R): Option[R] = if valid then Some(cfn) else None
+
+  
+  def platformFocus[Platform <: HostDependentTypes & Singleton, B](p: Platform)(
+      cfn: ConversionPair2[
+        CLong,
+        p.CLong,
+        ConversionPair2[SizeT, p.SizeT, ConversionPair2[TimeT, p.TimeT, B]]
+      ]
+  ): Option[B] =
+    if platformSpecific.hostDependentTypes.eq(p) then
+      Some(proveEqFor[p.CLong, CLong, B] {
+        proveEqFor[p.SizeT, SizeT, B] {
+          proveEqFor[p.TimeT, TimeT, B] {
+            cfn
+          }
+        }
+      })
+    else None
+
+
 object TypesI:
   type :->[A] = [B] =>> Convertible[B, A]
   type <-:[A] = [B] =>> Convertible[A, B]
@@ -44,9 +82,10 @@ object TypesI:
   type StandardCapabilities = LayoutOf *::: NativeInCompatible *:::
     NativeOutCompatible *::: Send *::: Receive *::: End
 
-  private[slinc] trait PlatformSpecific:
+  trait PlatformSpecific extends HostDependentTypes:
+    val hostDependentTypes: HostDependentTypes & Singleton
+
     // Type representing C's long type
-    type CLong
     type CLongProof = ContextProof[
       :->[Long] *::: <-:[Int] *::: <-?:[Long] *::: :?->[Int] *:::
         StandardCapabilities,
@@ -54,7 +93,6 @@ object TypesI:
     ]
 
     given cLongProof: CLongProof
-    type SizeT
 
     type SizeTProof = ContextProof[
       :->[Long] *::: <-:[Int] *::: <-?:[Long] *::: :?->[Int] *:::
@@ -63,7 +101,6 @@ object TypesI:
     ]
     given sizeTProof: SizeTProof
 
-    type TimeT
     type TimeTProof = ContextProof[
       :?->[Int] *::: <-?:[Int] *::: :?->[Long] *::: <-?:[Long] *:::
         StandardCapabilities,
