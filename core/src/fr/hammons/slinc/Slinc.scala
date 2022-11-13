@@ -39,6 +39,11 @@ trait Slinc:
   export container.ContextProof.given
   export receiveI.given
 
+  object x64:
+    val Linux: types.x64.Linux.type = types.x64.Linux
+    val Mac: types.x64.Mac.type = types.x64.Mac
+    val Windows: types.x64.Windows.type = types.x64.Windows
+
   export types.os
 
   def sizeOf[A](using l: LayoutOf[A]) = l.layout.size.toLong.maybeAs[SizeT]

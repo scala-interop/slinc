@@ -38,15 +38,24 @@ trait BindingsSpec(val slinc: Slinc) extends ScalaCheckSuite:
   }
 
   property("labs gives back absolute CLongs") {
-    forAll(Gen.choose(Int.MinValue + 1, Int.MaxValue)) { (i: Int) =>
-      assertEquals(Cstd.labs(i.as[CLong]).as[Long], i.toLong.abs)
-    }
-  }
+    platformFocus(x64.Linux){
+      forAll(Gen.choose(Long.MinValue+1, Long.MaxValue)) { (l: Long) =>
+        assertEquals(Cstd.labs(l): Long, l.abs)
 
-  test("labs") {
-    platformFocus(types.x64.Linux){
-      assertEquals(Cstd.labs(-13l): Long, 13l)
-    }.getOrElse(assert(false, os))
+      }
+    }.orElse(
+      platformFocus(x64.Mac) {
+        forAll(Gen.choose(Long.MinValue+1, Long.MaxValue)) { (l: Long) =>
+          assertEquals(Cstd.labs(l): Long, l.abs)
+        }
+      }
+    ).orElse(
+      platformFocus(x64.Windows){
+        forAll(Gen.choose(Int.MinValue+1, Int.MaxValue)) {(i: Int) =>
+          assertEquals(Cstd.labs(i): Int, i.abs)
+        }
+      }
+    ).getOrElse(assume(false, os))
   }
 
   property("div calculates quotient and remainder") {

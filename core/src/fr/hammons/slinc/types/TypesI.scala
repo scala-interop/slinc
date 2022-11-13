@@ -51,34 +51,28 @@ class TypesI protected[slinc] (
     given Conversion[B, A] = _.asInstanceOf[A]
     cfn
 
-  def x64LinuxFocus[A](
-      cfn: ContextSet[
-        (
-            SingleProof[Convertible[types.x64.Linux.CLong, *], CLong],
-            SingleProof[Convertible[*, types.x64.Linux], CLong]
-        )
-      ] ?=> A
-  ): Option[A] =
-    ???
+
+  class AssertionZone[A,B](valid: Boolean)(using Conversion[A,B], Conversion[B,A]):
+    def apply[R](cfn: Conversion[A,B] ?=> Conversion[B,A] ?=> R): Option[R] = if valid then Some(cfn) else None
+
+  
   def platformFocus[Platform <: HostDependentTypes & Singleton, B](p: Platform)(
       cfn: ConversionPair2[
         CLong,
         p.CLong,
-        ConversionPair2[TimeT, p.TimeT, B]
-      ] // Tuple.Concat[
-      //   ConversionPair[SizeT, p.SizeT],
-      //   ConversionPair[TimeT, p.TimeT]
-      // ]]]
+        ConversionPair2[SizeT, p.SizeT, ConversionPair2[TimeT, p.TimeT, B]]
+      ]
   ): Option[B] =
-    val hdt = platformSpecific.hostDependentTypes
-    import platformSpecific.given
-    if hdt.eq(p) then
+    if platformSpecific.hostDependentTypes.eq(p) then
       Some(proveEqFor[p.CLong, CLong, B] {
-        proveEqFor[p.TimeT, TimeT, B] {
-          cfn
+        proveEqFor[p.SizeT, SizeT, B] {
+          proveEqFor[p.TimeT, TimeT, B] {
+            cfn
+          }
         }
       })
     else None
+
 
 object TypesI:
   type :->[A] = [B] =>> Convertible[B, A]
