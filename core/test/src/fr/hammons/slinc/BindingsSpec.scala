@@ -11,6 +11,10 @@ import fr.hammons.slinc.types.OS
 trait BindingsSpec(val slinc: Slinc) extends ScalaCheckSuite:
   import slinc.{given, *}
 
+  @LibraryName("@test")
+  object Test derives Library:
+    def identity_int(i: CInt): CInt = Library.binding
+
   object Cstd derives Library:
     def abs(a: Int): Int = Library.binding
     def labs(l: CLong): CLong = Library.binding
@@ -165,6 +169,10 @@ trait BindingsSpec(val slinc: Slinc) extends ScalaCheckSuite:
       time.maybeAs[Long].map(_ - current).map(_.abs).forall(_ < 5),
       time.maybeAs[Long].map(_ - current).map(_.abs)
     )
+  }
+
+  test("int_identity") {
+    assertEquals(Test.identity_int(5), 5)
   }
 
 object BindingsSpec:

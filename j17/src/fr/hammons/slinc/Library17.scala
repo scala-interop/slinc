@@ -46,7 +46,47 @@ class Library17(layoutI: LayoutI, linker: CLinker)
 
     linker.downcallHandle(address.asInstanceOf[Addressable], md, fd).nn
 
-  override def getLookup(name: Option[String]): Lookup =
+  private val standardLibLookup = new Lookup:
+    val lookupImpl = CLinker.systemLookup.nn
+    def lookup(name: String) = lookupImpl
+      .lookup(name)
+      .nn
+      .orElseThrow(() =>
+        throw Error(s"Failed to load $name from the standard library")
+      )
+      .nn
+
+  override def getStandardLibLookup: Lookup =
+    Tools.hashCode()
+
+    standardLibLookup
+
+  override def getLibraryPathLookup(libName: String): Lookup =
+    new Lookup:
+      System.loadLibrary(libName)
+      val lookupImpl = SymbolLookup.loaderLookup().nn
+      def lookup(symbolName: String) = lookupImpl
+        .lookup(symbolName)
+        .nn
+        .orElseThrow(() =>
+          throw Error(s"Failed to load ${symbolName} from $libName")
+        )
+        .nn
+
+  override def getLocalLookup(libPath: String): Lookup =
+    new Lookup:
+      System.load(libPath)
+
+      val lookupImpl = SymbolLookup.loaderLookup().nn
+      def lookup(symbolName: String) = lookupImpl
+        .lookup(symbolName)
+        .nn
+        .orElseThrow(() =>
+          throw Error(s"Failed to load $symbolName from $libPath")
+        )
+        .nn
+
+  def getLookup(name: Option[String]): Lookup =
     import scala.jdk.OptionConverters.*
     name match
       case Some(n) =>

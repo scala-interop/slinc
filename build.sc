@@ -19,7 +19,7 @@ object v {
 }
 
 trait BaseModule extends ScalaModule with ScalafmtModule {
-  def scalaVersion = "3.2.1"
+  def scalaVersion = "3.2.0"
 
   val munitVersion = "1.0.0-M6"
   val jmhV = "1.33"

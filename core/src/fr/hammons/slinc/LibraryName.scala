@@ -5,6 +5,11 @@ import scala.quoted.*
 
 class LibraryName(name: String) extends StaticAnnotation
 
+enum LibraryLocation:
+  case Local(s: String)
+  case Resource(s: String)
+  case Path(s: String)
+
 object LibraryName:
   def libraryName[L](using Quotes, Type[L]) =
     import quotes.reflect.*
@@ -15,4 +20,8 @@ object LibraryName:
             List(Literal(StringConstant(name)))
           ) =>
         name
+    }.map{
+      case s"@$path" => LibraryLocation.Resource(path)
+      case s"#$path" => LibraryLocation.Path(path)
+      case s => LibraryLocation.Local(s)
     }.headOption
