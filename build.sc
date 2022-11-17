@@ -47,7 +47,6 @@ trait BaseModule extends ScalaModule with ScalafmtModule {
     )
 
   trait BaseTest extends Tests with TestModule.Munit with JacocoTestModule with ScalafmtModule {
-    override val jacocoReportModule = Jacoco
     def ivyDeps = Agg(
       ivy"org.scalameta::munit:$munitVersion",
       ivy"org.scalameta::munit-scalacheck:$munitVersion"
