@@ -5,4 +5,4 @@ import java.lang.foreign.SymbolLookup
 import java.lang.foreign.FunctionDescriptor
 import java.lang.foreign.ValueLayout.*
 
-class Bindings19 extends BindingsSpec(Slinc19.default)
+class StdlibSpec19 extends StdlibSpec(Slinc19.default)

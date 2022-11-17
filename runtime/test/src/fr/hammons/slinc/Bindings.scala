@@ -9,4 +9,4 @@ object Mytest derives Library:
 
 val x = println(Mytest.abs(3))
 
-class Bindings extends BindingsSpec(slinc)
+class Bindings extends StdlibSpec(slinc)
