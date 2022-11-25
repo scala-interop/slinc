@@ -33,6 +33,7 @@ object LibraryI:
     def getLocalLookup(name: String): Lookup
     def getLibraryPathLookup(name: String): Lookup
     def getStandardLibLookup: Lookup
+    def getResourceLibLookup(location: String): Lookup
 
   def checkMethodIsCompatible(using q: Quotes)(s: q.reflect.Symbol): Unit =
     import quotes.reflect.*
@@ -237,20 +238,15 @@ object LibraryI:
       platformSpecificExpr: Expr[PlatformSpecific]
   )(using Quotes, Type[L]) =
     import quotes.reflect.*
-    val name: Option[LibraryLocation] = LibraryName.libraryName[L]
+    val name: LibraryLocation = LibraryName.libraryName[L]
     name match
-      case None => '{ $platformSpecificExpr.getStandardLibLookup }
-      case Some(LibraryLocation.Local(s)) =>
+      case LibraryLocation.Standardard => '{ $platformSpecificExpr.getStandardLibLookup }
+      case LibraryLocation.Local(s) =>
         '{ $platformSpecificExpr.getLocalLookup(${ Expr(s) }) }
-      case Some(LibraryLocation.Path(s)) =>
+      case LibraryLocation.Path(s) =>
         '{ $platformSpecificExpr.getLibraryPathLookup(${ Expr(s) }) }
-      case Some(LibraryLocation.Resource(s)) =>
-        val sExpr = Expr(s)
-        val clPath = '{
-          Tools.sendResourceToCache($sExpr)
-          Tools.compileCachedResourceIfNeeded($sExpr).toAbsolutePath().nn.toString()
-        }
-        '{ $platformSpecificExpr.getLocalLookup($clPath ) }
+      case LibraryLocation.Resource(s) =>
+        '{ $platformSpecificExpr.getResourceLibLookup(${Expr(s)} ) }
 
   inline def getMethodAddress[L](l: Lookup) = ${
     getMethodAddressImpl[L]('l)

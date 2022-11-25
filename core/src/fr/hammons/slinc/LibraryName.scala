@@ -9,6 +9,7 @@ enum LibraryLocation:
   case Local(s: String)
   case Resource(s: String)
   case Path(s: String)
+  case Standardard
 
 object LibraryName:
   def libraryName[L](using Quotes, Type[L]) =
@@ -24,4 +25,4 @@ object LibraryName:
       case s"@$path" => LibraryLocation.Resource(path)
       case s"#$path" => LibraryLocation.Path(path)
       case s => LibraryLocation.Local(s)
-    }.headOption
+    }.headOption.getOrElse(LibraryLocation.Standardard)

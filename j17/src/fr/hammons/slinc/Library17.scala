@@ -46,67 +46,28 @@ class Library17(layoutI: LayoutI, linker: CLinker)
 
     linker.downcallHandle(address.asInstanceOf[Addressable], md, fd).nn
 
-  private val standardLibLookup = new Lookup:
-    val lookupImpl = CLinker.systemLookup.nn
-    def lookup(name: String) = lookupImpl
-      .lookup(name)
-      .nn
-      .orElseThrow(() =>
-        throw Error(s"Failed to load $name from the standard library")
-      )
-      .nn
-
+  class J17Lookup(s: SymbolLookup, libraryLocation: LibraryLocation) extends Lookup(libraryLocation):
+    def lookup(name: String): Object = s.lookup(name).nn.orElseThrow(() => throw this.lookupError(name)).nn
+  private val standardLibLookup = J17Lookup(CLinker.systemLookup().nn,LibraryLocation.Standardard)
   override def getStandardLibLookup: Lookup =
     Tools.hashCode()
 
     standardLibLookup
-
   override def getLibraryPathLookup(libName: String): Lookup =
-    new Lookup:
-      System.loadLibrary(libName)
-      val lookupImpl = SymbolLookup.loaderLookup().nn
-      def lookup(symbolName: String) = lookupImpl
-        .lookup(symbolName)
-        .nn
-        .orElseThrow(() =>
-          throw Error(s"Failed to load ${symbolName} from $libName")
-        )
-        .nn
+    System.loadLibrary(libName)
+    J17Lookup(SymbolLookup.loaderLookup().nn, LibraryLocation.Path(libName))
+
+
+  override def getResourceLibLookup(location: String): Lookup = 
+    Tools.sendResourceToCache(location)
+    Tools.compileCachedResourceIfNeeded(location)
+    Tools.loadCachedLibrary(location)
+    
+    J17Lookup(SymbolLookup.loaderLookup().nn, LibraryLocation.Resource(location))
 
   override def getLocalLookup(libPath: String): Lookup =
-    new Lookup:
-      System.load(libPath)
+    System.load(libPath)
 
-      val lookupImpl = SymbolLookup.loaderLookup().nn
-      def lookup(symbolName: String) = lookupImpl
-        .lookup(symbolName)
-        .nn
-        .orElseThrow(() =>
-          throw Error(s"Failed to load $symbolName from $libPath")
-        )
-        .nn
+    J17Lookup(SymbolLookup.loaderLookup().nn, LibraryLocation.Local(libPath))
 
-  def getLookup(name: Option[String]): Lookup =
-    import scala.jdk.OptionConverters.*
-    name match
-      case Some(n) =>
-        new Lookup:
-          if Files.exists(Paths.get(n)) then
-            System.load(Paths.get(n).nn.toRealPath().nn.toString())
-          else System.loadLibrary(n)
-          val l = SymbolLookup.loaderLookup().nn
-          def lookup(name: String) = l
-            .lookup(name)
-            .nn
-            .toScala
-            .getOrElse(throw Error(s"Failed to load $name from $n"))
-      case None =>
-        new Lookup:
-          val l = CLinker.systemLookup().nn
-          def lookup(name: String) = l
-            .lookup(name)
-            .nn
-            .toScala
-            .getOrElse(
-              throw Error(s"Failed to load $name from standard library")
-            )
+end Library17

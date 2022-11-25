@@ -11,42 +11,55 @@ import java.nio.channels.ByteChannel
 import java.nio.channels.Channels
 import scala.sys.process.*
 
-
-object Tools {
+object Tools:
   private val appDataStore =
-    Paths.get(os match
-      case OS.Windows =>
-        s"${System.getenv("APPDATA").nn}\\local\\slinc\\libstore\\"
-      case OS.Linux => s"${System.getProperty("user.home").nn}/.cache/slinc/"
-      case OS.Darwin =>
-        s"${System.getProperty("user.home").nn}/Library/Application Support/"
-    ).nn
+    Paths
+      .get(os match
+        case OS.Windows =>
+          s"${System.getenv("APPDATA").nn}\\local\\slinc\\libstore\\"
+        case OS.Linux => s"${System.getProperty("user.home").nn}/.cache/slinc/"
+        case OS.Darwin =>
+          s"${System.getProperty("user.home").nn}/Library/Application Support/"
+      )
+      .nn
 
-  private val sharedLibSuffix = 
+  private val sharedLibSuffix =
     os match
       case OS.Linux | OS.Darwin => ".so"
-      case OS.Windows => ".dll"
-      case OS.Unknown => throw Error("Cannot do lib compilation on this platform, it's unknown.")    
+      case OS.Windows           => ".dll"
+      case OS.Unknown =>
+        throw Error("Cannot do lib compilation on this platform, it's unknown.")
 
-  def sendResourceToCache(name: String) = 
-    println(name)
+  def sendResourceToCache(name: String): Unit =
     Files.createDirectories(appDataStore)
     val cacheLocation = appDataStore.resolve(s"$name.c")
-    if !Files.exists(appDataStore.resolve(s"$name.c")) then 
-      Files.copy(getClass().getResourceAsStream(s"/native/$name.c"), cacheLocation)
+    println(cacheLocation)
+    if !Files.exists(appDataStore.resolve(s"$name.c")) then
+      val stream = getClass().getResourceAsStream(s"/native/$name.c")
+      if stream != null then Files.copy(stream, cacheLocation)
+      else throw Error(s"Could not find resource /native/$name.c")
 
-  def compileCachedResourceIfNeeded(name: String): Path = 
+  def compileCachedResourceIfNeeded(name: String): Unit =
     val cacheLocation = appDataStore.resolve(s"$name$sharedLibSuffix")
     val headerLocation = appDataStore.resolve(s"$name.c")
 
+    println(headerLocation)
+
     if !Files.exists(cacheLocation) then
-      val cmd = Seq("clang", "-shared", "-Os", "-o", cacheLocation.nn.toAbsolutePath().nn.toString(), headerLocation.nn.toAbsolutePath().nn.toString())
-      if cmd.! != 0 then throw Error(s"failed to compile $headerLocation")
-      
-    cacheLocation.nn
+      val cmd = Seq(
+        "clang",
+        "-shared",
+        "-fvisibility=default",
+        "-Os",
+        "-o",
+        cacheLocation.nn.toAbsolutePath().nn.toString(),
+        headerLocation.nn.toAbsolutePath().nn.toString()
+      )
+      if cmd.! != 0 then throw Error(s"failed to compile $headerLocation: ${cmd.mkString(" ")}")
 
-  def loadCachedLibrary(name: String) = 
-    val cacheLocation = appDataStore.resolve(s"$name.$sharedLibSuffix")
-    System.loadLibrary(cacheLocation.nn.toAbsolutePath().nn.toString())
+  def loadCachedLibrary(name: String) =
+    val cacheLocation = appDataStore.resolve(s"$name$sharedLibSuffix")
+    println(cacheLocation)
+    System.load(cacheLocation.nn.toAbsolutePath().nn.toString())
 
-}
+end Tools

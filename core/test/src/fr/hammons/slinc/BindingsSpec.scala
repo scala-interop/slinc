@@ -174,6 +174,7 @@ trait BindingsSpec(val slinc: Slinc) extends ScalaCheckSuite:
   test("int_identity") {
     assertEquals(Test.identity_int(5), 5)
   }
+  Test.identity_int(5)
 
 object BindingsSpec:
   case class div_t(quot: Int, rem: Int)
