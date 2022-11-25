@@ -11,7 +11,7 @@ class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
   def asArray(size: Int)(using
       ClassTag[A]
   )(using l: LayoutOf[A], r: ReceiveBulk[A]) =
-    r.from(mem, offset, size)
+    r.from(mem.resize(Bytes(l.layout.size.toLong * size)), offset, size)
 
   def `unary_!_=`(value: A)(using send: Send[A]) = send.to(mem, offset, value)
   def apply(bytes: Bytes) = Ptr[A](mem, offset + bytes)
@@ -19,14 +19,16 @@ class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
     Ptr[A](mem, offset + (l.layout.size * index))
 
   def castTo[A]: Ptr[A] = this.asInstanceOf[Ptr[A]]
+  private[slinc] def resize(toBytes: Bytes) = Ptr[A](mem.resize(toBytes), offset)
 
 object Ptr:
   extension (p: Ptr[Byte])
     def copyIntoString(maxSize: Int)(using LayoutOf[Byte]) =
       var i = 0
-      while !p(i) != 0 do i += 1
+      val resizedPtr = p.resize(Bytes(maxSize))
+      while (i < maxSize && !resizedPtr(i) != 0) do i += 1
 
-      String(p.asArray(i).unsafeArray, "ASCII")
+      String(resizedPtr.asArray(i).unsafeArray, "ASCII")
   def blank[A](using layout: LayoutOf[A], alloc: Allocator): Ptr[A] =
     this.blankArray[A](1)
 

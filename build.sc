@@ -9,6 +9,7 @@ import com.github.lolgab.mill.mima._
 
 import $ivy.`de.tototec::de.tobiasroeser.mill.jacoco_mill0.10:0.0.2`
 import de.tobiasroeser.mill.jacoco.JacocoTestModule
+import de.tobiasroeser.mill.jacoco.JacocoReportModule
 
 object v {
   val munit = "1.0.0-M6"

@@ -47,6 +47,10 @@ object Receive:
   given Receive[Short] with
     def from(mem: Mem, offset: Bytes): Short = mem.readShort(offset)
 
+  given [A]: Receive[Ptr[A]] with
+    def from(mem: Mem, offset: Bytes): Ptr[A] =
+      Ptr[A](mem.readAddress(offset), Bytes(0))
+
   def staged[A <: Product](
       layout: StructLayout
   ): JitCompiler => Receive[A] =
@@ -97,7 +101,7 @@ object Receive:
       case _: ShortLayout =>
         '{ $mem.readShort($structOffset) }
       case _: PointerLayout =>
-        '{ $mem.readMem($structOffset) }
+        '{ $mem.readAddress($structOffset) }
       case u: UnionLayout =>
         ???
       case structLayout @ StructLayout(_, _, children) =>

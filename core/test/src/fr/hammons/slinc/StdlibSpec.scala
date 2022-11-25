@@ -1,6 +1,6 @@
 package fr.hammons.slinc
 
-import fr.hammons.slinc.BindingsSpec.div_t
+import fr.hammons.slinc.StdlibSpec.{div_t, ldiv_t, lldiv_t}
 import scala.util.Random
 import munit.ScalaCheckSuite
 import org.scalacheck.Prop.*
@@ -8,17 +8,15 @@ import org.scalacheck.Gen
 import org.scalacheck.Arbitrary
 import fr.hammons.slinc.types.OS
 
-trait BindingsSpec(val slinc: Slinc) extends ScalaCheckSuite:
+trait StdlibSpec(val slinc: Slinc) extends ScalaCheckSuite:
   import slinc.{given, *}
-
-  @LibraryName("@test")
-  object Test derives Library:
-    def identity_int(i: CInt): CInt = Library.binding
 
   object Cstd derives Library:
     def abs(a: Int): Int = Library.binding
     def labs(l: CLong): CLong = Library.binding
     def div(a: Int, b: Int): div_t = Library.binding
+    //def ldiv(a: Long, b: Long): ldiv_t = Library.binding
+    //def lldiv(a: Long, b: Long): lldiv_t = Library.binding
     def rand(): Int = Library.binding
     def qsort[A](
         array: Ptr[A],
@@ -27,6 +25,9 @@ trait BindingsSpec(val slinc: Slinc) extends ScalaCheckSuite:
         fn: Ptr[(Ptr[A], Ptr[A]) => Int]
     ): Unit = Library.binding
     def sprintf(ret: Ptr[Byte], string: Ptr[Byte], args: Variadic*): Unit =
+      Library.binding
+    def atof(str: Ptr[Byte]): CDouble = Library.binding
+    def strtod(str: Ptr[Byte], endptr: Ptr[Ptr[Byte]]): CDouble =
       Library.binding
 
   given Struct[div_t] = Struct.derived
@@ -77,6 +78,15 @@ trait BindingsSpec(val slinc: Slinc) extends ScalaCheckSuite:
     assertEquals(Cstd.div(5, 2), div_t(2, 1))
   }
 
+  /*
+  test("ldiv") {
+    assertEquals(Cstd.ldiv(5L, 2L), ldiv_t(2L, 1L))
+  }
+  
+  test("lldiv") {
+    assertEquals(Cstd.lldiv(5L, 2L), lldiv_t(2L, 1L))
+  }
+  */
   test("rand") {
     assertNotEquals(Cstd.rand(), Cstd.rand())
   }
@@ -171,10 +181,53 @@ trait BindingsSpec(val slinc: Slinc) extends ScalaCheckSuite:
     )
   }
 
-  test("int_identity") {
-    assertEquals(Test.identity_int(5), 5)
+  property("atof convert strings to floats") {
+    forAll { (d: Double) =>
+      Scope.confined {
+        val pStr = Ptr.copy(f"$d%f")
+        assertEqualsDouble(Cstd.atof(pStr), d, 0.1)
+      }
+    }
   }
-  Test.identity_int(5)
 
-object BindingsSpec:
+  property("strtod convert doubles from string") {
+    forAll {(d: Double) =>
+        Scope.confined {
+          val input = f"$d%f $d%f"
+          val maxSize = input.length()
+          val pStr0 = Ptr.copy(input)
+
+          val ans1 = Ptr.blank[Ptr[Byte]]
+          val a1 = Cstd.strtod(pStr0, ans1)
+          assertEqualsDouble(a1, d, 0.1)
+          val pStr1 = !ans1
+          val r1 = pStr1.copyIntoString(maxSize)
+          assertEquals(r1, f" $d%f")
+
+          val ans2 = Ptr.blank[Ptr[Byte]]
+          val a2 = Cstd.strtod(pStr1, ans2)
+          assertEqualsDouble(a2, d, 0.1)
+          assertEquals(!(!ans2), 0.toByte)
+        }
+    }
+  }
+
+  test("strtod convert bad string") {
+    Scope.confined {
+      val input = "notPossible"
+      val maxSize = input.length()
+      val pStr0 = Ptr.copy(input)
+
+      val ans1 = Ptr.blank[Ptr[Byte]]
+      val a = Cstd.strtod(pStr0, ans1)
+      assertEqualsDouble(a, 0.0d, 0.1)
+      val pStr1 = !ans1
+      val r1 = pStr1.copyIntoString(maxSize)
+      assertEquals(r1, input)
+    }
+  }
+
+object StdlibSpec:
   case class div_t(quot: Int, rem: Int)
+  case class ldiv_t(quot: Long, rem: Long)
+  case class lldiv_t(quot: Long, rem: Long)
