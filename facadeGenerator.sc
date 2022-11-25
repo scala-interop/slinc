@@ -18,7 +18,7 @@ trait FacadeGenerationModule extends JavaModule {
         |
         |import java.lang.invoke.MethodHandle;
         |
-        |class MethodHandleArity${arity} {
+        |public class MethodHandleArity${arity} {
         | ${callMethodGen(arity).mkString("\n\n")}
         |}""".stripMargin
   }

@@ -5,6 +5,7 @@ import scala.annotation.targetName
 import scala.deriving.Mirror
 import scala.compiletime.{erasedValue, summonInline}
 import scala.util.chaining.*
+import fr.hammons.slinc.container.{ContextProof, *:::, End}
 
 trait Send[A]:
   def to(mem: Mem, offset: Bytes, value: A): Unit
@@ -15,12 +16,7 @@ object Send:
       (mem: Mem, offset: Bytes, value: A) =>
         andThen(function.to(mem, offset, value))
 
-    @targetName("complexAndThen")
-    def andThen[ZZ](
-        function: Send[A],
-        andThen: Unit => ZZ
-    ): FnCalc[(Mem, Bytes, A), ZZ] = (mem: Mem, offset: Bytes, value: A) =>
-      andThen(function.to(mem, offset, value))
+  given [A](using c: ContextProof[Send *::: End, A]): Send[A] = c.tup.head
 
   def staged[A <: Product](layout: StructLayout): JitCompiler => Send[A] =
     (jitCompiler: JitCompiler) =>
@@ -170,3 +166,10 @@ object Send:
   given sendByte: Send[Array[Byte]] with
     def to(mem: Mem, offset: Bytes, value: Array[Byte]): Unit =
       mem.writeByteArray(value, offset)
+
+  given sendArrayA[A](using s: Send[A], l: LayoutOf[A]): Send[Array[A]] with
+    def to(mem: Mem, offset: Bytes, value: Array[A]): Unit =
+      var i = 0
+      while i < value.length do
+        s.to(mem, offset + (l.layout.size * i), value(i))
+        i += 1

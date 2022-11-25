@@ -19,7 +19,9 @@ trait Mem:
   def readInt(offset: Bytes): Int
   def readFloat(offset: Bytes): Float
   def readByte(offset: Bytes): Byte
-  def readMem(offset: Bytes): Mem
+  def readAddress(offset: Bytes): Mem
   def readShort(offset: Bytes): Short
   def readLong(offset: Bytes): Long
   def readDouble(offset: Bytes): Double
+
+  def readIntArray(offset: Bytes, size: Int): Array[Int]

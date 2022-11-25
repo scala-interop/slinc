@@ -1,6 +1,7 @@
 package fr.hammons.slinc
 
 import scala.quoted.*
+import container.{ContextProof, *:::, End}
 
 trait NativeInCompatible[A]
 
@@ -11,7 +12,10 @@ object NativeInCompatible:
   given NativeInCompatible[Double] with {}
   given NativeInCompatible[Byte] with {}
   given NativeInCompatible[Short] with {}
-  given NativeInCompatible[Char] with {}
+
+  given [A](using
+      c: ContextProof[NativeInCompatible *::: End, A]
+  ): NativeInCompatible[A] = c.tup.head
 
   type PossiblyNeedsAllocator = (Expr[Allocator => Any]) | Expr[Any]
   def handleInput(

@@ -2,7 +2,8 @@ package fr.hammons.slinc
 
 import jdk.incubator.foreign.MemorySegment
 import jdk.incubator.foreign.MemoryAccess
-import jdk.incubator.foreign.CLinker.C_POINTER
+import jdk.incubator.foreign.ResourceScope
+import jdk.incubator.foreign.CLinker.{C_CHAR, C_INT}
 
 class Mem17(private[slinc] val mem: MemorySegment) extends Mem:
   override def readDouble(offset: Bytes): Double =
@@ -20,7 +21,18 @@ class Mem17(private[slinc] val mem: MemorySegment) extends Mem:
     mem,
     offset.toLong
   )
-  override def readMem(offset: Bytes): Mem = ???
+
+  override def readAddress(offset: Bytes): Mem =
+    Mem17(
+      MemoryAccess
+        .getAddressAtOffset(
+          mem,
+          offset.toLong
+        ).nn.asSegment(
+          C_CHAR.nn.byteSize(),
+          ResourceScope.globalScope()
+        ).nn
+    )
 
   override def writeInt(v: Int, offset: Bytes): Unit =
     MemoryAccess.setIntAtOffset(mem, offset.toLong, v)
@@ -55,4 +67,16 @@ class Mem17(private[slinc] val mem: MemorySegment) extends Mem:
 
   def asBase: Object = mem
   def resize(bytes: Bytes): Mem =
-    Mem17(mem.address().nn.asSegment(bytes.toLong, mem.scope().nn).nn)
+    Mem17(resizeSegment(bytes))
+
+  def resizeSegment(to: Bytes): MemorySegment =
+    if to.toLong == 0 then
+      mem
+    else
+      mem.address().nn.asSegment(to.toLong, mem.scope().nn).nn
+
+  def readIntArray(offset: Bytes, size: Int): Array[Int] =
+    val arr = Array.ofDim[Int](size)
+    val resizedMem = resizeSegment(Bytes(size * C_INT.nn.byteSize()))
+    MemorySegment.ofArray(arr).nn.copyFrom(resizedMem)
+    arr

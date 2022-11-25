@@ -7,6 +7,7 @@ import scala.quoted.*
 import scala.compiletime.{erasedValue, summonInline}
 import scala.util.chaining.*
 import scala.deriving.Mirror
+import container.{ContextProof, *:::, End}
 
 class ReceiveI(val libraryPs: LibraryI.PlatformSpecific, layoutI: LayoutI):
   inline given fnReceive[A](using Fn[A, ?, ?]): Receive[A] =
@@ -26,11 +27,7 @@ object Receive:
     def andThen(fn: Receive[A], andThen: A => A): Receive[A] =
       (mem: Mem, offset: Bytes) => andThen(fn.from(mem, offset))
 
-    @targetName("complexAndThen")
-    def andThen[ZZ](
-        fn: Receive[A],
-        andThen: A => ZZ
-    ): FnCalc[(Mem, Bytes), ZZ] = (mem, offset) => andThen(fn.from(mem, offset))
+  given [A](using c: ContextProof[Receive *::: End, A]): Receive[A] = c.tup.head
 
   given Receive[Int] with
     def from(mem: Mem, offset: Bytes): Int = mem.readInt(offset)
@@ -49,6 +46,10 @@ object Receive:
 
   given Receive[Short] with
     def from(mem: Mem, offset: Bytes): Short = mem.readShort(offset)
+
+  given [A]: Receive[Ptr[A]] with
+    def from(mem: Mem, offset: Bytes): Ptr[A] =
+      Ptr[A](mem.readAddress(offset), Bytes(0))
 
   def staged[A <: Product](
       layout: StructLayout
@@ -100,7 +101,7 @@ object Receive:
       case _: ShortLayout =>
         '{ $mem.readShort($structOffset) }
       case _: PointerLayout =>
-        '{ $mem.readMem($structOffset) }
+        '{ $mem.readAddress($structOffset) }
       case u: UnionLayout =>
         ???
       case structLayout @ StructLayout(_, _, children) =>

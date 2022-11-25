@@ -14,13 +14,17 @@ trait BindingsBenchmarkShape(val s: Slinc):
   object Cstd derives Library:
     def abs(i: Int): Int = Library.binding
     def div(numer: Int, denom: Int): div_t = Library.binding
+    def labs(l: CLong): CLong = Library.binding
     // todo: needs SizeT
     def qsort[A](
         array: Ptr[A],
         num: Long,
-        size: Long,
+        size: SizeT,
         fn: Ptr[(Ptr[A], Ptr[A]) => A]
     ): Unit = Library.binding
+
+  object Cstd2 derives Library:
+    def labs(l: Long): Long = Library.binding
 
   given Struct[div_t] = Struct.derived
 
@@ -45,6 +49,14 @@ trait BindingsBenchmarkShape(val s: Slinc):
     Cstd.abs(6)
 
   @Benchmark
+  def labs = 
+    Cstd.labs(-15.as[CLong])
+
+  @Benchmark
+  def labs2 = 
+    Cstd2.labs(-15)
+
+  @Benchmark
   def div =
     Cstd.div(5, 2)
 
@@ -56,7 +68,7 @@ trait BindingsBenchmarkShape(val s: Slinc):
       Cstd.qsort(
         sortingArr,
         10000,
-        4,
+        4.as[SizeT],
         Ptr.upcall((a, b) =>
           val aVal = !a
           val bVal = !b
@@ -72,3 +84,5 @@ trait BindingsBenchmarkShape(val s: Slinc):
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   def scalasort =
     baseArr.sorted
+
+  

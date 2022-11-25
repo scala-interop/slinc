@@ -44,8 +44,10 @@ trait BaseModule extends ScoverageModule with ScalafmtModule {
     "-Yexplicit-nulls",
     "-Ysafe-init",
     "-source:future",
-    "-Ykind-projector"
-  )
+    "-Ykind-projector",
+    "-Vprofile"
+    //"-Ycc"
+    )
 
   trait BaseTest extends ScoverageTests with TestModule.Munit  {
     def ivyDeps = Agg(
@@ -60,6 +62,18 @@ object core
     with PublishableModule
     with FacadeGenerationModule
     with BenchmarksModule {
+
+  def javacOptions =
+    super.javacOptions() ++ Seq("--release", "17")
+
+  override def scalaDocOptions = T {
+    super.scalaDocOptions() ++ Seq(
+      "-project-logo", 
+      (millSourcePath / "docs" / "_assets" / "images" / "logo.svg").toString,
+      "-project", "slinc"
+    )
+  }
+
 
   def pomSettings = pomTemplate("slinc-core")
 
@@ -148,26 +162,28 @@ object j19 extends BaseModule with PublishableModule with BenchmarksModule {
   }
 }
 
-// object `runtime-test` extends BaseModule with PublishableModule {
+object `runtime` extends BaseModule with PublishableModule {
 
-//   def pomSettings = pomTemplate("slinc-full")
+  def pomSettings = pomTemplate("slinc-full")
 
-//   override def ivyDeps = Agg(
-//     ivy"fr.hammons::slinc-j17:${publishVersion()}",
-//     ivy"fr.hammons::slinc-j19:${publishVersion()}"
-//   )
+  override def moduleDeps = Seq(j17, j19)
 
-//   object test extends Tests with TestModule.Munit {
-//     def ivyDeps = Agg(ivy"org.scalameta::munit:$munitVersion")
+  // override def ivyDeps = Agg(
+  //   ivy"fr.hammons::slinc-j17:${publishVersion()}",
+  //   ivy"fr.hammons::slinc-j19:${publishVersion()}"
+  // )
 
-//     def jvm = T.input{ System.getProperty("java.version")}
-//     def moduleDeps = super.moduleDeps ++ Seq(core.test)
-//     def forkArgs = super.forkArgs() ++ Seq(
-//       "--enable-preview",
-//       "--enable-native-access=ALL-UNNAMED"
-//     ) ++ (if (jvm().startsWith("17")) {
-//             println("adding")
-//             Seq("--add-modules=jdk.incubator.foreign")
-//           } else Seq.empty)
-//   }
-// }
+  object test extends Tests with TestModule.Munit {
+    def ivyDeps = Agg(ivy"org.scalameta::munit:$munitVersion")
+
+    def jvm = T.input{ System.getProperty("java.version")}
+    def moduleDeps = super.moduleDeps ++ Seq(core.test)
+    def forkArgs = super.forkArgs() ++ Seq(
+      "--enable-preview",
+      "--enable-native-access=ALL-UNNAMED"
+    ) ++ (if (jvm().startsWith("17")) {
+            println("adding")
+            Seq("--add-modules=jdk.incubator.foreign")
+          } else Seq.empty)
+  }
+}

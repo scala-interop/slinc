@@ -1,15 +1,18 @@
 package fr.hammons.slinc
 
 import java.lang.foreign.MemorySegment
+import java.lang.foreign.MemorySession
 import java.lang.foreign.ValueLayout, ValueLayout.*
 
 object Mem19:
   val javaShort = JAVA_SHORT.nn.withBitAlignment(8)
   val javaInt = JAVA_INT.nn.withBitAlignment(8)
+  val javaChar = JAVA_CHAR.nn.withBitAlignment(8)
   val javaLong = JAVA_LONG.nn.withBitAlignment(8)
   val javaFloat = JAVA_FLOAT.nn.withBitAlignment(8)
   val javaDouble = JAVA_DOUBLE.nn.withBitAlignment(8)
   val javaByte = JAVA_BYTE.nn.withBitAlignment(8)
+  val javaAddress = ADDRESS.nn.withBitAlignment(8)
 
 class Mem19(private[slinc] val mem: MemorySegment) extends Mem:
   import Mem19.*
@@ -41,11 +44,20 @@ class Mem19(private[slinc] val mem: MemorySegment) extends Mem:
   override def readFloat(offset: Bytes): Float =
     mem.get(javaFloat, offset.toLong)
 
-  override def readMem(offset: Bytes): Mem = ???
+  override def readAddress(offset: Bytes): Mem = Mem19(
+    MemorySegment.ofAddress(
+      mem.get(javaAddress, offset.toLong).nn,
+      javaChar.nn.byteSize(),
+      MemorySession.global()
+    ).nn
+  )
 
   override def resize(bytes: Bytes): Mem = Mem19(
-    MemorySegment.ofAddress(mem.address().nn, bytes.toLong, mem.session()).nn
+    resizeSegment(bytes)
   )
+
+  def resizeSegment(to: Bytes): MemorySegment =
+    MemorySegment.ofAddress(mem.address().nn, to.toLong, mem.session()).nn
 
   override def readByte(offset: Bytes): Byte = mem.get(javaByte, offset.toLong)
 
@@ -63,3 +75,9 @@ class Mem19(private[slinc] val mem: MemorySegment) extends Mem:
 
   override def readShort(offset: Bytes): Short =
     mem.get(javaShort, offset.toLong)
+
+  override def readIntArray(offset: Bytes, size: Int): Array[Int] =
+    val arr = Array.ofDim[Int](size)
+    val resizedMem = resizeSegment(Bytes(size * javaInt.nn.byteSize()))
+    MemorySegment.ofArray(arr).nn.copyFrom(resizedMem)
+    arr

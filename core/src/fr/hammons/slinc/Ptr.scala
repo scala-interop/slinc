@@ -10,27 +10,25 @@ class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
   def `unary_!`(using receive: Receive[A]) = receive.from(mem, offset)
   def asArray(size: Int)(using
       ClassTag[A]
-  )(using l: LayoutOf[A], r: Receive[A]) =
-    var i = 0
-    val array = Array.ofDim[A](size)
-    while i < size do
-      array(i) = r.from(mem, offset + (l.layout.size * i))
-      i += 1
-
-    IArray.unsafeFromArray(array)
+  )(using l: LayoutOf[A], r: ReceiveBulk[A]) =
+    r.from(mem.resize(Bytes(l.layout.size.toLong * size)), offset, size)
 
   def `unary_!_=`(value: A)(using send: Send[A]) = send.to(mem, offset, value)
   def apply(bytes: Bytes) = Ptr[A](mem, offset + bytes)
   def apply(index: Int)(using l: LayoutOf[A]) =
     Ptr[A](mem, offset + (l.layout.size * index))
 
+  def castTo[A]: Ptr[A] = this.asInstanceOf[Ptr[A]]
+  private[slinc] def resize(toBytes: Bytes) = Ptr[A](mem.resize(toBytes), offset)
+
 object Ptr:
   extension (p: Ptr[Byte])
-    def copyIntoString(maxSize: Int)(using LayoutOf[Byte], Receive[Byte]) =
+    def copyIntoString(maxSize: Int)(using LayoutOf[Byte]) =
       var i = 0
-      while !p(i) != 0 do i += 1
+      val resizedPtr = p.resize(Bytes(maxSize))
+      while (i < maxSize && !resizedPtr(i) != 0) do i += 1
 
-      String(p.asArray(i).unsafeArray, "ASCII")
+      String(resizedPtr.asArray(i).unsafeArray, "ASCII")
   def blank[A](using layout: LayoutOf[A], alloc: Allocator): Ptr[A] =
     this.blankArray[A](1)
 
@@ -63,15 +61,3 @@ object Ptr:
     val nFn = Fn.toNativeCompatible(a)
     val descriptor = Descriptor.fromFunction[A]
     Ptr[A](alloc.upcall(descriptor, nFn), Bytes(0))
-
-  // @experimental
-  // inline def upcallExp[A, B <: Tuple, R, C](a: A)(using alloc: Allocator, fnTuple: TupledFunction[A,B => R], fnTuple2: TupledFunction[C, Tuple.Map[B, NativeOut] => NativeOut[R]]): Ptr[A] =
-  //   val ret = inline erasedValue[R] match
-  //     case _: Unit => None
-  //     case _ => Some(summonInline[LayoutOf[R]].layout)
-
-  //   Fn.contramap[A,NativeOut](a, [D] => (i: NativeOut[D]) =>
-  //      i.asInstanceOf[D]
-  //   )
-
-  //   Ptr[A](alloc.upcall(LayoutI.tupLayouts[B], ret, a), Bytes(0))

@@ -1,5 +1,7 @@
 package fr.hammons.slinc
 
+import container.*
+
 trait Convertible[A, B]:
   def to(a: A): B
 
@@ -14,3 +16,11 @@ object Convertible:
 
   given Convertible[Long, Long] with
     def to(a: Long): Long = a
+
+  inline given [A, B](using
+      c: ContextProof[Convertible[*, B] *::: End, A]
+  ): Convertible[A, B] = c.tup.head
+
+  inline given [A, B](using
+      c: ContextProof[Convertible[B, *] *::: End, A]
+  ): Convertible[B, A] = c.tup.head

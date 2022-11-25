@@ -23,10 +23,11 @@ trait Slinc:
   protected val layoutI = LayoutI(layoutPlatformSpecific)
   protected val transitionsI = TransitionsI(transitionsPlatformSpecific)
   protected val structI = StructI(layoutI, transitionsI, jitManager)
-  protected val typesI = TypesI.platformTypes(layoutI)
+  val typesI = types.TypesI.platformTypes(layoutI)
   protected val scopeI = ScopeI(scopePlatformSpecific)
   protected val libraryI = LibraryI(libraryIPlatformSpecific)
   val receiveI = ReceiveI(libraryIPlatformSpecific, layoutI)
+
   export layoutI.{*, given}
   export typesI.{*, given}
   export libraryI.*
@@ -35,10 +36,19 @@ trait Slinc:
   export transitionsI.given
   export structI.Struct
   export scopeI.given
-  export ContextProof.given
+  export container.ContextProof.given
   export receiveI.given
 
+  object x64:
+    val Linux: types.x64.Linux.type = types.x64.Linux
+    val Mac: types.x64.Mac.type = types.x64.Mac
+    val Windows: types.x64.Windows.type = types.x64.Windows
+
+  export types.os
+
   def sizeOf[A](using l: LayoutOf[A]) = l.layout.size.toLong.maybeAs[SizeT]
+
+  def Null[A] = scopePlatformSpecific.nullPtr[A]
 
   extension (l: Long) def toBytes = Bytes(l)
 

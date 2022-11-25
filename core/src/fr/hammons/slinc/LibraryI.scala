@@ -18,9 +18,10 @@ class LibraryI(platformSpecific: LibraryI.PlatformSpecific):
       val (handles, varGens) =
         MethodHandleTools.calculateMethodHandles[L](platformSpecific, addresses)
 
-    inline def binding[R]: R = ${
-      LibraryI.bindingImpl[R, Library]
-    }
+    inline def binding[R]: R =
+      ${
+        LibraryI.bindingImpl[R, Library]
+      }
 
 object LibraryI:
   trait PlatformSpecific(layoutI: LayoutI):
@@ -29,7 +30,10 @@ object LibraryI:
         descriptor: Descriptor
     ): MethodHandle
 
-    def getLookup(name: Option[String]): Lookup
+    def getLocalLookup(name: String): Lookup
+    def getLibraryPathLookup(name: String): Lookup
+    def getStandardLibLookup: Lookup
+    def getResourceLibLookup(location: String): Lookup
 
   def checkMethodIsCompatible(using q: Quotes)(s: q.reflect.Symbol): Unit =
     import quotes.reflect.*
@@ -234,8 +238,15 @@ object LibraryI:
       platformSpecificExpr: Expr[PlatformSpecific]
   )(using Quotes, Type[L]) =
     import quotes.reflect.*
-    val name = LibraryName.libraryName[L]
-    '{ $platformSpecificExpr.getLookup(${ Expr(name) }) }
+    val name: LibraryLocation = LibraryName.libraryName[L]
+    name match
+      case LibraryLocation.Standardard => '{ $platformSpecificExpr.getStandardLibLookup }
+      case LibraryLocation.Local(s) =>
+        '{ $platformSpecificExpr.getLocalLookup(${ Expr(s) }) }
+      case LibraryLocation.Path(s) =>
+        '{ $platformSpecificExpr.getLibraryPathLookup(${ Expr(s) }) }
+      case LibraryLocation.Resource(s) =>
+        '{ $platformSpecificExpr.getResourceLibLookup(${Expr(s)} ) }
 
   inline def getMethodAddress[L](l: Lookup) = ${
     getMethodAddressImpl[L]('l)
