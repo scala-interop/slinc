@@ -42,28 +42,24 @@ class Library19(layoutI: LayoutI, linker: Linker)
 
     linker.downcallHandle(address.asInstanceOf[Addressable], fd).nn
 
-  override def getLookup(name: Option[String]): Lookup =
-    import scala.jdk.OptionConverters.*
+  class J19Lookup(s: SymbolLookup, l: LibraryLocation) extends Lookup(l):
+    def lookup(name: String): Object = s.lookup(name).nn.orElseThrow(() => this.lookupError(name)).nn
+  override def getLibraryPathLookup(name: String): Lookup = 
+    System.loadLibrary(name)
 
-    name match
-      case Some(n) =>
-        new Lookup:
-          if Files.exists(Paths.get(n)) then
-            System.load(Paths.get(n).nn.toRealPath().nn.toString())
-          else System.loadLibrary(n)
-          val l = SymbolLookup.loaderLookup().nn
-          def lookup(name: String) =
-            l.lookup(name)
-              .nn
-              .toScala
-              .getOrElse(throw Error(s"Lookup of $name in $n failed"))
-      case None =>
-        new Lookup:
-          val l = linker.defaultLookup().nn
-          def lookup(name: String) = l
-            .lookup(name)
-            .nn
-            .toScala
-            .getOrElse(
-              throw Error(s"Lookup of $name in standard library failed")
-            )
+    J19Lookup(SymbolLookup.loaderLookup().nn, LibraryLocation.Path(name))
+
+  override def getLocalLookup(name: String): Lookup = 
+    System.load(name)
+
+    J19Lookup(SymbolLookup.loaderLookup().nn, LibraryLocation.Local(name))
+
+  override def getResourceLibLookup(location: String): Lookup = 
+    Tools.sendResourceToCache(location)
+    Tools.compileCachedResourceIfNeeded(location)
+    Tools.loadCachedLibrary(location)
+
+    J19Lookup(SymbolLookup.loaderLookup().nn, LibraryLocation.Resource(location))
+
+  override def getStandardLibLookup: Lookup = J19Lookup(linker.defaultLookup().nn, LibraryLocation.Standardard)
+end Library19
