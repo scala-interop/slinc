@@ -136,9 +136,6 @@ object j19 extends BaseModule with PublishableModule with BenchmarksModule {
   def moduleDeps = Seq(core)
   def pomSettings = pomTemplate("slinc-java-19")
 
-  def javacOptions =
-    super.javacOptions() ++ Seq("--release", "17", "--enable-preview")
-
   object test extends BaseTest {
     def moduleDeps = super.moduleDeps ++ Seq(core.test)
     def forkArgs = super.forkArgs() ++ Seq(
