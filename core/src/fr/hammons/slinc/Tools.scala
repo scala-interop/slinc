@@ -33,7 +33,7 @@ object Tools:
   def sendResourceToCache(name: String): Unit =
     Files.createDirectories(appDataStore)
     val cacheLocation = appDataStore.resolve(s"$name.c")
-    println(cacheLocation)
+
     if !Files.exists(appDataStore.resolve(s"$name.c")) then
       val stream = getClass().getResourceAsStream(s"/native/$name.c")
       if stream != null then Files.copy(stream, cacheLocation)
@@ -42,8 +42,6 @@ object Tools:
   def compileCachedResourceIfNeeded(name: String): Unit =
     val cacheLocation = appDataStore.resolve(s"$name$sharedLibSuffix")
     val headerLocation = appDataStore.resolve(s"$name.c")
-
-    println(headerLocation)
 
     if !Files.exists(cacheLocation) then
       val cmd = Seq(
@@ -59,7 +57,6 @@ object Tools:
 
   def loadCachedLibrary(name: String) =
     val cacheLocation = appDataStore.resolve(s"$name$sharedLibSuffix")
-    println(cacheLocation)
     System.load(cacheLocation.nn.toAbsolutePath().nn.toString())
 
 end Tools
