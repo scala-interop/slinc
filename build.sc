@@ -11,7 +11,7 @@ import $ivy.`de.tototec::de.tobiasroeser.mill.jacoco_mill0.10:0.0.2`
 import de.tobiasroeser.mill.jacoco.JacocoTestModule 
 
 import $ivy.`com.lihaoyi::mill-contrib-scoverage:`
-import mill.contrib.scoverage.ScoverageModule
+import mill.contrib.scoverage.{ScoverageModule, ScoverageReport}
 
 object v {
   val munit = "1.0.0-M6"
@@ -21,8 +21,10 @@ object v {
   val scoverage = "1.4.0"
 }
 
+object scoverage extends BaseModule with ScoverageReport 
+
 trait BaseModule extends ScoverageModule with ScalafmtModule {
-  def scalaVersion = "3.2.0"
+  def scalaVersion = "3.2.2-RC1"
   def scoverageVersion = "2.0.7"
 
   val munitVersion = "1.0.0-M6"

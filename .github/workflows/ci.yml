@@ -33,7 +33,6 @@ jobs:
 
       - name: Java 19 Implementation test
         run: ./mill j19.test 
-      - run: ./mill de.tobiasroeser.mill.jacoco.Jacoco/jacocoReportFull
       - name: Runtime 17 implementation tests 
         run: ./mill runtime.test 
         env: 
@@ -41,10 +40,12 @@ jobs:
         
       - name: Runtime 19 implementation tests 
         run: ./mill runtime.test
+      - run: ./mill scoverage.xmlReportAll
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3 
         with:
-          directory: out/de/tobiasroeser/mill/jacoco/Jacoco/jacocoReportFull.dest
+          directory: out/scoverage/xmlReportAll.dest
           flags: unittests
   # benchmarks:
   #   needs: unit-tests
