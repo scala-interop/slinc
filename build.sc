@@ -24,7 +24,7 @@ object v {
 object scoverage extends BaseModule with ScoverageReport 
 
 trait BaseModule extends ScoverageModule with ScalafmtModule {
-  def scalaVersion = "3.2.2-RC1"
+  def scalaVersion = "3.2.2-RC2"
   def scoverageVersion = "2.0.7"
 
   val munitVersion = "1.0.0-M6"

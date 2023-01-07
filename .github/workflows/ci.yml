@@ -22,7 +22,9 @@ jobs:
             17
             19
       - name: Core tests
-        run: ./mill core.test
+        run: |
+          ./mill core.compile
+          ./mill core.test
         env: 
           JAVA_HOME: ${{ env.JAVA_HOME_17_X64}}
           
