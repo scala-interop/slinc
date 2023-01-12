@@ -16,7 +16,7 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
     assertEquals(Test.identity_int(5), 5)
   }
 
-  test("i31") {
+  test("issue 31 fix") {
     Scope.confined {
       val struct = Test.I31Struct(
         Ptr.copy("hello world!")

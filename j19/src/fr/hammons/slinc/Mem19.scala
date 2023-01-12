@@ -77,7 +77,7 @@ class Mem19(private[slinc] val mem: MemorySegment) extends Mem:
   override def readShort(offset: Bytes): Short =
     mem.get(javaShort, offset.toLong)
 
-  def writeAddress(v: Mem, offset: Bytes): Unit = mem.set(javaAddress, offset.toLong, v.asAddress.asInstanceOf[Addressable])
+  def writeAddress(v: Mem, offset: Bytes): Unit = mem.set(javaAddress, offset.toLong, v.asBase.asInstanceOf[Addressable])
 
   override def readIntArray(offset: Bytes, size: Int): Array[Int] =
     val arr = Array.ofDim[Int](size)
