@@ -115,9 +115,9 @@ object LibraryI:
       Type[L]
   ) =
     import quotes.reflect.*
-    val library = LibraryI.getLibrary[L]
-
     val owningClass = MacroHelpers.findOwningClass(Symbol.spliceOwner)
+    val library = LibraryI.getLibrary[L](owningClass)
+
 
     val methodSymbol = MacroHelpers.findOwningMethod(Symbol.spliceOwner)
     val methodPositionExpr = MacroHelpers
