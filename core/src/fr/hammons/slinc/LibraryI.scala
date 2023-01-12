@@ -5,7 +5,6 @@ import java.lang.invoke.MethodHandle
 import NativeInCompatible.PossiblyNeedsAllocator
 import scala.annotation.nowarn
 
-
 class LibraryI(platformSpecific: LibraryI.PlatformSpecific):
   trait Library[+L]:
     val handles: IArray[MethodHandle]
@@ -116,7 +115,7 @@ object LibraryI:
       Type[L]
   ) =
     import quotes.reflect.*
-    val library = LibraryI.getLibrary[L](MacroHelpers.findOwningClass(Symbol.spliceOwner))
+    val library = LibraryI.getLibrary[L]
 
     val owningClass = MacroHelpers.findOwningClass(Symbol.spliceOwner)
 
