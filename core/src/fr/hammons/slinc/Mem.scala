@@ -12,6 +12,7 @@ trait Mem:
   def writeShort(v: Short, offset: Bytes): Unit
   def writeByte(v: Byte, offset: Bytes): Unit
   def writeByteArray(v: Array[Byte], offset: Bytes): Unit
+  def writeAddress(v: Mem, offset: Bytes): Unit
 
   def writeInt(v: Int, offset: Bytes): Unit
   def writeIntArray(v: Array[Int], offset: Bytes): Unit

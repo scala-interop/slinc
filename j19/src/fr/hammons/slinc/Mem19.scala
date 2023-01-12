@@ -3,6 +3,7 @@ package fr.hammons.slinc
 import java.lang.foreign.MemorySegment
 import java.lang.foreign.MemorySession
 import java.lang.foreign.ValueLayout, ValueLayout.*
+import java.lang.foreign.Addressable
 
 object Mem19:
   val javaShort = JAVA_SHORT.nn.withBitAlignment(8)
@@ -75,6 +76,8 @@ class Mem19(private[slinc] val mem: MemorySegment) extends Mem:
 
   override def readShort(offset: Bytes): Short =
     mem.get(javaShort, offset.toLong)
+
+  def writeAddress(v: Mem, offset: Bytes): Unit = mem.set(javaAddress, offset.toLong, v.asBase.asInstanceOf[Addressable])
 
   override def readIntArray(offset: Bytes, size: Int): Array[Int] =
     val arr = Array.ofDim[Int](size)

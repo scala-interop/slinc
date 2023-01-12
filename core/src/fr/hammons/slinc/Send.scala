@@ -173,3 +173,10 @@ object Send:
       while i < value.length do
         s.to(mem, offset + (l.layout.size * i), value(i))
         i += 1
+
+  private val ptrSend: Send[Ptr[Any]] = new Send[Ptr[Any]]:
+    def to(mem: Mem, offset: Bytes, value: Ptr[Any]): Unit = 
+      mem.writeAddress(value.mem, offset)
+
+
+  given sendPtr[A]: Send[Ptr[A]] = ptrSend.asInstanceOf[Send[Ptr[A]]]

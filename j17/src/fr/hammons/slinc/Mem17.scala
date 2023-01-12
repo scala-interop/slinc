@@ -4,6 +4,7 @@ import jdk.incubator.foreign.MemorySegment
 import jdk.incubator.foreign.MemoryAccess
 import jdk.incubator.foreign.ResourceScope
 import jdk.incubator.foreign.CLinker.{C_CHAR, C_INT}
+import jdk.incubator.foreign.Addressable
 
 class Mem17(private[slinc] val mem: MemorySegment) extends Mem:
   override def readDouble(offset: Bytes): Double =
@@ -59,6 +60,9 @@ class Mem17(private[slinc] val mem: MemorySegment) extends Mem:
     MemoryAccess.setDoubleAtOffset(mem, offset.toLong, v)
   override def writeShort(v: Short, offset: Bytes): Unit =
     MemoryAccess.setShortAtOffset(mem, offset.toLong, v)
+
+  override def writeAddress(v: Mem, offset: Bytes): Unit = 
+    MemoryAccess.setAddress(mem, v.asBase.asInstanceOf[Addressable])
 
   override def readByte(offset: Bytes): Byte =
     MemoryAccess.getByteAtOffset(mem, offset.toLong)
