@@ -115,9 +115,9 @@ object LibraryI:
       Type[L]
   ) =
     import quotes.reflect.*
-    val library = LibraryI.getLibrary[L]
-
     val owningClass = MacroHelpers.findOwningClass(Symbol.spliceOwner)
+    val library = LibraryI.getLibrary[L](owningClass)
+
 
     val methodSymbol = MacroHelpers.findOwningMethod(Symbol.spliceOwner)
     val methodPositionExpr = MacroHelpers
@@ -153,13 +153,12 @@ object LibraryI:
       .filter(!_.isExprOf[Seq[Variadic]])
 
     val allocationlessInputs =
-      mappedInputs.filter(_.isExprOf[Object]).map(_.asExprOf[Object])
+      mappedInputs.filter(!_.isExprOf[Allocator => Object]).map(_.asExprOf[Any])
 
     val allocInputs = makeAllTakeAlloc(mappedInputs)
 
     val code: Expr[R] =
       if inputs.size == mappedInputs.size then
-
         if allocationlessInputs == mappedInputs && !needsAllocator(methodSymbol)
         then
           val invokation =
@@ -214,14 +213,20 @@ object LibraryI:
             }
           )
         }
-    report.warning(code.asTerm.show(using Printer.TreeShortCode))
+    report.info(
+      s"""|Binding doesn't need allocator: ${allocationlessInputs == mappedInputs && !needsAllocator(methodSymbol)}
+          |Binding has return that requires allocator: ${needsAllocator(methodSymbol)}
+          |Binding has inputs that require allocation: ${allocationlessInputs != mappedInputs}
+          |Allocationless inputs: ${allocationlessInputs.map(_.asTerm.show(using Printer.TreeShortCode))}
+          |Mapped inputs: ${mappedInputs.map(_.asTerm.show(using Printer.TreeShortCode))}
+          |Generated code: ${code.asTerm.show(using Printer.TreeShortCode)}""".stripMargin
+    )
     code
 
-  def getLibrary[L[_]](using Quotes, Type[L]): Expr[L[Any]] =
+  def getLibrary[L[_]](using q: Quotes)(using Type[L])(owningClass: q.reflect.Symbol): Expr[L[Any]] =
     import quotes.reflect.*
-    val c = MacroHelpers.findOwningClass(Symbol.spliceOwner)
 
-    TypeRepr.of[L].appliedTo(c.typeRef).asType match
+    TypeRepr.of[L].appliedTo(owningClass.typeRef).asType match
       case '[l] =>
         Expr.summon[l] match
           case None =>
