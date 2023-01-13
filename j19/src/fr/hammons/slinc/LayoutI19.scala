@@ -55,10 +55,18 @@ object LayoutI19 extends LayoutI.PlatformSpecific:
           case None        => JAVA_DOUBLE.nn
           case Some(value) => JAVA_DOUBLE.nn.withName(value).nn
 
+      case p: PaddingLayout =>
+        p.name match
+          case None => MemoryLayout.paddingLayout(p.size.toLong * 8).nn
+          case Some(value) => throw Error("Why are you trying to name a Padding layout???")
+        
+
       case StructLayout(name, size, children) =>
         val childLayouts = children.map {
-          case StructMember(childLayout, name, _) =>
+          case StructMember(childLayout, Some(name), _) =>
             dataLayout2MemoryLayout(childLayout).withName(name).nn
+          case StructMember(childLayout, _, _) => 
+            dataLayout2MemoryLayout(childLayout)
         }
         val base = MemoryLayout.structLayout(childLayouts*).nn
         name match
@@ -70,34 +78,6 @@ object LayoutI19 extends LayoutI.PlatformSpecific:
     Bytes(ValueLayout.JAVA_DOUBLE.nn.byteSize()),
     ByteOrder.HostDefault
   )
-
-  override def getStructLayout[T](
-      layouts: DataLayout*
-  )(using po: ProductOf[T], ct: ClassTag[T]): StructLayout =
-    val gl = MemoryLayout.structLayout(layouts.map(dataLayout2MemoryLayout)*).nn
-
-    val members =
-      val paths = gl
-        .memberLayouts()
-        .nn
-        .asScala
-        .map(_.name().nn.get())
-        .map(PathElement.groupElement)
-      paths
-        .map(gl.byteOffset(_))
-        .map(Bytes.apply)
-        .zip(layouts)
-        .map((offset, layout) => StructMember(layout, layout.name.get, offset))
-
-    StructLayout(
-      gl.name().nn.toScala,
-      Bytes(gl.byteSize()),
-      Bytes(gl.byteAlignment()),
-      ByteOrder.HostDefault,
-      po.fromProduct(_).asInstanceOf[Product],
-      ct.runtimeClass,
-      members.toVector
-    )
 
   override val pointerLayout: PointerLayout = PointerLayout(
     None,

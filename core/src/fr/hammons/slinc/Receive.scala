@@ -101,15 +101,15 @@ object Receive:
       case _: ShortLayout =>
         '{ $mem.readShort($structOffset) }
       case _: PointerLayout =>
-        '{ $mem.readAddress($structOffset) }
+        '{ Ptr($mem.readAddress($structOffset), Bytes(0)) }
       case u: UnionLayout =>
         ???
       case structLayout @ StructLayout(_, _, children) =>
         val transformIndex = transformIndices(
           structLayout.clazz.getName().nn
         )
-        val exprs = children.map {
-          case StructMember(childLayout, _, childOffset) =>
+        val exprs = children.collect {
+          case StructMember(childLayout, Some(_), childOffset) =>
             stagedHelper(
               childLayout,
               transformIndices,

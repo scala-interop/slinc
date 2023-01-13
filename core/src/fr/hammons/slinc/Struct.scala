@@ -27,7 +27,7 @@ class StructI(
       val layout: StructLayout =
         structLayout[A]
 
-      private val offsetsArray = IArray.from(layout.children.map(_.offset))
+      private val offsetsArray = layout.offsets
 
       private var sender: Send[A] = uninitialized
 

@@ -1,7 +1,7 @@
 package fr.hammons.slinc
 
 import scala.compiletime.{summonInline, erasedValue, constValue}
-import scala.deriving.Mirror
+import scala.deriving.Mirror.ProductOf
 import scala.reflect.ClassTag
 import scala.quoted.*
 import java.lang.invoke.MethodType
@@ -20,7 +20,6 @@ trait LayoutOfStruct[A <: Product] extends LayoutOf[A]:
   val layout: DataLayout
 
 class LayoutI(platformSpecific: LayoutI.PlatformSpecific):
-  import platformSpecific.getStructLayout
   given LayoutOf[Char] with
     val layout = platformSpecific.shortLayout
 
@@ -74,12 +73,59 @@ class LayoutI(platformSpecific: LayoutI.PlatformSpecific):
   given [A]: LayoutOf[Ptr[A]] = ptrGen.asInstanceOf[LayoutOf[Ptr[A]]]
 
   inline def structLayout[P <: Product](using
-      m: Mirror.ProductOf[P],
+      m: ProductOf[P],
       ct: ClassTag[P]
   ) =
     getStructLayout[P](
       structLayoutHelper[Tuple.Zip[m.MirroredElemLabels, m.MirroredElemTypes]]*
     )
+
+  def genLayoutList(remainingLayouts: Seq[DataLayout], alignment: Long, currentLocation: Long, finishedLayout: Seq[DataLayout]): Seq[DataLayout] = 
+    remainingLayouts match 
+      case head :: next => 
+        val headAlignment = head.alignment.toLong
+        val misalignment = currentLocation % headAlignment
+        val toAdd = if misalignment == 0 then 
+          Seq(head)
+        else 
+          val paddingNeeded = headAlignment - misalignment
+
+          Seq(PaddingLayout(Bytes(paddingNeeded), head.byteOrder), head)
+        genLayoutList(next, alignment, currentLocation + toAdd.view.map(_.size.toLong).sum, finishedLayout ++ toAdd)
+      case _ => 
+        val misalignment = (currentLocation % alignment)
+        finishedLayout ++
+          (if misalignment != 0 then 
+            Seq(PaddingLayout(Bytes(alignment - misalignment), ByteOrder.HostDefault))
+          else 
+            Seq.empty
+          )
+
+  def getStructLayout[T](
+      layouts: DataLayout*
+  )(using po: ProductOf[T], ct: ClassTag[T]): StructLayout =
+    val alignment = layouts.view.map(_.alignment.toLong).max
+
+
+    val generatedLayout = genLayoutList(layouts, alignment, 0, Seq.empty)
+
+    val members = generatedLayout match 
+      case head :: next => next.foldLeft(Vector(StructMember(head, head.name, Bytes(0))) -> head.size) {
+        case ((seq, currentOffset), layout) => 
+          (seq :+ StructMember(layout, layout.name, currentOffset)) -> (currentOffset + layout.size)
+      }._1
+      case _ => Vector.empty
+
+    StructLayout(
+      None,
+      Bytes(members.view.map(_.layout.size.toLong).sum),
+      Bytes(members.view.map(_.layout.alignment.toLong).max),
+      ByteOrder.HostDefault,
+      po.fromProduct(_).asInstanceOf[Product],
+      ct.runtimeClass,
+      members
+    )
+  
 
   private inline def structLayoutHelper[T <: Tuple]: List[DataLayout] =
     inline erasedValue[T] match
@@ -97,9 +143,6 @@ object LayoutI:
     val doubleLayout: DoubleLayout
     val pointerLayout: PointerLayout
     val byteLayout: ByteLayout
-    def getStructLayout[T](
-        layouts: DataLayout*
-    )(using Mirror.ProductOf[T], scala.reflect.ClassTag[T]): StructLayout
     def toCarrierType(dataLayout: DataLayout): Class[?]
 
   def getLayoutFor[A](using Quotes, Type[A]) =
