@@ -3,8 +3,9 @@ package fr.hammons.slinc
 import jdk.incubator.foreign.MemorySegment
 import jdk.incubator.foreign.MemoryAccess
 import jdk.incubator.foreign.ResourceScope
-import jdk.incubator.foreign.CLinker.{C_CHAR, C_INT}
+import jdk.incubator.foreign.CLinker.{C_CHAR, C_INT, C_POINTER}
 import jdk.incubator.foreign.Addressable
+import jdk.incubator.foreign.MemoryAddress
 
 class Mem17(private[slinc] val mem: MemorySegment) extends Mem:
   override def readDouble(offset: Bytes): Double =
@@ -24,13 +25,12 @@ class Mem17(private[slinc] val mem: MemorySegment) extends Mem:
   )
 
   override def readAddress(offset: Bytes): Mem =
+    val addr: MemoryAddress = MemoryAccess
+      .getAddressAtOffset(mem, offset.toLong).nn    
+
     Mem17(
-      MemoryAccess
-        .getAddressAtOffset(
-          mem,
-          offset.toLong
-        ).nn.asSegment(
-          C_CHAR.nn.byteSize(),
+      addr.asSegment(
+          C_POINTER.nn.byteSize(),
           ResourceScope.globalScope()
         ).nn
     )
@@ -62,7 +62,7 @@ class Mem17(private[slinc] val mem: MemorySegment) extends Mem:
     MemoryAccess.setShortAtOffset(mem, offset.toLong, v)
 
   override def writeAddress(v: Mem, offset: Bytes): Unit = 
-    MemoryAccess.setAddress(mem, v.asBase.asInstanceOf[Addressable])
+    MemoryAccess.setAddressAtOffset(mem, offset.toLong, v.asAddress.asInstanceOf[Addressable])
 
   override def readByte(offset: Bytes): Byte =
     MemoryAccess.getByteAtOffset(mem, offset.toLong)

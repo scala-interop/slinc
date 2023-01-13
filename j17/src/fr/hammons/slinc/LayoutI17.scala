@@ -31,35 +31,6 @@ object LayoutI17 extends LayoutI.PlatformSpecific:
   override val floatLayout: FloatLayout =
     FloatLayout(None, Bytes(C_FLOAT.nn.byteSize()), ByteOrder.HostDefault)
 
-  override def getStructLayout[T](
-      layouts: DataLayout*
-  )(using po: ProductOf[T], ct: ClassTag[T]): StructLayout =
-    val gl = MemoryLayout
-      .structLayout(layouts.map(dataLayout2MemoryLayout)*)
-      .nn
-
-    val members =
-      val paths = gl
-        .memberLayouts()
-        .nn
-        .asScala
-        .map(_.name().nn.get())
-        .map(PathElement.groupElement)
-      paths
-        .map(gl.byteOffset(_))
-        .map(Bytes.apply)
-        .zip(layouts)
-        .map((offset, layout) => StructMember(layout, layout.name.get, offset))
-
-    StructLayout(
-      gl.name().nn.toScala,
-      Bytes(gl.byteSize()),
-      Bytes(gl.byteAlignment()),
-      ByteOrder.HostDefault,
-      po.fromProduct(_).asInstanceOf[Product],
-      ct.runtimeClass,
-      members.toVector
-    )
 
   // todo: support byte orders, different alignments
   def dataLayout2MemoryLayout(dataLayout: DataLayout): MemoryLayout =
@@ -104,10 +75,18 @@ object LayoutI17 extends LayoutI.PlatformSpecific:
           case None        => C_SHORT.nn
           case Some(value) => C_SHORT.nn.withName(value).nn
 
+      case p: PaddingLayout =>
+        p.name match
+          case None => MemoryLayout.paddingLayout(p.size.toLong * 8).nn
+          case Some(value) => throw Error("Why are you trying to name padding?")
+        
+
       case StructLayout(name, size, children) =>
         val childLayouts = children.map {
-          case StructMember(childLayout, name, _) =>
+          case StructMember(childLayout, Some(name), _) =>
             dataLayout2MemoryLayout(childLayout).withName(name).nn
+          case StructMember(childLayout, _, _) => 
+            dataLayout2MemoryLayout(childLayout)
         }
         val base = MemoryLayout.structLayout(childLayouts*).nn
         name match

@@ -5,17 +5,14 @@ import org.scalacheck.Prop.*
 import org.scalacheck.Gen
 import org.scalacheck.Arbitrary
 
-object TransferSpec:
-  case class A(a: Int, b: Int)
-  case class B(a: Int, b: A, c: Int)
-  case class C(a: Int, b: Byte, c: Short, d: Long, e: Float, f: Double)
-
 trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
   import slinc.{*, given}
 
-  given Struct[TransferSpec.A] = Struct.derived
-  given Struct[TransferSpec.B] = Struct.derived
-  given Struct[TransferSpec.C] = Struct.derived
+  case class A(a: Int, b: Int) derives Struct
+  case class B(a: Int, b: A, c: Int) derives Struct 
+  case class C(a: Int, b: Byte, c: Short, d: Long, e: Float, f: Double) derives Struct 
+  case class D(a: Byte, b: Ptr[Int], c: Byte) derives Struct
+
 
   test("can read and write jvm ints") {
     Scope.global {
@@ -73,7 +70,6 @@ trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
   }
 
   test("can read and write simple top-level structs") {
-    import TransferSpec.*
     Scope.global {
       val mem = Ptr.blank[A]
 
@@ -83,7 +79,6 @@ trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
   }
 
   test("can read and write complex top-level structs") {
-    import TransferSpec.*
     Scope.global {
       val mem = Ptr.blank[B]
 
@@ -96,14 +91,13 @@ trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
     forAll { (a: Int, b: Byte, c: Short, d: Long, e: Float, f: Double) =>
       Scope.confined {
 
-        val ts = TransferSpec.C(a, b, c, d, e, f)
+        val ts = C(a, b, c, d, e, f)
 
-        val mem = Ptr.blank[TransferSpec.C]
+        val mem = Ptr.blank[C]
         !mem = ts
         assertEquals(!mem, ts)
       }
     }
-
   }
 
   property("can read function pointers") {
@@ -127,11 +121,11 @@ trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
   val genA = for
     a <- Arbitrary.arbitrary[Int]
     b <- Arbitrary.arbitrary[Int]
-  yield TransferSpec.A(a, b)
+  yield A(a, b)
 
   property("can read/write arrays of A") {
-    forAll(Gen.containerOf[Array, TransferSpec.A](genA)) {
-      (arr: Array[TransferSpec.A]) =>
+    forAll(Gen.containerOf[Array, A](genA)) {
+      (arr: Array[A]) =>
         Scope.confined {
           val mem = Ptr.copy(arr)
 
@@ -139,3 +133,21 @@ trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
         }
     }
   }
+
+
+
+  property("can read/write structs with pointers") {
+    forAll { (a: Byte, b: Int, c: Byte) => 
+      Scope.confined{
+        val d = D(a, Ptr.copy(b), c)
+        val ptr = Ptr.copy(d)
+        val dPrime = !ptr
+
+        assertEquals(d.a, dPrime.a)
+        assertEquals(d.c, dPrime.c)
+        assertEquals(!d.b, !dPrime.b)
+      }
+    }
+  }
+
+  

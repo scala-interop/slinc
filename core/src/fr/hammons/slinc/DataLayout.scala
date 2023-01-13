@@ -14,6 +14,8 @@ sealed trait DataLayout:
   val byteOrder: ByteOrder
   def withName(name: String): DataLayout
 
+  override def toString(): String = s"${this.getClass()}: {name: $name, size: ${size}, alignment: ${alignment}, byteOrder: ${byteOrder}}"
+
 sealed trait PrimitiveLayout extends DataLayout:
   val alignment = size
 
@@ -84,7 +86,15 @@ object PointerLayout:
   def unapply(p: PointerLayout): (Option[String], Bytes, ByteOrder) =
     (p.name, p.size, p.byteOrder)
 
-case class StructMember(layout: DataLayout, name: String, offset: Bytes)
+class PaddingLayout(
+  val size: Bytes,
+  val byteOrder: ByteOrder,
+  val name: Option[String] = None
+) extends DataLayout:
+  val alignment: Bytes = Bytes(1)
+  def withName(name: String): DataLayout = throw Error("Stop that")
+
+case class StructMember(layout: DataLayout, name: Option[String], offset: Bytes)
 class StructLayout private[slinc] (
     val name: Option[String],
     val size: Bytes,
@@ -94,7 +104,7 @@ class StructLayout private[slinc] (
     val clazz: Class[?],
     val children: Vector[StructMember]
 ) extends DataLayout:
-  def withName(name: String): StructLayout = StructLayout(
+  def withName(name: String): StructLayout = new StructLayout(
     Some(name),
     size,
     alignment,
@@ -103,6 +113,11 @@ class StructLayout private[slinc] (
     clazz,
     children
   )
+
+  def offsets: IArray[Bytes] = IArray.from(children.collect{
+    case StructMember(_, Some(_), offset) => offset
+  })
+
 
 object StructLayout:
   def unapply(s: StructLayout): (Option[String], Bytes, Vector[StructMember]) =

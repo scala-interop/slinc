@@ -56,6 +56,10 @@ object Send:
         '{ $mem.writeByte(${ asExprOf[Byte](value) }, $offset) }
       case _: DoubleLayout =>
         '{ $mem.writeDouble(${ asExprOf[Double](value) }, $offset) }
+      case _: PaddingLayout => 
+        '{}
+      case _: PointerLayout => 
+        '{ $mem.writeAddress(${asExprOf[Ptr[Any]](value)}.mem, $offset) }
       case structLayout @ StructLayout(_, _, children) =>
         val fields =
           if canBeUsedDirectly(structLayout.clazz) then
@@ -64,7 +68,7 @@ object Send:
               .caseFields
           else Nil
 
-        val fns = children.zipWithIndex.map {
+        val fns = children.filter(_.name.isDefined).zipWithIndex.map {
           case (StructMember(childLayout, _, childOffset), index) =>
             (nv: Expr[Product]) =>
               val childField =

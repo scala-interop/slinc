@@ -45,13 +45,18 @@ class Mem19(private[slinc] val mem: MemorySegment) extends Mem:
   override def readFloat(offset: Bytes): Float =
     mem.get(javaFloat, offset.toLong)
 
-  override def readAddress(offset: Bytes): Mem = Mem19(
-    MemorySegment.ofAddress(
-      mem.get(javaAddress, offset.toLong).nn,
-      javaChar.nn.byteSize(),
-      MemorySession.global()
-    ).nn
-  )
+  override def readAddress(offset: Bytes): Mem =
+    val addr = mem.get(ADDRESS.nn, offset.toLong).nn
+
+    Mem19(
+      MemorySegment
+        .ofAddress(
+          addr,
+          javaAddress.nn.byteSize(),
+          MemorySession.global()
+        )
+        .nn
+    )
 
   override def resize(bytes: Bytes): Mem = Mem19(
     resizeSegment(bytes)
@@ -77,7 +82,8 @@ class Mem19(private[slinc] val mem: MemorySegment) extends Mem:
   override def readShort(offset: Bytes): Short =
     mem.get(javaShort, offset.toLong)
 
-  def writeAddress(v: Mem, offset: Bytes): Unit = mem.set(javaAddress, offset.toLong, v.asBase.asInstanceOf[Addressable])
+  def writeAddress(v: Mem, offset: Bytes): Unit =
+    mem.set(javaAddress, offset.toLong, v.asBase.asInstanceOf[Addressable])
 
   override def readIntArray(offset: Bytes, size: Int): Array[Int] =
     val arr = Array.ofDim[Int](size)
