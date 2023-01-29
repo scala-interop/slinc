@@ -3,6 +3,7 @@ package fr.hammons.slinc
 import scala.quoted.*
 import java.lang.invoke.MethodHandle
 import scala.compiletime.asMatchable
+import fr.hammons.slinc.modules.DescriptorModule
 
 object MethodHandleTools:
   def exprNameMapping(expr: Expr[Any])(using Quotes): String =
@@ -29,9 +30,9 @@ object MethodHandleTools:
       case _         => "O"
 
   def invokeVariadicArguments(
-      mhGen: Expr[Seq[DataLayout] => MethodHandle],
+      mhGen: Expr[Seq[TypeDescriptor] => MethodHandle],
       exprs: Expr[Seq[Any]],
-      varArgDescriptors: Expr[Seq[DataLayout]]
+      varArgDescriptors: Expr[Seq[TypeDescriptor]]
   )(using Quotes) =
     '{
       MethodHandleFacade.callVariadic(
@@ -92,7 +93,7 @@ object MethodHandleTools:
       )
 
   inline def getVariadicContext(s: Seq[Variadic]) =
-    s.map(_.use[LayoutOf](l ?=> _ => l.layout))
+    s.map(_.use[DescriptorOf](l ?=> _ => l.descriptor))
 
   inline def getVariadicExprs(s: Seq[Variadic]) = (alloc: Allocator) ?=>
     s.map(
@@ -110,7 +111,7 @@ object MethodHandleTools:
   def calculateMethodHandleImplementation[L](
       platformExpr: Expr[LibraryI.PlatformSpecific],
       addresses: Expr[IArray[Object]]
-  )(using Quotes, Type[L]) =
+  )(using Quotes, Type[L]): Expr[(IArray[MethodHandle], IArray[Seq[TypeDescriptor] => MethodHandle])] =
     import quotes.reflect.*
 
     val methodSymbols = MacroHelpers.getMethodSymbols(
@@ -146,12 +147,14 @@ object MethodHandleTools:
       )
       .zipWithIndex
       .map((descriptor, addressIdx) =>
-        '{ (varargsDesc: Seq[DataLayout]) =>
+        val typeV = Expr.summon[DescriptorModule].getOrElse(???)
+        '{ (varargsDesc: Seq[TypeDescriptor]) =>
+          val dm = $typeV
           $platformExpr
             .getDowncall(
               $addresses(${ Expr(addressIdx) }),
               $descriptor
-                .addVarargs(varargsDesc*)
+                .addVarargs(varargsDesc.map(dm.toDataLayout)*)
             )
             .nn
         }
@@ -167,7 +170,7 @@ object MethodHandleTools:
   inline def calculateMethodHandles[L](
       platformSpecific: LibraryI.PlatformSpecific,
       addresses: IArray[Object]
-  ) = ${
+  ): (IArray[MethodHandle], IArray[Seq[TypeDescriptor] => MethodHandle])  = ${
     calculateMethodHandleImplementation[L]('platformSpecific, 'addresses)
   }
 
