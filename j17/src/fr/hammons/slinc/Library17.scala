@@ -1,7 +1,7 @@
 package fr.hammons.slinc
 
 import java.lang.invoke.MethodHandle
-import jdk.incubator.foreign.FunctionDescriptor
+import jdk.incubator.foreign.{FunctionDescriptor as JFunctionDescriptor}
 import jdk.incubator.foreign.MemorySegment
 import jdk.incubator.foreign.MemoryAddress
 import java.lang.invoke.MethodType
@@ -18,11 +18,11 @@ class Library17(linker: CLinker)
 
   override def getDowncall(
       address: Object,
-      descriptor: Descriptor
+      descriptor: FunctionDescriptor
   ): MethodHandle =
     val fd = descriptor.outputDescriptor match
       case Some(r) =>
-        FunctionDescriptor.of(
+        JFunctionDescriptor.of(
           descriptorModule17.toMemoryLayout(r),
           descriptor.inputDescriptors.view
             .map(descriptorModule17.toMemoryLayout)
@@ -34,7 +34,7 @@ class Library17(linker: CLinker)
             .toSeq*
         )
       case _ =>
-        FunctionDescriptor.ofVoid(
+        JFunctionDescriptor.ofVoid(
           descriptor.inputDescriptors.view
             .map(descriptorModule17.toMemoryLayout)
             .concat(

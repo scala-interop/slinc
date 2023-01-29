@@ -6,9 +6,9 @@ import fr.hammons.slinc.modules.DescriptorModule
 
 trait Allocator:
   def allocate(descriptor: TypeDescriptor, num: Int): Mem
-  def upcall[Fn](descriptor: Descriptor, target: Fn): Mem
+  def upcall[Fn](descriptor: FunctionDescriptor, target: Fn): Mem
   protected def methodHandleFromFn[Fn](
-      descriptor: Descriptor,
+      descriptor: FunctionDescriptor,
       target: Fn
   )(using DescriptorModule): MethodHandle =
     val size = descriptor.inputDescriptors.size

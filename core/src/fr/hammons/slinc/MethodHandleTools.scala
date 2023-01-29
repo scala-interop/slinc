@@ -127,7 +127,7 @@ object MethodHandleTools:
 
     val methodHandles = methodSymbols
       .map(
-        Descriptor.fromDefDef
+        FunctionDescriptor.fromDefDef
       )
       .zipWithIndex
       .map { case (descriptor, addressIdx) =>
@@ -143,7 +143,7 @@ object MethodHandleTools:
 
     val varMethodHandleGens = methodSymbols
       .map(
-        Descriptor.fromDefDef
+        FunctionDescriptor.fromDefDef
       )
       .zipWithIndex
       .map((descriptor, addressIdx) =>

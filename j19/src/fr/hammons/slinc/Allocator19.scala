@@ -3,7 +3,7 @@ package fr.hammons.slinc
 import java.lang.foreign.SegmentAllocator
 import java.lang.foreign.MemorySession
 import java.lang.foreign.Linker
-import java.lang.foreign.FunctionDescriptor
+import java.lang.foreign.{FunctionDescriptor as JFunctionDescriptor}
 import fr.hammons.slinc.modules.descriptorModule19
 
 class Allocator19(
@@ -12,19 +12,19 @@ class Allocator19(
     linker: Linker,
 ) extends Allocator:
 
-  override def upcall[Fn](descriptor: Descriptor, target: Fn): Mem =
+  override def upcall[Fn](descriptor: FunctionDescriptor, target: Fn): Mem =
     val size = descriptor.inputDescriptors.size
 
     val mh = this.methodHandleFromFn(descriptor, target)
 
     val fd = descriptor.outputDescriptor match
       case Some(r) =>
-        FunctionDescriptor.of(
+        JFunctionDescriptor.of(
           descriptorModule19.toMemoryLayout(r),
           descriptor.inputDescriptors.view.map(descriptorModule19.toMemoryLayout).toSeq*
         )
       case _ =>
-        FunctionDescriptor.ofVoid(
+        JFunctionDescriptor.ofVoid(
           descriptor.inputDescriptors.view.map(descriptorModule19.toMemoryLayout).toSeq*
         )
 

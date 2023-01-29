@@ -61,5 +61,5 @@ object Ptr:
 
   inline def upcall[A](inline a: A)(using alloc: Allocator) =
     val nFn = Fn.toNativeCompatible(a)
-    val descriptor = Descriptor.fromFunction[A]
+    val descriptor = FunctionDescriptor.fromFunction[A]
     Ptr[A](alloc.upcall(descriptor, nFn), Bytes(0))

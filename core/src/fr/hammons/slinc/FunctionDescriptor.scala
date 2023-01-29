@@ -4,17 +4,17 @@ import scala.quoted.*
 import fr.hammons.slinc.modules.DescriptorModule
 import java.lang.invoke.MethodType
 
-final case class Descriptor(
+final case class FunctionDescriptor(
     inputDescriptors: Seq[TypeDescriptor],
     variadicDescriptors: Seq[TypeDescriptor],
     outputDescriptor: Option[TypeDescriptor]
 ):
   def addVarargs(args: TypeDescriptor*) =
-    Descriptor(inputDescriptors, args, outputDescriptor)
+    FunctionDescriptor(inputDescriptors, args, outputDescriptor)
 
   def toMethodType(using DescriptorModule): MethodType =
     this match
-      case Descriptor(head +: tail, variadicDescriptors, None) =>
+      case FunctionDescriptor(head +: tail, variadicDescriptors, None) =>
         VoidHelper
           .methodTypeV(
             head.toCarrierType,
@@ -22,7 +22,7 @@ final case class Descriptor(
           )
           .nn
 
-      case Descriptor(
+      case FunctionDescriptor(
             head +: tail,
             variadicDescriptors,
             Some(outputDescriptor)
@@ -35,11 +35,11 @@ final case class Descriptor(
           )
           .nn
 
-      case Descriptor(_, _, None) => VoidHelper.methodTypeV().nn
-      case Descriptor(_, _, Some(outputDescriptor)) =>
+      case FunctionDescriptor(_, _, None) => VoidHelper.methodTypeV().nn
+      case FunctionDescriptor(_, _, Some(outputDescriptor)) =>
         MethodType.methodType(outputDescriptor.toCarrierType).nn
 
-object Descriptor:
+object FunctionDescriptor:
   // grabs a description of a method from its definition. Ignores Seq[Variadic] arguments.
   def fromDefDef(using q: Quotes)(symbol: q.reflect.Symbol) =
     import quotes.reflect.*
@@ -63,7 +63,7 @@ object Descriptor:
         '{ Some($descriptor) }
 
     '{
-      Descriptor($inputLayouts, Seq.empty, $outputLayout)
+      FunctionDescriptor($inputLayouts, Seq.empty, $outputLayout)
     }
 
   inline def fromFunction[A] = ${
@@ -84,5 +84,5 @@ object Descriptor:
         '{ Some($descriptor) }
 
     '{
-      Descriptor($inputLayouts, Seq.empty, $outputLayout)
+      FunctionDescriptor($inputLayouts, Seq.empty, $outputLayout)
     }

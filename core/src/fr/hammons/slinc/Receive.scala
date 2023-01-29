@@ -14,7 +14,7 @@ class ReceiveI(val libraryPs: LibraryI.PlatformSpecific):
   inline given fnReceive[A](using Fn[A, ?, ?]): Receive[A] =
     new Receive[A]:
       def from(mem: Mem, offset: Bytes): A =
-        val descriptor = Descriptor.fromFunction[A]
+        val descriptor = FunctionDescriptor.fromFunction[A]
 
         MethodHandleTools.wrappedMH[A](
           libraryPs.getDowncall(mem.asAddress, descriptor)

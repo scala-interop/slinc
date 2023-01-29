@@ -27,7 +27,7 @@ object LibraryI:
   trait PlatformSpecific:
     def getDowncall(
         address: Object,
-        descriptor: Descriptor
+        descriptor: FunctionDescriptor
     ): MethodHandle
 
     def getLocalLookup(name: String): Lookup

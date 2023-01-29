@@ -2,7 +2,7 @@ package fr.hammons.slinc
 
 import java.lang.foreign.Linker
 import java.lang.invoke.MethodHandle
-import java.lang.foreign.FunctionDescriptor
+import java.lang.foreign.{FunctionDescriptor as JFunctionDescriptor}
 import java.lang.foreign.Addressable
 import dotty.tools.dotc.core.SymbolLoader
 import java.lang.foreign.SymbolLookup
@@ -15,11 +15,11 @@ class Library19(linker: Linker)
 
   override def getDowncall(
       address: Object,
-      descriptor: Descriptor
+      descriptor: FunctionDescriptor
   ): MethodHandle =
     val fd = descriptor.outputDescriptor match
       case Some(r) =>
-        FunctionDescriptor
+        JFunctionDescriptor
           .of(
             descriptorModule19.toMemoryLayout(r),
             descriptor.inputDescriptors.view.map(descriptorModule19.toMemoryLayout).toSeq*
@@ -29,7 +29,7 @@ class Library19(linker: Linker)
             descriptor.variadicDescriptors.view.map(descriptorModule19.toMemoryLayout).toSeq*
           )
       case _ =>
-        FunctionDescriptor
+        JFunctionDescriptor
           .ofVoid(
             descriptor.inputDescriptors.view.map(descriptorModule19.toMemoryLayout).toSeq*
           )

@@ -4,7 +4,7 @@ import jdk.incubator.foreign.{
   SegmentAllocator,
   ResourceScope,
   CLinker,
-  FunctionDescriptor
+  FunctionDescriptor as JFunctionDescriptor
 }, CLinker.C_POINTER
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
@@ -17,17 +17,17 @@ class Allocator17(
     linker: CLinker,
 ) extends Allocator:
 
-  override def upcall[Fn](descriptor: Descriptor, target: Fn): Mem =
+  override def upcall[Fn](descriptor: FunctionDescriptor, target: Fn): Mem =
     val size = descriptor.inputDescriptors.size
     val mh = methodHandleFromFn(descriptor, target)
     val fd = descriptor.outputDescriptor match
       case Some(r) =>
-        FunctionDescriptor.of(
+        JFunctionDescriptor.of(
           descriptorModule17.toMemoryLayout(r),
           descriptor.inputDescriptors.map(descriptorModule17.toMemoryLayout)*
         )
       case _ =>
-        FunctionDescriptor.ofVoid(
+        JFunctionDescriptor.ofVoid(
           descriptor.inputDescriptors.map(descriptorModule17.toMemoryLayout)*
         )
 
