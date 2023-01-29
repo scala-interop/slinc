@@ -12,7 +12,6 @@ import scala.reflect.ClassTag
 import modules.DescriptorModule
 
 class StructI(
-    layoutI: LayoutI,
     transitionI: TransitionsI,
     jitManager: JitManager
 )(using DescriptorModule):
@@ -39,7 +38,6 @@ class StructI(
   private inline def memberNames[A](using m: Mirror.ProductOf[A]) =
     constValueTuple[m.MirroredElemLabels].toArray.map(_.toString())
 
-  import layoutI.{given, *}
   import transitionI.given
   trait Struct[A <: Product]
       extends DescriptorOf[A],

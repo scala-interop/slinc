@@ -10,7 +10,7 @@ import scala.deriving.Mirror
 import container.{ContextProof, *:::, End}
 import fr.hammons.slinc.modules.DescriptorModule
 
-class ReceiveI(val libraryPs: LibraryI.PlatformSpecific, layoutI: LayoutI):
+class ReceiveI(val libraryPs: LibraryI.PlatformSpecific):
   inline given fnReceive[A](using Fn[A, ?, ?]): Receive[A] =
     new Receive[A]:
       def from(mem: Mem, offset: Bytes): A =

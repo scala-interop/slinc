@@ -4,8 +4,7 @@ import fr.hammons.slinc.ScopeI.PlatformSpecific
 import java.lang.invoke.{MethodHandle, MethodType, MethodHandles}
 import fr.hammons.slinc.modules.DescriptorModule
 
-trait Allocator(layoutI: LayoutI):
-  import layoutI.*
+trait Allocator:
   def allocate(descriptor: TypeDescriptor, num: Int): Mem
   def upcall[Fn](descriptor: Descriptor, target: Fn): Mem
   protected def methodHandleFromFn[Fn](

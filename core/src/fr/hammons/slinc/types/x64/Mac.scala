@@ -1,13 +1,10 @@
 package fr.hammons.slinc.types.x64
 
-import fr.hammons.slinc.LayoutI
 import fr.hammons.slinc.types.TypesI
 import fr.hammons.slinc.container.ContextProof
 import fr.hammons.slinc.types.HostDependentTypes
 
-private[slinc] class Mac(layoutI: LayoutI) extends TypesI.PlatformSpecific:
-  import layoutI.given
-
+private[slinc] class Mac() extends TypesI.PlatformSpecific:
   val hostDependentTypes = Mac
   type CLong = Mac.CLong
   override given cLongProof: CLongProof = ContextProof()

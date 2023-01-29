@@ -24,7 +24,7 @@ class LibraryI(platformSpecific: LibraryI.PlatformSpecific):
       }
 
 object LibraryI:
-  trait PlatformSpecific(layoutI: LayoutI):
+  trait PlatformSpecific:
     def getDowncall(
         address: Object,
         descriptor: Descriptor

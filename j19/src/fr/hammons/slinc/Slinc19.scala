@@ -1,22 +1,19 @@
 package fr.hammons.slinc
 
-import fr.hammons.slinc.LayoutI.PlatformSpecific
 import java.lang.foreign.Linker
 import fr.hammons.slinc.modules.{*, given}
 
 class Slinc19(_jitManager: JitManager, linker: Linker)(using val dm: DescriptorModule) extends Slinc:
   protected def jitManager: JitManager = _jitManager
 
-  protected def layoutPlatformSpecific = LayoutI19
-
   protected def scopePlatformSpecific: ScopeI.PlatformSpecific =
-    Scope19(layoutI, linker)
+    Scope19(linker)
 
   protected def transitionsPlatformSpecific: TransitionsI.PlatformSpecific =
     Transitions19
 
   protected def libraryIPlatformSpecific: LibraryI.PlatformSpecific =
-    Library19(layoutI, linker)
+    Library19(linker)
 
 @SlincImpl(19)
 object Slinc19:

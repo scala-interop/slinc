@@ -6,52 +6,95 @@ import scala.collection.concurrent.TrieMap
 import java.lang.foreign.MemoryLayout
 import java.lang.foreign.MemoryAddress
 import java.lang.foreign.MemorySegment
+import java.lang.foreign.GroupLayout
 
-given DescriptorModule with
-  private val sdt = TrieMap.empty[StructDescriptor, StructLayout]
+given descriptorModule19: DescriptorModule with
+  private val sdt = TrieMap.empty[StructDescriptor, GroupLayout]
   private val offsets = TrieMap.empty[StructDescriptor, IArray[Bytes]]
-  
-  override def toDataLayout(td: TypeDescriptor): DataLayout = td match
-    case ByteDescriptor       => LayoutI19.byteLayout
-    case ShortDescriptor      => LayoutI19.shortLayout
-    case IntDescriptor        => LayoutI19.intLayout
-    case LongDescriptor       => LayoutI19.longLayout
-    case FloatDescriptor      => LayoutI19.floatLayout
-    case DoubleDescriptor     => LayoutI19.doubleLayout
-    case PtrDescriptor        => LayoutI19.pointerLayout
-    case sd: StructDescriptor => toStructLayout(sd)
 
+  def toMemoryLayout(td: TypeDescriptor): MemoryLayout = td match
+    case ByteDescriptor       => ValueLayout.JAVA_BYTE.nn
+    case ShortDescriptor      => ValueLayout.JAVA_SHORT.nn
+    case IntDescriptor        => ValueLayout.JAVA_INT.nn
+    case LongDescriptor       => ValueLayout.JAVA_LONG.nn
+    case FloatDescriptor      => ValueLayout.JAVA_FLOAT.nn
+    case DoubleDescriptor     => ValueLayout.JAVA_DOUBLE.nn
+    case PtrDescriptor        => ValueLayout.ADDRESS.nn
+    case sd: StructDescriptor => toGroupLayout(sd)
+
+  def toMemoryLayout(smd: StructMemberDescriptor): MemoryLayout =
+    toMemoryLayout(smd.descriptor).withName(smd.name).nn
+
+  def toGroupLayout(sd: StructDescriptor): GroupLayout =
+    sdt.getOrElseUpdate(
+      sd, {
+        MemoryLayout
+          .structLayout(
+            genLayoutList(
+              sd.members.map(toMemoryLayout),
+              alignmentOf(sd).toLong
+            )*
+          )
+          .nn
+      }
+    )
+
+  def genLayoutList(
+      layouts: Seq[MemoryLayout],
+      alignment: Long
+  ): Seq[MemoryLayout] =
+    val (vector, currentLocation) =
+      layouts.foldLeft(Seq.empty[MemoryLayout] -> 0L) {
+        case ((vector, currentLocation), layout) =>
+          val thisAlignment = layout.byteAlignment()
+          val misalignment = currentLocation % thisAlignment
+          val toAdd =
+            if misalignment == 0 then Seq(layout)
+            else
+              val paddingNeeded = thisAlignment - misalignment
+
+              Seq(
+                MemoryLayout.paddingLayout(paddingNeeded * 8).nn,
+                layout
+              )
+          (vector ++ toAdd, currentLocation + toAdd.view.map(_.byteSize()).sum)
+      }
+    val misalignment = currentLocation % alignment
+    vector ++ (
+      if misalignment != 0 then
+        Seq(
+          MemoryLayout.paddingLayout((alignment - misalignment) * 8).nn
+        )
+      else Seq.empty
+    )
 
   def toCarrierType(td: TypeDescriptor): Class[?] = td match
-    case ByteDescriptor => classOf[Byte]
-    case ShortDescriptor => classOf[Short]
-    case IntDescriptor => classOf[Int]
-    case LongDescriptor => classOf[Long]
-    case FloatDescriptor => classOf[Float]
-    case DoubleDescriptor => classOf[Double]
-    case PtrDescriptor => classOf[MemoryAddress]
+    case ByteDescriptor      => classOf[Byte]
+    case ShortDescriptor     => classOf[Short]
+    case IntDescriptor       => classOf[Int]
+    case LongDescriptor      => classOf[Long]
+    case FloatDescriptor     => classOf[Float]
+    case DoubleDescriptor    => classOf[Double]
+    case PtrDescriptor       => classOf[MemoryAddress]
     case _: StructDescriptor => classOf[MemorySegment]
-  
-
-  def toDataLayout(smd: StructMemberDescriptor): DataLayout =
-    toDataLayout(smd.descriptor).withName(smd.name)
 
   override def memberOffsets(sd: StructDescriptor): IArray[Bytes] =
     offsets.getOrElseUpdate(
       sd, {
-        val ll = genDataLayoutList(
-          sd.members.view.map(toDataLayout).toSeq,
+        val ll = genLayoutList(
+          sd.members.view.map(toMemoryLayout).toSeq,
           sd.members.view.map(_.descriptor).map(alignmentOf).map(_.toLong).max
         )
         IArray.from(
           ll match
             case head :: next =>
               next
-                .foldLeft((Seq(Bytes(0)), head.size)) {
+                .foldLeft((Seq(Bytes(0)), head.byteSize())) {
                   case ((offsets, lastSize), layout) =>
-                    val newSize = lastSize + layout.size
+                    val newSize = lastSize + layout.byteSize()
                     val newOffsets =
-                      if layout.name.isDefined then offsets :+ lastSize
+                      if layout.name().nn.isPresent() then
+                        offsets :+ Bytes(lastSize)
                       else offsets
                     (newOffsets, newSize)
                 }
@@ -70,81 +113,7 @@ given DescriptorModule with
     case FloatDescriptor      => Bytes(4)
     case DoubleDescriptor     => Bytes(8)
     case PtrDescriptor        => Bytes(ValueLayout.ADDRESS.nn.byteSize())
-    case sd: StructDescriptor => toStructLayout(sd).size
-
-  override def toStructLayout(sd: StructDescriptor): StructLayout =
-    sdt.getOrElseUpdate(
-      sd, {
-        val originalMembers = sd.members.map(toDataLayout)
-        val alignment = alignmentOf(sd)
-        val offsets = memberOffsets(sd)
-        val structMembers =
-          genDataLayoutList(originalMembers, alignment.toLong)
-            .foldLeft(Vector.empty[StructMember] -> 0) {
-              case ((vector, offsetsIndex), dataLayout) =>
-                if dataLayout.name.isDefined then
-                  (
-                    vector :+ StructMember(
-                      dataLayout,
-                      dataLayout.name,
-                      offsets(offsetsIndex)
-                    ),
-                    offsetsIndex + 1
-                  )
-                else
-                  (
-                    vector :+ StructMember(dataLayout, None, Bytes(0)),
-                    offsetsIndex
-                  )
-            }
-            ._1
-
-        StructLayout(
-          if sd.clazz.getCanonicalName() != null then
-            Some(sd.clazz.getCanonicalName().nn)
-          else None,
-          Bytes(structMembers.view.map(_.layout.size.toLong).sum),
-          Bytes(structMembers.view.map(_.layout.alignment.toLong).max),
-          ByteOrder.HostDefault,
-          sd.transform,
-          sd.clazz,
-          structMembers
-        )
-      }
-    )
-
-  def genDataLayoutList(
-      layouts: Seq[DataLayout],
-      alignment: Long
-  ): Seq[DataLayout] =
-    val (vector, currentLocation) = layouts
-      .foldLeft(Seq.empty[DataLayout] -> 0L) {
-        case ((vector, currentLocation), layout) =>
-          val thisAlignment = layout.alignment.toLong
-          val misalignment = currentLocation % thisAlignment
-          val toAdd =
-            if misalignment == 0 then Seq(layout)
-            else
-              val paddingNeeded = thisAlignment - misalignment
-
-              Seq(
-                PaddingLayout(Bytes(paddingNeeded), layout.byteOrder),
-                layout
-              )
-
-          (vector ++ toAdd, currentLocation + toAdd.view.map(_.size.toLong).sum)
-      }
-    val misalignment = currentLocation % alignment
-    vector ++ (
-      if misalignment != 0 then
-        Seq(
-          PaddingLayout(
-            Bytes(alignment - misalignment),
-            ByteOrder.HostDefault
-          )
-        )
-      else Seq.empty
-    )
+    case sd: StructDescriptor => Bytes(toGroupLayout(sd).byteSize())
 
   override def alignmentOf(td: TypeDescriptor): Bytes =
     import java.lang.foreign.ValueLayout

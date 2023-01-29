@@ -109,10 +109,10 @@ object TypesI:
     ]
     val timeTProof: TimeTProof
 
-  protected[slinc] val platformTypes: LayoutI => TypesI = layout =>
+  protected[slinc] val platformTypes: TypesI =
     val platform = (arch, os) match
-      case (Arch.X64, OS.Linux)   => types.x64.Linux(layout)
-      case (Arch.X64, OS.Windows) => types.x64.Windows(layout)
-      case (Arch.X64, OS.Darwin)  => types.x64.Mac(layout)
-      case _                      => types.x64.Mac(layout)
+      case (Arch.X64, OS.Linux)   => types.x64.Linux()
+      case (Arch.X64, OS.Windows) => types.x64.Windows()
+      case (Arch.X64, OS.Darwin)  => types.x64.Mac()
+      case _                      => types.x64.Mac()
     TypesI(platform)

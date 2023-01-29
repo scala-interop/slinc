@@ -1,13 +1,10 @@
 package fr.hammons.slinc.types.x64
 
 import fr.hammons.slinc.types.TypesI
-import fr.hammons.slinc.LayoutI
 import fr.hammons.slinc.container.ContextProof
 import fr.hammons.slinc.types.HostDependentTypes
 
-private[types] class Linux(layoutI: LayoutI) extends TypesI.PlatformSpecific:
-  import layoutI.given
-
+private[types] class Linux() extends TypesI.PlatformSpecific:
   val hostDependentTypes = Linux
 
   type CLong = Linux.CLong
