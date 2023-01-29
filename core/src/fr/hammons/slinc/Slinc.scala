@@ -8,6 +8,7 @@ import java.util.concurrent.ThreadFactory
 import scala.util.chaining.*
 import java.util.concurrent.atomic.AtomicReference
 import scala.compiletime.uninitialized
+import modules.DescriptorModule
 
 trait Slinc:
   protected def jitManager: JitManager
@@ -16,6 +17,8 @@ trait Slinc:
   protected def scopePlatformSpecific: ScopeI.PlatformSpecific
   protected def transitionsPlatformSpecific: TransitionsI.PlatformSpecific
   protected def libraryIPlatformSpecific: LibraryI.PlatformSpecific
+
+  given dm: DescriptorModule
 
   private val useJit = Option(System.getProperty("sffi-jit"))
     .flatMap(_.nn.toBooleanOption)

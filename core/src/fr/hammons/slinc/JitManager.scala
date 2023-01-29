@@ -103,8 +103,6 @@ class JitManagerImpl(
       while nextCycleEnd <= System.currentTimeMillis() do
         nextCycleEnd += checkRate.toMillis
       Thread.sleep(Math.max(0, lastCycleEnd - System.currentTimeMillis()))
-
-    println("shutdown")
   }.onComplete {
     case Failure(t) => System.err.nn.println(t.getMessage())
     case _          => ()

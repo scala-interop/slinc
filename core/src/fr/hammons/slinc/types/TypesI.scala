@@ -57,7 +57,7 @@ class TypesI protected[slinc] (
   class AssertionZone[A,B](valid: Boolean)(using Conversion[A,B], Conversion[B,A]):
     def apply[R](cfn: Conversion[A,B] ?=> Conversion[B,A] ?=> R): Option[R] = if valid then Some(cfn) else None
 
-  
+
   def platformFocus[Platform <: HostDependentTypes & Singleton, B](p: Platform)(
       cfn: ConversionPair2[
         CLong,
@@ -75,14 +75,13 @@ class TypesI protected[slinc] (
       })
     else None
 
-
 object TypesI:
   type :->[A] = [B] =>> Convertible[B, A]
   type <-:[A] = [B] =>> Convertible[A, B]
   type :?->[A] = [B] =>> PotentiallyConvertible[B, A]
   type <-?:[A] = [B] =>> PotentiallyConvertible[A, B]
-  type StandardCapabilities = LayoutOf *::: NativeInCompatible *:::
-    NativeOutCompatible *::: Send *::: Receive *::: End
+  type StandardCapabilities = DescriptorOf *:::
+    NativeInCompatible *::: NativeOutCompatible *::: Send *::: Receive *::: End
 
   trait PlatformSpecific extends HostDependentTypes:
     val hostDependentTypes: HostDependentTypes & Singleton
