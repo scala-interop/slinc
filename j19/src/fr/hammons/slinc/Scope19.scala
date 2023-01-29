@@ -5,8 +5,9 @@ import java.lang.foreign.MemorySession
 import java.lang.foreign.SegmentAllocator
 import java.lang.foreign.MemorySegment
 import java.lang.foreign.MemoryAddress
+import fr.hammons.slinc.modules.DescriptorModule
 
-class Scope19(layoutI: LayoutI, linker: Linker)
+class Scope19(layoutI: LayoutI, linker: Linker)(using DescriptorModule)
     extends ScopeI.PlatformSpecific(layoutI):
 
   val baseNull: Ptr[Any] = Ptr(

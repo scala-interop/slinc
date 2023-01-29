@@ -5,7 +5,7 @@ import java.lang.invoke.{MethodHandle, MethodType, MethodHandles}
 
 trait Allocator(layoutI: LayoutI):
   import layoutI.*
-  def allocate(layout: DataLayout, num: Int): Mem
+  def allocate(descriptor: TypeDescriptor, num: Int): Mem
   def upcall[Fn](descriptor: Descriptor, target: Fn): Mem
   protected def methodHandleFromFn[Fn](
       descriptor: Descriptor,

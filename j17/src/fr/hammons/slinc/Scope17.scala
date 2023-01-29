@@ -4,8 +4,9 @@ import jdk.incubator.foreign.CLinker
 import jdk.incubator.foreign.ResourceScope
 import jdk.incubator.foreign.SegmentAllocator
 import jdk.incubator.foreign.MemoryAddress
+import fr.hammons.slinc.modules.DescriptorModule
 
-class Scope17(layoutI: LayoutI, linker: CLinker)
+class Scope17(layoutI: LayoutI, linker: CLinker)(using DescriptorModule)
     extends ScopeI.PlatformSpecific(layoutI):
 
   private val baseNull = Ptr[Nothing](

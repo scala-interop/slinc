@@ -28,7 +28,7 @@ trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
       Arbitrary[A],
       Send[A],
       Receive[A],
-      LayoutOf[A]
+      DescriptorOf[A]
   ) = property(s"can read/write ${nameOf[A]}") {
     forAll { (b: A) =>
       Scope.confined {
