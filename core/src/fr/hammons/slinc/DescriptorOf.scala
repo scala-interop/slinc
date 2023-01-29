@@ -1,6 +1,7 @@
 package fr.hammons.slinc
 
 import fr.hammons.slinc.container.*
+import scala.quoted.*
 
 /** Typeclass that summons TypeDescriptors
   * 
@@ -47,3 +48,11 @@ object DescriptorOf:
 
   given [A]: DescriptorOf[Ptr[A]] =
     ptrDescriptor.asInstanceOf[DescriptorOf[Ptr[A]]]
+
+  def getDescriptorFor[A](using Quotes, Type[A]) =
+    import quotes.reflect.*
+    val expr = Expr.summon[DescriptorOf[A]].getOrElse(
+      report.errorAndAbort(s"Cannot find a descriptor of ${Type.show[A]}")
+    )
+
+    '{$expr.descriptor}

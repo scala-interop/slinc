@@ -9,29 +9,6 @@ import scala.annotation.varargs
 import modules.DescriptorModule
 import container.*
 
-trait LayoutOf[A <: AnyKind]:
-  val layout: DataLayout
-
-object LayoutOf:
-  given [A](using
-      c: ContextProof[LayoutOf *::: End, A]
-  ): LayoutOf[A] = c.tup.head
-
-  /** Compatibility given for TypeDescriptors
-    * 
-    * Summons a [[TypeDescriptor]] matching A, which can then be 
-    * converted to a [[DataLayout]] automatically via [[TypeDescriptor.dl]]
-    *
-    * @return LayoutOf with converted Descriptor within
-    */
-  given [A](using DescriptorOf[A], DescriptorModule): LayoutOf[A] with 
-    val layout = DescriptorOf[A]
-
-
-
-trait LayoutOfStruct[A <: Product] extends LayoutOf[A]:
-  val layout: DataLayout
-
 class LayoutI(platformSpecific: LayoutI.PlatformSpecific):
   extension (d: Descriptor)
     def toMethodType: MethodType =
@@ -56,7 +33,6 @@ class LayoutI(platformSpecific: LayoutI.PlatformSpecific):
         case Descriptor(_, _, Some(r)) =>
           MethodType.methodType(toCarrierType(r)).nn
 
-
 object LayoutI:
   trait PlatformSpecific:
     val intLayout: IntLayout
@@ -67,13 +43,3 @@ object LayoutI:
     val pointerLayout: PointerLayout
     val byteLayout: ByteLayout
     def toCarrierType(dataLayout: DataLayout): Class[?]
-
-  def getLayoutFor[A](using Quotes, Type[A]) =
-    import quotes.reflect.*
-    val expr = Expr
-      .summon[LayoutOf[A]]
-      .getOrElse(
-        report.errorAndAbort(s"Cannot find a layout of ${Type.show[A]}")
-      )
-
-    '{ $expr.layout }

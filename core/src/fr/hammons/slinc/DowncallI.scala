@@ -13,20 +13,20 @@ class DowncallI(platform: DowncallI.PlatformSpecific):
       platform.getDowncall(
         getDowncallHelper[T],
         summonFrom {
-          case lo: LayoutOf[R] => Some(lo.layout)
+          case dO: DescriptorOf[R] => Some(dO.descriptor)
           case _               => None
         }
       )
 
-  private inline def getDowncallHelper[T <: Tuple]: Seq[DataLayout] =
+  private inline def getDowncallHelper[T <: Tuple]: Seq[TypeDescriptor] =
     inline erasedValue[T] match
       case _: (h *: t) =>
-        summonInline[LayoutOf[h]].layout +: getDowncallHelper[t]
+        summonInline[DescriptorOf[h]].descriptor +: getDowncallHelper[t]
       case _: EmptyTuple => Seq.empty
 
 object DowncallI:
   trait PlatformSpecific:
     def getDowncall(
-        layout: Seq[DataLayout],
-        ret: Option[DataLayout]
+        layout: Seq[TypeDescriptor],
+        ret: Option[TypeDescriptor]
     ): MethodHandle
