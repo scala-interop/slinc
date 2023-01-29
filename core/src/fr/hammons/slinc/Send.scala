@@ -6,6 +6,7 @@ import scala.deriving.Mirror
 import scala.compiletime.{erasedValue, summonInline}
 import scala.util.chaining.*
 import fr.hammons.slinc.container.{ContextProof, *:::, End}
+import fr.hammons.slinc.modules.DescriptorModule
 
 trait Send[A]:
   def to(mem: Mem, offset: Bytes, value: A): Unit
@@ -171,11 +172,11 @@ object Send:
     def to(mem: Mem, offset: Bytes, value: Array[Byte]): Unit =
       mem.writeByteArray(value, offset)
 
-  given sendArrayA[A](using s: Send[A], l: LayoutOf[A]): Send[Array[A]] with
+  given sendArrayA[A](using DescriptorOf[A], DescriptorModule)(using s: Send[A]): Send[Array[A]] with
     def to(mem: Mem, offset: Bytes, value: Array[A]): Unit =
       var i = 0
       while i < value.length do
-        s.to(mem, offset + (l.layout.size * i), value(i))
+        s.to(mem, offset + (DescriptorOf[A].size * i), value(i))
         i += 1
 
   private val ptrSend: Send[Ptr[Any]] = new Send[Ptr[Any]]:

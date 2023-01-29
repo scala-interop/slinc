@@ -49,7 +49,7 @@ trait Slinc:
 
   export types.os
 
-  def sizeOf[A](using l: LayoutOf[A]) = l.layout.size.toLong.maybeAs[SizeT]
+  def sizeOf[A](using l: DescriptorOf[A]) = DescriptorOf[A].size.toLong.maybeAs[SizeT]
 
   def Null[A] = scopePlatformSpecific.nullPtr[A]
 
