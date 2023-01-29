@@ -1,7 +1,7 @@
 import os.Path
-import $file.aux.benchmark, benchmark.BenchmarksModule
-import $file.aux.publishable, publishable.PublishableModule
-import $file.aux.facadeGenerator, facadeGenerator.FacadeGenerationModule
+import $file.auxiliary.benchmark, benchmark.BenchmarksModule
+import $file.auxiliary.publishable, publishable.PublishableModule
+import $file.auxiliary.facadeGenerator, facadeGenerator.FacadeGenerationModule
 import mill._, scalalib._, scalafmt._
 import $ivy.`com.lihaoyi::mill-contrib-buildinfo:`
 import mill.contrib.buildinfo.BuildInfo
