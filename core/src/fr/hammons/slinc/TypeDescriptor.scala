@@ -8,11 +8,7 @@ import modules.DescriptorModule
 sealed trait TypeDescriptor:
   def size(using dm: DescriptorModule): Bytes = dm.sizeOf(this)
   def alignment(using dm: DescriptorModule): Bytes = dm.alignmentOf(this)
-
-object TypeDescriptor:
-  given dl(using dm: DescriptorModule): Conversion[TypeDescriptor, DataLayout] = dm.toDataLayout(_)
-
-  given sl(using dm: DescriptorModule): Conversion[StructDescriptor, StructLayout] = dm.toStructLayout(_)
+  def toCarrierType(using dm: DescriptorModule): Class[?] = dm.toCarrierType(this)
 
 case object ByteDescriptor extends TypeDescriptor
 case object ShortDescriptor extends TypeDescriptor

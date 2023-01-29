@@ -2,6 +2,7 @@ package fr.hammons.slinc
 
 import fr.hammons.slinc.ScopeI.PlatformSpecific
 import java.lang.invoke.{MethodHandle, MethodType, MethodHandles}
+import fr.hammons.slinc.modules.DescriptorModule
 
 trait Allocator(layoutI: LayoutI):
   import layoutI.*
@@ -10,8 +11,8 @@ trait Allocator(layoutI: LayoutI):
   protected def methodHandleFromFn[Fn](
       descriptor: Descriptor,
       target: Fn
-  ): MethodHandle =
-    val size = descriptor.inputLayouts.size
+  )(using DescriptorModule): MethodHandle =
+    val size = descriptor.inputDescriptors.size
     val mh = MethodHandles.lookup.nn
       .findVirtual(
         Class.forName(s"scala.Function$size"),

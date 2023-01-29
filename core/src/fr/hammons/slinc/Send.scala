@@ -19,14 +19,16 @@ object Send:
 
   given [A](using c: ContextProof[Send *::: End, A]): Send[A] = c.tup.head
 
-  def staged[A <: Product](layout: StructLayout): JitCompiler => Send[A] =
+  def staged[A <: Product](
+      descriptor: StructDescriptor
+  )(using DescriptorModule): JitCompiler => Send[A] =
     (jitCompiler: JitCompiler) =>
       jitCompiler(
         '{
           new Send[Product]:
             def to(mem: Mem, offset: Bytes, value: Product) =
               ${
-                stagedHelper(layout, 'mem, 'offset, 'value)
+                stagedHelper(descriptor, 'mem, 'offset, 'value)
               }
         }
       ).asInstanceOf[Send[A]]
@@ -37,40 +39,39 @@ object Send:
     else '{ $expr.asInstanceOf[A] }
 
   private def stagedHelper(
-      layout: DataLayout,
+      layout: TypeDescriptor,
       mem: Expr[Mem],
       offset: Expr[Bytes],
       value: Expr[Any]
-  )(using Quotes): Expr[Unit] =
+  )(using Quotes, DescriptorModule): Expr[Unit] =
     import quotes.reflect.*
 
     layout match
-      case _: IntLayout =>
+      case IntDescriptor =>
         '{ $mem.writeInt(${ asExprOf[Int](value) }, $offset) }
-      case _: LongLayout =>
+      case LongDescriptor =>
         '{ $mem.writeLong(${ asExprOf[Long](value) }, $offset) }
-      case _: FloatLayout =>
+      case FloatDescriptor =>
         '{ $mem.writeFloat(${ asExprOf[Float](value) }, $offset) }
-      case _: ShortLayout =>
+      case ShortDescriptor =>
         '{ $mem.writeShort(${ asExprOf[Short](value) }, $offset) }
-      case _: ByteLayout =>
+      case ByteDescriptor =>
         '{ $mem.writeByte(${ asExprOf[Byte](value) }, $offset) }
-      case _: DoubleLayout =>
+      case DoubleDescriptor =>
         '{ $mem.writeDouble(${ asExprOf[Double](value) }, $offset) }
-      case _: PaddingLayout => 
-        '{}
-      case _: PointerLayout => 
-        '{ $mem.writeAddress(${asExprOf[Ptr[Any]](value)}.mem, $offset) }
-      case structLayout @ StructLayout(_, _, children) =>
+      case PtrDescriptor =>
+        '{ $mem.writeAddress(${ asExprOf[Ptr[Any]](value) }.mem, $offset) }
+      case structDescriptor: StructDescriptor =>
         val fields =
-          if canBeUsedDirectly(structLayout.clazz) then
+          if canBeUsedDirectly(structDescriptor.clazz) then
             Symbol
-              .classSymbol(structLayout.clazz.getCanonicalName().nn)
+              .classSymbol(structDescriptor.clazz.getCanonicalName().nn)
               .caseFields
           else Nil
 
-        val fns = children.filter(_.name.isDefined).zipWithIndex.map {
-          case (StructMember(childLayout, _, childOffset), index) =>
+        val offsets = structDescriptor.offsets
+        val fns = structDescriptor.members.view.zipWithIndex.map {
+          case (StructMemberDescriptor(childLayout, _), index) =>
             (nv: Expr[Product]) =>
               val childField =
                 if fields.nonEmpty then Select(nv.asTerm, fields(index)).asExpr
@@ -79,7 +80,7 @@ object Send:
               stagedHelper(
                 childLayout,
                 mem,
-                '{ $offset + ${ Expr(childOffset) } },
+                '{ $offset + ${ Expr(offsets(index)) } },
                 childField
               )
         }.toList
@@ -87,8 +88,8 @@ object Send:
         val implementation = [A] =>
           (inputExpression: Expr[A & Product]) =>
             Expr.block(fns.map(_(inputExpression)), '{})
-        if canBeUsedDirectly(structLayout.clazz) then
-          TypeRepr.typeConstructorOf(structLayout.clazz).asType match
+        if canBeUsedDirectly(structDescriptor.clazz) then
+          TypeRepr.typeConstructorOf(structDescriptor.clazz).asType match
             case '[a & Product] =>
               '{
                 val a: a & Product = $value.asInstanceOf[a & Product]
@@ -172,7 +173,9 @@ object Send:
     def to(mem: Mem, offset: Bytes, value: Array[Byte]): Unit =
       mem.writeByteArray(value, offset)
 
-  given sendArrayA[A](using DescriptorOf[A], DescriptorModule)(using s: Send[A]): Send[Array[A]] with
+  given sendArrayA[A](using DescriptorOf[A], DescriptorModule)(using
+      s: Send[A]
+  ): Send[Array[A]] with
     def to(mem: Mem, offset: Bytes, value: Array[A]): Unit =
       var i = 0
       while i < value.length do
@@ -180,8 +183,7 @@ object Send:
         i += 1
 
   private val ptrSend: Send[Ptr[Any]] = new Send[Ptr[Any]]:
-    def to(mem: Mem, offset: Bytes, value: Ptr[Any]): Unit = 
+    def to(mem: Mem, offset: Bytes, value: Ptr[Any]): Unit =
       mem.writeAddress(value.mem, offset)
-
 
   given sendPtr[A]: Send[Ptr[A]] = ptrSend.asInstanceOf[Send[Ptr[A]]]

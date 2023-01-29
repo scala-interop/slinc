@@ -8,6 +8,7 @@ import scala.compiletime.{erasedValue, summonInline}
 import scala.util.chaining.*
 import scala.deriving.Mirror
 import container.{ContextProof, *:::, End}
+import fr.hammons.slinc.modules.DescriptorModule
 
 class ReceiveI(val libraryPs: LibraryI.PlatformSpecific, layoutI: LayoutI):
   inline given fnReceive[A](using Fn[A, ?, ?]): Receive[A] =
@@ -52,10 +53,10 @@ object Receive:
       Ptr[A](mem.readAddress(offset), Bytes(0))
 
   def staged[A <: Product](
-      layout: StructLayout
-  ): JitCompiler => Receive[A] =
+      descriptor: StructDescriptor
+  )(using DescriptorModule): JitCompiler => Receive[A] =
     val transforms =
-      getTransforms(layout).distinctBy((className, _) => className)
+      getTransforms(descriptor).distinctBy((className, _) => className)
     val transformsArray =
       IArray.from(transforms.map((_, transform) => transform))
     val transformIndices =
@@ -68,7 +69,7 @@ object Receive:
             mem: Expr[Mem],
             structOffset: Expr[Bytes]
         ) =>
-          stagedHelper(layout, transformIndices, mem, structOffset, fns)
+          stagedHelper(descriptor, transformIndices, mem, structOffset, fns)
             .asExprOf[Product]
         '{ (fns: IArray[Tuple => Product]) =>
           new Receive[Product]:
@@ -81,46 +82,45 @@ object Receive:
   end staged
 
   private def stagedHelper(
-      layout: DataLayout,
+      layout: TypeDescriptor,
       transformIndices: Map[String, Int],
       mem: Expr[Mem],
       structOffset: Expr[Bytes],
       transforms: Expr[IArray[Tuple => Product]]
-  )(using Quotes): Expr[Any] =
+  )(using Quotes, DescriptorModule): Expr[Any] =
     layout match
-      case _: FloatLayout =>
+      case FloatDescriptor =>
         '{ $mem.readFloat($structOffset) }
-      case _: DoubleLayout =>
+      case DoubleDescriptor =>
         '{ $mem.readDouble($structOffset) }
-      case _: IntLayout =>
+      case IntDescriptor =>
         '{ $mem.readInt($structOffset) }
-      case _: LongLayout =>
+      case LongDescriptor =>
         '{ $mem.readLong($structOffset) }
-      case _: ByteLayout =>
+      case ByteDescriptor =>
         '{ $mem.readByte($structOffset) }
-      case _: ShortLayout =>
+      case ShortDescriptor =>
         '{ $mem.readShort($structOffset) }
-      case _: PointerLayout =>
+      case PtrDescriptor =>
         '{ Ptr($mem.readAddress($structOffset), Bytes(0)) }
-      case u: UnionLayout =>
-        ???
-      case structLayout @ StructLayout(_, _, children) =>
+      case structDescriptor: StructDescriptor =>
         val transformIndex = transformIndices(
-          structLayout.clazz.getName().nn
+          structDescriptor.clazz.getName().nn
         )
-        val exprs = children.collect {
-          case StructMember(childLayout, Some(_), childOffset) =>
+        val offsets = structDescriptor.offsets
+        val exprs = structDescriptor.members.view.zipWithIndex.collect {
+          case (StructMemberDescriptor(childLayout, name), index) =>
             stagedHelper(
               childLayout,
               transformIndices,
               mem,
-              '{ $structOffset + ${ Expr(childOffset) } },
+              '{ $structOffset + ${ Expr(offsets(index)) } },
               transforms
             )
         }.toList
 
-        if canBeUsedDirectly(structLayout.clazz) then
-          constructFromTarget(structLayout.clazz, exprs)
+        if canBeUsedDirectly(structDescriptor.clazz) then
+          constructFromTarget(structDescriptor.clazz, exprs)
         else
           '{
             $transforms(${ Expr(transformIndex) })(${
@@ -130,14 +130,14 @@ object Receive:
   end stagedHelper
 
   private def getTransforms(
-      layout: DataLayout
-  ): Vector[(String, Tuple => Product)] =
-    layout match
-      case s @ StructLayout(_, _, members) =>
-        (s.clazz.getName().nn, s.transform) +: members
-          .map(_.layout)
+      descriptor: TypeDescriptor
+  ): Seq[(String, Tuple => Product)] =
+    descriptor match
+      case s: StructDescriptor =>
+        (s.clazz.getName().nn, s.transform) +: s.members
+          .map(_.descriptor)
           .flatMap(getTransforms)
-      case _ => Vector.empty
+      case _ => Seq.empty
 
   private def constructFromTarget(clazz: Class[?], members: List[Expr[Any]])(
       using Quotes

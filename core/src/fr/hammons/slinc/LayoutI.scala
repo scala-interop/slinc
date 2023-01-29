@@ -9,29 +9,7 @@ import scala.annotation.varargs
 import modules.DescriptorModule
 import container.*
 
-class LayoutI(platformSpecific: LayoutI.PlatformSpecific):
-  extension (d: Descriptor)
-    def toMethodType: MethodType =
-      import platformSpecific.toCarrierType
-      d match
-        case Descriptor(head +: tail, vargs, None) =>
-          VoidHelper
-            .methodTypeV(
-              toCarrierType(head),
-              tail.concat(vargs).map(toCarrierType)*
-            )
-            .nn
-        case Descriptor(head +: tail, vargs, Some(r)) =>
-          MethodType
-            .methodType(
-              toCarrierType(r),
-              toCarrierType(head),
-              tail.concat(vargs).map(toCarrierType)*
-            )
-            .nn
-        case Descriptor(_, _, None) => VoidHelper.methodTypeV().nn
-        case Descriptor(_, _, Some(r)) =>
-          MethodType.methodType(toCarrierType(r)).nn
+class LayoutI(platformSpecific: LayoutI.PlatformSpecific)(using dm: DescriptorModule)
 
 object LayoutI:
   trait PlatformSpecific:

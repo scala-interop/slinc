@@ -11,13 +11,23 @@ import jdk.incubator.foreign.CLinker.{
   C_LONG_LONG,
   C_POINTER
 }
-import jdk.incubator.foreign.MemoryLayout
+import jdk.incubator.foreign.{MemoryLayout, MemoryAddress, MemorySegment}
 import scala.collection.concurrent.TrieMap
 
 given DescriptorModule with
   val chm: TrieMap[StructDescriptor, StructLayout] = TrieMap.empty
   val offsets: TrieMap[StructDescriptor, IArray[Bytes]] = TrieMap.empty
       
+  def toCarrierType(td: TypeDescriptor): Class[?] = td match
+    case ByteDescriptor => classOf[Byte]
+    case ShortDescriptor => classOf[Short]
+    case IntDescriptor => classOf[Int]
+    case LongDescriptor => classOf[Long]
+    case FloatDescriptor => classOf[Float]
+    case DoubleDescriptor => classOf[Double]
+    case PtrDescriptor => classOf[MemoryAddress]
+    case _: StructDescriptor => classOf[MemorySegment]
+  
   def genDataLayoutList(
       layouts: Seq[DataLayout],
       alignment: Long,

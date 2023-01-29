@@ -14,12 +14,12 @@ private[types] class Linux(layoutI: LayoutI) extends TypesI.PlatformSpecific:
   given cLongProof: CLongProof = ContextProof()
 
   type SizeT = Linux.SizeT
-  override given sizeTProof: SizeTProof =
+  override val sizeTProof: SizeTProof =
     ContextProof()
 
   type TimeT = Linux.TimeT
 
-  given timeTProof: TimeTProof = ContextProof()
+  val timeTProof: TimeTProof = ContextProof()
 
 
 object Linux extends HostDependentTypes:

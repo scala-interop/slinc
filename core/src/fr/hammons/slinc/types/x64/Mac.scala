@@ -13,11 +13,11 @@ private[slinc] class Mac(layoutI: LayoutI) extends TypesI.PlatformSpecific:
   override given cLongProof: CLongProof = ContextProof()
 
   type SizeT = Mac.SizeT
-  override given sizeTProof: SizeTProof =
+  override val sizeTProof: SizeTProof =
     ContextProof()
 
   type TimeT = Mac.TimeT
-  override given timeTProof: TimeTProof = ContextProof()
+  override val timeTProof: TimeTProof = ContextProof()
 
 object Mac extends HostDependentTypes:
   type CLong = Long 

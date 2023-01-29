@@ -10,8 +10,9 @@ import jdk.incubator.foreign.SymbolLookup
 import jdk.incubator.foreign.Addressable
 import java.nio.file.Paths
 import java.nio.file.Files
+import fr.hammons.slinc.modules.DescriptorModule
 
-class Library17(layoutI: LayoutI, linker: CLinker)
+class Library17(layoutI: LayoutI, linker: CLinker)(using dm: DescriptorModule)
     extends LibraryI.PlatformSpecific(layoutI):
   import layoutI.*
 
@@ -19,27 +20,28 @@ class Library17(layoutI: LayoutI, linker: CLinker)
       address: Object,
       descriptor: Descriptor
   ): MethodHandle =
-    val fd = descriptor.outputLayout match
+    val fd = descriptor.outputDescriptor match
       case Some(r) =>
         FunctionDescriptor.of(
-          LayoutI17.dataLayout2MemoryLayout(r),
-          descriptor.inputLayouts
+          LayoutI17.dataLayout2MemoryLayout(dm.toDataLayout(r)),
+          descriptor.inputDescriptors.view.map(dm.toDataLayout)
             .map(LayoutI17.dataLayout2MemoryLayout)
             .concat(
-              descriptor.variadicLayouts
+              descriptor.variadicDescriptors.view.map(dm.toDataLayout)
                 .map(LayoutI17.dataLayout2MemoryLayout)
                 .map(CLinker.asVarArg)
-            )*
+            ).toSeq*
         )
       case _ =>
         FunctionDescriptor.ofVoid(
-          descriptor.inputLayouts
+          descriptor.inputDescriptors.view
+            .map(dm.toDataLayout)
             .map(LayoutI17.dataLayout2MemoryLayout)
             .concat(
-              descriptor.variadicLayouts
+              descriptor.variadicDescriptors.view.map(dm.toDataLayout)
                 .map(LayoutI17.dataLayout2MemoryLayout)
                 .map(CLinker.asVarArg)
-            )*
+            ).toSeq*
         )
 
     val md = descriptor.toMethodType

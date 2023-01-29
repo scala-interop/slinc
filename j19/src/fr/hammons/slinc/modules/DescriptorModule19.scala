@@ -4,10 +4,13 @@ import fr.hammons.slinc.*
 import java.lang.foreign.ValueLayout
 import scala.collection.concurrent.TrieMap
 import java.lang.foreign.MemoryLayout
+import java.lang.foreign.MemoryAddress
+import java.lang.foreign.MemorySegment
 
 given DescriptorModule with
   private val sdt = TrieMap.empty[StructDescriptor, StructLayout]
   private val offsets = TrieMap.empty[StructDescriptor, IArray[Bytes]]
+  
   override def toDataLayout(td: TypeDescriptor): DataLayout = td match
     case ByteDescriptor       => LayoutI19.byteLayout
     case ShortDescriptor      => LayoutI19.shortLayout
@@ -17,6 +20,18 @@ given DescriptorModule with
     case DoubleDescriptor     => LayoutI19.doubleLayout
     case PtrDescriptor        => LayoutI19.pointerLayout
     case sd: StructDescriptor => toStructLayout(sd)
+
+
+  def toCarrierType(td: TypeDescriptor): Class[?] = td match
+    case ByteDescriptor => classOf[Byte]
+    case ShortDescriptor => classOf[Short]
+    case IntDescriptor => classOf[Int]
+    case LongDescriptor => classOf[Long]
+    case FloatDescriptor => classOf[Float]
+    case DoubleDescriptor => classOf[Double]
+    case PtrDescriptor => classOf[MemoryAddress]
+    case _: StructDescriptor => classOf[MemorySegment]
+  
 
   def toDataLayout(smd: StructMemberDescriptor): DataLayout =
     toDataLayout(smd.descriptor).withName(smd.name)

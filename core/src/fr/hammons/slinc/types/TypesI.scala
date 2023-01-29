@@ -100,14 +100,14 @@ object TypesI:
         StandardCapabilities,
       SizeT
     ]
-    given sizeTProof: SizeTProof
+    val sizeTProof: SizeTProof
 
     type TimeTProof = ContextProof[
       :?->[Int] *::: <-?:[Int] *::: :?->[Long] *::: <-?:[Long] *:::
         StandardCapabilities,
       TimeT
     ]
-    given timeTProof: TimeTProof
+    val timeTProof: TimeTProof
 
   protected[slinc] val platformTypes: LayoutI => TypesI = layout =>
     val platform = (arch, os) match

@@ -147,14 +147,12 @@ object MethodHandleTools:
       )
       .zipWithIndex
       .map((descriptor, addressIdx) =>
-        val typeV = Expr.summon[DescriptorModule].getOrElse(???)
         '{ (varargsDesc: Seq[TypeDescriptor]) =>
-          val dm = $typeV
           $platformExpr
             .getDowncall(
               $addresses(${ Expr(addressIdx) }),
               $descriptor
-                .addVarargs(varargsDesc.map(dm.toDataLayout)*)
+                .addVarargs(varargsDesc*)
             )
             .nn
         }

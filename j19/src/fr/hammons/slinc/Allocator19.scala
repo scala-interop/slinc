@@ -11,23 +11,23 @@ class Allocator19(
     scope: MemorySession,
     linker: Linker,
     layoutI: LayoutI
-)(using DescriptorModule) extends Allocator(layoutI):
+)(using dm: DescriptorModule) extends Allocator(layoutI):
   import layoutI.*
 
   override def upcall[Fn](descriptor: Descriptor, target: Fn): Mem =
-    val size = descriptor.inputLayouts.size
+    val size = descriptor.inputDescriptors.size
 
     val mh = this.methodHandleFromFn(descriptor, target)
 
-    val fd = descriptor.outputLayout match
+    val fd = descriptor.outputDescriptor match
       case Some(r) =>
         FunctionDescriptor.of(
-          LayoutI19.dataLayout2MemoryLayout(r),
-          descriptor.inputLayouts.map(LayoutI19.dataLayout2MemoryLayout)*
+          LayoutI19.dataLayout2MemoryLayout(dm.toDataLayout(r)),
+          descriptor.inputDescriptors.view.map(dm.toDataLayout).map(LayoutI19.dataLayout2MemoryLayout).toSeq*
         )
       case _ =>
         FunctionDescriptor.ofVoid(
-          descriptor.inputLayouts.map(LayoutI19.dataLayout2MemoryLayout)*
+          descriptor.inputDescriptors.view.map(dm.toDataLayout).map(LayoutI19.dataLayout2MemoryLayout).toSeq*
         )
 
     Mem19(

@@ -8,8 +8,9 @@ import dotty.tools.dotc.core.SymbolLoader
 import java.lang.foreign.SymbolLookup
 import java.nio.file.Paths
 import java.nio.file.Files
+import fr.hammons.slinc.modules.DescriptorModule
 
-class Library19(layoutI: LayoutI, linker: Linker)
+class Library19(layoutI: LayoutI, linker: Linker)(using dm: DescriptorModule)
     extends LibraryI.PlatformSpecific(layoutI):
   import layoutI.*
 
@@ -17,25 +18,25 @@ class Library19(layoutI: LayoutI, linker: Linker)
       address: Object,
       descriptor: Descriptor
   ): MethodHandle =
-    val fd = descriptor.outputLayout match
+    val fd = descriptor.outputDescriptor match
       case Some(r) =>
         FunctionDescriptor
           .of(
-            LayoutI19.dataLayout2MemoryLayout(r),
-            descriptor.inputLayouts.map(LayoutI19.dataLayout2MemoryLayout)*
+            LayoutI19.dataLayout2MemoryLayout(dm.toDataLayout(r)),
+            descriptor.inputDescriptors.view.map(dm.toDataLayout).map(LayoutI19.dataLayout2MemoryLayout).toSeq*
           )
           .nn
           .asVariadic(
-            descriptor.variadicLayouts.map(LayoutI19.dataLayout2MemoryLayout)*
+            descriptor.variadicDescriptors.view.map(dm.toDataLayout).map(LayoutI19.dataLayout2MemoryLayout).toSeq*
           )
       case _ =>
         FunctionDescriptor
           .ofVoid(
-            descriptor.inputLayouts.map(LayoutI19.dataLayout2MemoryLayout)*
+            descriptor.inputDescriptors.view.map(dm.toDataLayout).map(LayoutI19.dataLayout2MemoryLayout).toSeq*
           )
           .nn
           .asVariadic(
-            descriptor.variadicLayouts.map(LayoutI19.dataLayout2MemoryLayout)*
+            descriptor.variadicDescriptors.view.map(dm.toDataLayout).map(LayoutI19.dataLayout2MemoryLayout).toSeq*
           )
 
     val md = descriptor.toMethodType
