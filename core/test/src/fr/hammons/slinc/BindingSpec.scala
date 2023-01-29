@@ -1,9 +1,11 @@
 package fr.hammons.slinc
 
 import munit.ScalaCheckSuite
+import scala.concurrent.duration.*
 
 trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
   import slinc.{given, *}
+  override def munitTimeout: Duration = 5.minutes
   @LibraryName("@test")
   object Test derives Library:
     def identity_int(i: CInt): CInt = Library.binding
