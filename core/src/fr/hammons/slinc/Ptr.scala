@@ -12,7 +12,7 @@ class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
   def asArray(size: Int)(using
       ClassTag[A]
   )(using DescriptorOf[A], DescriptorModule)(using r: ReceiveBulk[A]) =
-    r.from(mem.resize(Bytes(DescriptorOf[A].size.toLong * size)), offset, size)
+    r.from(mem.resize(DescriptorOf[A].size * size), offset, size)
 
   def `unary_!_=`(value: A)(using send: Send[A]) = send.to(mem, offset, value)
   def apply(bytes: Bytes) = Ptr[A](mem, offset + bytes)

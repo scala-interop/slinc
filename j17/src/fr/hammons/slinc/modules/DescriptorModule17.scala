@@ -35,29 +35,29 @@ given descriptorModule17: DescriptorModule with
 
   def genLayoutList(
       layouts: Seq[MemoryLayout],
-      alignment: Long
+      alignment: Bytes
   ): Seq[MemoryLayout] =
     val (vector, currentLocation) =
-      layouts.foldLeft(Seq.empty[MemoryLayout] -> 0L) {
+      layouts.foldLeft(Seq.empty[MemoryLayout] -> Bytes(0L)) {
         case ((vector, currentLocation), layout) =>
-          val thisAlignment = layout.byteAlignment()
+          val thisAlignment = Bytes(layout.byteAlignment())
           val misalignment = currentLocation % thisAlignment
           val toAdd =
-            if misalignment == 0 then Seq(layout)
+            if misalignment == Bytes(0) then Seq(layout)
             else
               val paddingNeeded = thisAlignment - misalignment
 
               Seq(
-                MemoryLayout.paddingLayout(paddingNeeded * 8).nn,
+                MemoryLayout.paddingLayout(paddingNeeded.toBits).nn,
                 layout
               )
-          (vector ++ toAdd, currentLocation + toAdd.view.map(_.byteSize()).sum)
+          (vector ++ toAdd, currentLocation + Bytes(toAdd.view.map(_.byteSize()).sum))
       }
     val misalignment = currentLocation % alignment
     vector ++ (
-      if misalignment != 0 then
+      if misalignment != Bytes(0) then
         Seq(
-          MemoryLayout.paddingLayout((alignment - misalignment) * 8).nn
+          MemoryLayout.paddingLayout((alignment - misalignment).toBits).nn
         )
       else Seq.empty
     )
@@ -75,7 +75,7 @@ given descriptorModule17: DescriptorModule with
 
   override def alignmentOf(td: TypeDescriptor): Bytes = td match
     case s: StructDescriptor =>
-      Bytes(s.members.view.map(_.descriptor).map(alignmentOf).map(_.toLong).max)
+      s.members.view.map(_.descriptor).map(alignmentOf).max
     case _ => sizeOf(td)
 
   override def memberOffsets(sd: StructDescriptor): IArray[Bytes] =
@@ -83,7 +83,7 @@ given descriptorModule17: DescriptorModule with
       sd, {
         val ll = genLayoutList(
           sd.members.map(toMemoryLayout),
-          sd.members.view.map(_.descriptor).map(alignmentOf).map(_.toLong).max
+          sd.members.view.map(_.descriptor).map(alignmentOf).max
         )
         IArray.from(
           ll match
@@ -125,7 +125,7 @@ given descriptorModule17: DescriptorModule with
         val alignment = alignmentOf(sd)
         val offsets = memberOffsets(sd)
         MemoryLayout
-          .structLayout(genLayoutList(originalMembers, alignment.toLong)*)
+          .structLayout(genLayoutList(originalMembers, alignment)*)
           .nn
           .withName(sd.clazz.getName())
           .nn
