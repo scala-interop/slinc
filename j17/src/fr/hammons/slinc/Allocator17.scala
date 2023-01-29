@@ -4,47 +4,45 @@ import jdk.incubator.foreign.{
   SegmentAllocator,
   ResourceScope,
   CLinker,
-  FunctionDescriptor
-}
+  FunctionDescriptor as JFunctionDescriptor
+}, CLinker.C_POINTER
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
 import java.lang.invoke.MethodHandle
-import dotty.tools.dotc.transform.init.Semantic.Fun
+import fr.hammons.slinc.modules.descriptorModule17
 
 class Allocator17(
     segmentAllocator: SegmentAllocator,
     scope: ResourceScope,
     linker: CLinker,
-    layoutI: LayoutI
-) extends Allocator(layoutI):
-  import layoutI.*
+) extends Allocator:
 
-  override def upcall[Fn](descriptor: Descriptor, target: Fn): Mem =
-    val size = descriptor.inputLayouts.size
+  override def upcall[Fn](descriptor: FunctionDescriptor, target: Fn): Mem =
+    val size = descriptor.inputDescriptors.size
     val mh = methodHandleFromFn(descriptor, target)
-    val fd = descriptor.outputLayout match
+    val fd = descriptor.outputDescriptor match
       case Some(r) =>
-        FunctionDescriptor.of(
-          LayoutI17.dataLayout2MemoryLayout(r),
-          descriptor.inputLayouts.map(LayoutI17.dataLayout2MemoryLayout)*
+        JFunctionDescriptor.of(
+          descriptorModule17.toMemoryLayout(r),
+          descriptor.inputDescriptors.map(descriptorModule17.toMemoryLayout)*
         )
       case _ =>
-        FunctionDescriptor.ofVoid(
-          descriptor.inputLayouts.map(LayoutI17.dataLayout2MemoryLayout)*
+        JFunctionDescriptor.ofVoid(
+          descriptor.inputDescriptors.map(descriptorModule17.toMemoryLayout)*
         )
 
     Mem17(
       linker
         .upcallStub(mh, fd, scope)
         .nn
-        .asSegment(LayoutI17.pointerLayout.size.toLong, scope)
+        .asSegment(C_POINTER.nn.byteSize(), scope)
         .nn
     )
 
-  override def allocate(layout: DataLayout, num: Int): Mem =
+  override def allocate(descriptor: TypeDescriptor, num: Int): Mem =
     Mem17(
       segmentAllocator
-        .allocate(layout.size.toLong * num, layout.alignment.toLong)
+        .allocate(descriptor.size.toLong * num, descriptor.alignment.toLong)
         .nn
     )
   override def base: Object = segmentAllocator

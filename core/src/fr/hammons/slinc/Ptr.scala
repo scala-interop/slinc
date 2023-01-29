@@ -5,59 +5,61 @@ import scala.annotation.experimental
 import scala.annotation.targetName
 import scala.compiletime.{erasedValue, summonInline}
 import scala.reflect.ClassTag
+import fr.hammons.slinc.modules.DescriptorModule
 
 class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
   def `unary_!`(using receive: Receive[A]) = receive.from(mem, offset)
   def asArray(size: Int)(using
       ClassTag[A]
-  )(using l: LayoutOf[A], r: ReceiveBulk[A]) =
-    r.from(mem.resize(Bytes(l.layout.size.toLong * size)), offset, size)
+  )(using DescriptorOf[A], DescriptorModule)(using r: ReceiveBulk[A]) =
+    r.from(mem.resize(Bytes(DescriptorOf[A].size.toLong * size)), offset, size)
 
   def `unary_!_=`(value: A)(using send: Send[A]) = send.to(mem, offset, value)
   def apply(bytes: Bytes) = Ptr[A](mem, offset + bytes)
-  def apply(index: Int)(using l: LayoutOf[A]) =
-    Ptr[A](mem, offset + (l.layout.size * index))
+  def apply(index: Int)(using DescriptorOf[A], DescriptorModule) =
+    Ptr[A](mem, offset + (DescriptorOf[A].size * index))
 
   def castTo[A]: Ptr[A] = this.asInstanceOf[Ptr[A]]
-  private[slinc] def resize(toBytes: Bytes) = Ptr[A](mem.resize(toBytes), offset)
+  private[slinc] def resize(toBytes: Bytes) =
+    Ptr[A](mem.resize(toBytes), offset)
 
 object Ptr:
   extension (p: Ptr[Byte])
-    def copyIntoString(maxSize: Int)(using LayoutOf[Byte]) =
+    def copyIntoString(maxSize: Int)(using DescriptorOf[Byte], DescriptorModule) =
       var i = 0
       val resizedPtr = p.resize(Bytes(maxSize))
       while (i < maxSize && !resizedPtr(i) != 0) do i += 1
 
       String(resizedPtr.asArray(i).unsafeArray, "ASCII")
-  def blank[A](using layout: LayoutOf[A], alloc: Allocator): Ptr[A] =
+  def blank[A](using DescriptorOf[A], Allocator): Ptr[A] =
     this.blankArray[A](1)
 
   def blankArray[A](
       num: Int
-  )(using layout: LayoutOf[A], alloc: Allocator): Ptr[A] =
-    Ptr[A](alloc.allocate(layout.layout, num), Bytes(0))
+  )(using descriptor: DescriptorOf[A], alloc: Allocator): Ptr[A] =
+    Ptr[A](alloc.allocate(DescriptorOf[A], num), Bytes(0))
 
   def copy[A](
       a: Array[A]
-  )(using alloc: Allocator, layout: LayoutOf[A], send: Send[Array[A]]) =
-    val mem = alloc.allocate(layout.layout, a.size)
+  )(using alloc: Allocator, descriptor: DescriptorOf[A], send: Send[Array[A]]) =
+    val mem = alloc.allocate(DescriptorOf[A], a.size)
     send.to(mem, Bytes(0), a)
     Ptr[A](mem, Bytes(0))
 
   def copy[A](using alloc: Allocator)(
       a: A
-  )(using send: Send[A], layout: LayoutOf[A]) =
-    val mem = alloc.allocate(layout.layout, 1)
+  )(using send: Send[A], descriptor: DescriptorOf[A]) =
+    val mem = alloc.allocate(DescriptorOf[A], 1)
     send.to(mem, Bytes(0), a)
     Ptr[A](mem, Bytes(0))
 
   def copy(
       string: String
-  )(using Allocator, LayoutOf[Byte], Send[Array[Byte]]): Ptr[Byte] = copy(
+  )(using Allocator, DescriptorOf[Byte], Send[Array[Byte]]): Ptr[Byte] = copy(
     string.getBytes("ASCII").nn :+ 0.toByte
   )
 
   inline def upcall[A](inline a: A)(using alloc: Allocator) =
     val nFn = Fn.toNativeCompatible(a)
-    val descriptor = Descriptor.fromFunction[A]
+    val descriptor = FunctionDescriptor.fromFunction[A]
     Ptr[A](alloc.upcall(descriptor, nFn), Bytes(0))

@@ -23,7 +23,7 @@ class ScopeI(platformSpecific: ScopeI.PlatformSpecific):
   given ConfinedScope = platformSpecific.createConfinedScope
 
 object ScopeI:
-  trait PlatformSpecific(layoutI: LayoutI):
+  trait PlatformSpecific:
     def createTempScope: TempScope
     def createGlobalScope: GlobalScope
     def createConfinedScope: ConfinedScope

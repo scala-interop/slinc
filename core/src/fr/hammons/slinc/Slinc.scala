@@ -8,27 +8,27 @@ import java.util.concurrent.ThreadFactory
 import scala.util.chaining.*
 import java.util.concurrent.atomic.AtomicReference
 import scala.compiletime.uninitialized
+import modules.DescriptorModule
 
 trait Slinc:
   protected def jitManager: JitManager
 
-  protected def layoutPlatformSpecific: LayoutI.PlatformSpecific
   protected def scopePlatformSpecific: ScopeI.PlatformSpecific
   protected def transitionsPlatformSpecific: TransitionsI.PlatformSpecific
   protected def libraryIPlatformSpecific: LibraryI.PlatformSpecific
 
+  given dm: DescriptorModule
+
   private val useJit = Option(System.getProperty("sffi-jit"))
     .flatMap(_.nn.toBooleanOption)
     .getOrElse(true)
-  protected val layoutI = LayoutI(layoutPlatformSpecific)
   protected val transitionsI = TransitionsI(transitionsPlatformSpecific)
-  protected val structI = StructI(layoutI, transitionsI, jitManager)
-  val typesI = types.TypesI.platformTypes(layoutI)
+  protected val structI = StructI(transitionsI, jitManager)
+  val typesI = types.TypesI.platformTypes
   protected val scopeI = ScopeI(scopePlatformSpecific)
   protected val libraryI = LibraryI(libraryIPlatformSpecific)
-  val receiveI = ReceiveI(libraryIPlatformSpecific, layoutI)
+  val receiveI = ReceiveI(libraryIPlatformSpecific)
 
-  export layoutI.{*, given}
   export typesI.{*, given}
   export libraryI.*
   export Convertible.as
@@ -46,7 +46,7 @@ trait Slinc:
 
   export types.os
 
-  def sizeOf[A](using l: LayoutOf[A]) = l.layout.size.toLong.maybeAs[SizeT]
+  def sizeOf[A](using l: DescriptorOf[A]) = DescriptorOf[A].size.toLong.maybeAs[SizeT]
 
   def Null[A] = scopePlatformSpecific.nullPtr[A]
 

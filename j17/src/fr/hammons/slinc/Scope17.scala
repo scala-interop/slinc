@@ -4,9 +4,10 @@ import jdk.incubator.foreign.CLinker
 import jdk.incubator.foreign.ResourceScope
 import jdk.incubator.foreign.SegmentAllocator
 import jdk.incubator.foreign.MemoryAddress
+import fr.hammons.slinc.modules.DescriptorModule
 
-class Scope17(layoutI: LayoutI, linker: CLinker)
-    extends ScopeI.PlatformSpecific(layoutI):
+class Scope17(linker: CLinker)(using DescriptorModule)
+    extends ScopeI.PlatformSpecific:
 
   private val baseNull = Ptr[Nothing](
     Mem17(MemoryAddress.NULL.nn.asSegment(1, ResourceScope.globalScope).nn),
@@ -19,14 +20,14 @@ class Scope17(layoutI: LayoutI, linker: CLinker)
     def apply[A](fn: (Allocator) ?=> A): A =
       val rs = ResourceScope.globalScope().nn
       given Allocator =
-        Allocator17(SegmentAllocator.arenaAllocator(rs).nn, rs, linker, layoutI)
+        Allocator17(SegmentAllocator.arenaAllocator(rs).nn, rs, linker)
       fn
 
   def createConfinedScope: ConfinedScope = new ConfinedScope:
     def apply[A](fn: Allocator ?=> A): A =
       val rs = ResourceScope.newConfinedScope().nn
       given Allocator =
-        Allocator17(SegmentAllocator.arenaAllocator(rs).nn, rs, linker, layoutI)
+        Allocator17(SegmentAllocator.arenaAllocator(rs).nn, rs, linker)
       val res = fn
       rs.close()
       res
@@ -39,8 +40,7 @@ class Scope17(layoutI: LayoutI, linker: CLinker)
       given Allocator = Allocator17(
         segmentAllocator,
         ResourceScope.globalScope().nn,
-        linker,
-        layoutI
+        linker
       )
       val res = fn
       allocator.reset()

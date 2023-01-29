@@ -1,7 +1,7 @@
 package fr.hammons.slinc
 
 import java.lang.invoke.MethodHandle
-import jdk.incubator.foreign.FunctionDescriptor
+import jdk.incubator.foreign.{FunctionDescriptor as JFunctionDescriptor}
 import jdk.incubator.foreign.MemorySegment
 import jdk.incubator.foreign.MemoryAddress
 import java.lang.invoke.MethodType
@@ -10,45 +10,51 @@ import jdk.incubator.foreign.SymbolLookup
 import jdk.incubator.foreign.Addressable
 import java.nio.file.Paths
 import java.nio.file.Files
+import fr.hammons.slinc.modules.DescriptorModule
+import modules.descriptorModule17
 
-class Library17(layoutI: LayoutI, linker: CLinker)
-    extends LibraryI.PlatformSpecific(layoutI):
-  import layoutI.*
+class Library17(linker: CLinker)
+    extends LibraryI.PlatformSpecific:
 
   override def getDowncall(
       address: Object,
-      descriptor: Descriptor
+      descriptor: FunctionDescriptor
   ): MethodHandle =
-    val fd = descriptor.outputLayout match
+    val fd = descriptor.outputDescriptor match
       case Some(r) =>
-        FunctionDescriptor.of(
-          LayoutI17.dataLayout2MemoryLayout(r),
-          descriptor.inputLayouts
-            .map(LayoutI17.dataLayout2MemoryLayout)
+        JFunctionDescriptor.of(
+          descriptorModule17.toMemoryLayout(r),
+          descriptor.inputDescriptors.view
+            .map(descriptorModule17.toMemoryLayout)
             .concat(
-              descriptor.variadicLayouts
-                .map(LayoutI17.dataLayout2MemoryLayout)
+              descriptor.variadicDescriptors.view
+                .map(descriptorModule17.toMemoryLayout)
                 .map(CLinker.asVarArg)
-            )*
+            )
+            .toSeq*
         )
       case _ =>
-        FunctionDescriptor.ofVoid(
-          descriptor.inputLayouts
-            .map(LayoutI17.dataLayout2MemoryLayout)
+        JFunctionDescriptor.ofVoid(
+          descriptor.inputDescriptors.view
+            .map(descriptorModule17.toMemoryLayout)
             .concat(
-              descriptor.variadicLayouts
-                .map(LayoutI17.dataLayout2MemoryLayout)
+              descriptor.variadicDescriptors.view
+                .map(descriptorModule17.toMemoryLayout)
                 .map(CLinker.asVarArg)
-            )*
+            )
+            .toSeq*
         )
 
     val md = descriptor.toMethodType
 
     linker.downcallHandle(address.asInstanceOf[Addressable], md, fd).nn
 
-  class J17Lookup(s: SymbolLookup, libraryLocation: LibraryLocation) extends Lookup(libraryLocation):
-    def lookup(name: String): Object = s.lookup(name).nn.orElseThrow(() => throw this.lookupError(name)).nn
-  private val standardLibLookup = J17Lookup(CLinker.systemLookup().nn,LibraryLocation.Standardard)
+  class J17Lookup(s: SymbolLookup, libraryLocation: LibraryLocation)
+      extends Lookup(libraryLocation):
+    def lookup(name: String): Object =
+      s.lookup(name).nn.orElseThrow(() => throw this.lookupError(name)).nn
+  private val standardLibLookup =
+    J17Lookup(CLinker.systemLookup().nn, LibraryLocation.Standardard)
   override def getStandardLibLookup: Lookup =
     Tools.hashCode()
 
@@ -57,13 +63,15 @@ class Library17(layoutI: LayoutI, linker: CLinker)
     System.loadLibrary(libName)
     J17Lookup(SymbolLookup.loaderLookup().nn, LibraryLocation.Path(libName))
 
-
-  override def getResourceLibLookup(location: String): Lookup = 
+  override def getResourceLibLookup(location: String): Lookup =
     Tools.sendResourceToCache(location)
     Tools.compileCachedResourceIfNeeded(location)
     Tools.loadCachedLibrary(location)
-    
-    J17Lookup(SymbolLookup.loaderLookup().nn, LibraryLocation.Resource(location))
+
+    J17Lookup(
+      SymbolLookup.loaderLookup().nn,
+      LibraryLocation.Resource(location)
+    )
 
   override def getLocalLookup(libPath: String): Lookup =
     System.load(libPath)

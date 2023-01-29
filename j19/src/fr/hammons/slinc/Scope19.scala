@@ -6,8 +6,8 @@ import java.lang.foreign.SegmentAllocator
 import java.lang.foreign.MemorySegment
 import java.lang.foreign.MemoryAddress
 
-class Scope19(layoutI: LayoutI, linker: Linker)
-    extends ScopeI.PlatformSpecific(layoutI):
+class Scope19(linker: Linker)
+    extends ScopeI.PlatformSpecific:
 
   val baseNull: Ptr[Any] = Ptr(
     Mem19(
@@ -21,8 +21,7 @@ class Scope19(layoutI: LayoutI, linker: Linker)
     given Allocator = Allocator19(
       TempAllocator19.localAllocator,
       MemorySession.global().nn,
-      linker,
-      layoutI
+      linker
     )
     def apply[A](fn: Allocator ?=> A): A =
       val res = fn
@@ -33,14 +32,14 @@ class Scope19(layoutI: LayoutI, linker: Linker)
     def apply[A](fn: Allocator ?=> A): A =
       val rs = MemorySession.global().nn
       given Allocator =
-        Allocator19(SegmentAllocator.newNativeArena(rs).nn, rs, linker, layoutI)
+        Allocator19(SegmentAllocator.newNativeArena(rs).nn, rs, linker)
       fn
 
   override def createConfinedScope: ConfinedScope = new ConfinedScope:
     def apply[A](fn: Allocator ?=> A): A =
       val rs = MemorySession.openConfined().nn
       given Allocator =
-        Allocator19(SegmentAllocator.newNativeArena(rs).nn, rs, linker, layoutI)
+        Allocator19(SegmentAllocator.newNativeArena(rs).nn, rs, linker)
       val res = fn
       rs.close()
       res

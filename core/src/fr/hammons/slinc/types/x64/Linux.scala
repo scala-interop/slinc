@@ -1,25 +1,22 @@
 package fr.hammons.slinc.types.x64
 
 import fr.hammons.slinc.types.TypesI
-import fr.hammons.slinc.LayoutI
 import fr.hammons.slinc.container.ContextProof
 import fr.hammons.slinc.types.HostDependentTypes
 
-private[types] class Linux(layoutI: LayoutI) extends TypesI.PlatformSpecific:
-  import layoutI.given
-
+private[types] class Linux() extends TypesI.PlatformSpecific:
   val hostDependentTypes = Linux
 
   type CLong = Linux.CLong
   given cLongProof: CLongProof = ContextProof()
 
   type SizeT = Linux.SizeT
-  override given sizeTProof: SizeTProof =
+  override val sizeTProof: SizeTProof =
     ContextProof()
 
   type TimeT = Linux.TimeT
 
-  given timeTProof: TimeTProof = ContextProof()
+  val timeTProof: TimeTProof = ContextProof()
 
 
 object Linux extends HostDependentTypes:

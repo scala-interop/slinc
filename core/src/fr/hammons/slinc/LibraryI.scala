@@ -8,7 +8,7 @@ import scala.annotation.nowarn
 class LibraryI(platformSpecific: LibraryI.PlatformSpecific):
   trait Library[+L]:
     val handles: IArray[MethodHandle]
-    val varGens: IArray[Seq[DataLayout] => MethodHandle]
+    val varGens: IArray[Seq[TypeDescriptor] => MethodHandle]
     val addresses: IArray[Object]
 
   object Library:
@@ -24,10 +24,10 @@ class LibraryI(platformSpecific: LibraryI.PlatformSpecific):
       }
 
 object LibraryI:
-  trait PlatformSpecific(layoutI: LayoutI):
+  trait PlatformSpecific:
     def getDowncall(
         address: Object,
-        descriptor: Descriptor
+        descriptor: FunctionDescriptor
     ): MethodHandle
 
     def getLocalLookup(name: String): Lookup

@@ -2,16 +2,16 @@ package fr.hammons.slinc
 
 import fr.hammons.slinc.ScopeI.PlatformSpecific
 import java.lang.invoke.{MethodHandle, MethodType, MethodHandles}
+import fr.hammons.slinc.modules.DescriptorModule
 
-trait Allocator(layoutI: LayoutI):
-  import layoutI.*
-  def allocate(layout: DataLayout, num: Int): Mem
-  def upcall[Fn](descriptor: Descriptor, target: Fn): Mem
+trait Allocator:
+  def allocate(descriptor: TypeDescriptor, num: Int): Mem
+  def upcall[Fn](descriptor: FunctionDescriptor, target: Fn): Mem
   protected def methodHandleFromFn[Fn](
-      descriptor: Descriptor,
+      descriptor: FunctionDescriptor,
       target: Fn
-  ): MethodHandle =
-    val size = descriptor.inputLayouts.size
+  )(using DescriptorModule): MethodHandle =
+    val size = descriptor.inputDescriptors.size
     val mh = MethodHandles.lookup.nn
       .findVirtual(
         Class.forName(s"scala.Function$size"),
