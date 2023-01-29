@@ -18,7 +18,8 @@ case class PrimaryMetrics(
   scoreUnit: String
 ) derives ReadWriter
 
-val file = Paths.get(args(2))
+val pathFragments = args(2).split('/')
+val file = Paths.get(pathFragments.head, pathFragments.tail*)
 
 val json = Files.readString(file)
 
