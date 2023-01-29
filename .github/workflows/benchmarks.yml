@@ -4,6 +4,8 @@ on:
     branches:
       - "master"
   pull_request:
+    types:
+      - opened
     
 
 jobs:
@@ -16,11 +18,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: coursier/cache-action@v6
-      - uses: actions/setup-java@v3
+      - uses: VirtusLab/scala-cli-setup@v0.1.20
         with:
-          distribution: 'temurin'
-          java-version: ${{ matrix.jvm }}
+          jvm: temurin:1.${{ matrix.jvm }}
       - run: ./mill j${{ matrix.jvm }}.benchmarks.test -f1 -o j${{ matrix.jvm }}-${{ matrix.os }}.bench -rff j${{ matrix.jvm }}-${{ matrix.os }}.json -rf json
+      - run: scala-cli run scripts/PublishBenchmarkReport.sc -- "Java ${{ matrix.jvm}}" ${{ matrix.os }} out/j${{ matrix.jvm }}/benchmarks/test/jmhRun.dest/j${{ matrix.jvm }}-${{ matrix.os }}.json >> $GITHUB_STEP_SUMMARY
       - uses: actions/upload-artifact@v3
         with:
           path: out/j${{ matrix.jvm }}/benchmarks/test/jmhRun.dest/*

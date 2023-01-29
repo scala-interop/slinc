@@ -1,6 +1,9 @@
 name: SLinC CI
 on:
   pull_request:
+  push: 
+    branches:
+      - "master"
 
 
 jobs: 
