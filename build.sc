@@ -1,14 +1,12 @@
 import os.Path
-import $file.benchmark, benchmark.BenchmarksModule
-import $file.publishable, publishable.PublishableModule
-import $file.facadeGenerator, facadeGenerator.FacadeGenerationModule
+import $file.auxiliary.benchmark, benchmark.BenchmarksModule
+import $file.auxiliary.publishable, publishable.PublishableModule
+import $file.auxiliary.facadeGenerator, facadeGenerator.FacadeGenerationModule
 import mill._, scalalib._, scalafmt._
 import $ivy.`com.lihaoyi::mill-contrib-buildinfo:`
 import mill.contrib.buildinfo.BuildInfo
 import com.github.lolgab.mill.mima._
 
-import $ivy.`de.tototec::de.tobiasroeser.mill.jacoco_mill0.10:0.0.2`
-import de.tobiasroeser.mill.jacoco.JacocoTestModule 
 
 import $ivy.`com.lihaoyi::mill-contrib-scoverage:`
 import mill.contrib.scoverage.{ScoverageModule, ScoverageReport}
