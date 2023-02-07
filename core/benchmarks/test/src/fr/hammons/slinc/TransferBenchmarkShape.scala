@@ -1,7 +1,7 @@
 package fr.hammons.slinc
 
 import org.openjdk.jmh.annotations.*,
-Mode.{SampleTime, SingleShotTime, Throughput}
+  Mode.{SampleTime, SingleShotTime, Throughput}
 import java.util.concurrent.TimeUnit
 import fr.hammons.slinc.Scope
 import scala.annotation.experimental
@@ -19,47 +19,42 @@ trait TransferBenchmarkShape(val s: Slinc):
   given Struct[C] = Struct.derived
   given Struct[D] = Struct.derived
 
-  val aPtr = Scope.global{
+  val aPtr = Scope.global {
     Ptr.blank[A]
   }
 
-  val a = A(1,B(2,3),4)
+  val a = A(1, B(2, 3), 4)
 
-  val cPtr = Scope.global{
+  val cPtr = Scope.global {
     Ptr.blank[C]
   }
 
-  val c = C(1,D(2,3),4)
+  val c = C(1, D(2, 3), 4)
 
-  @Benchmark 
-  def topLevelRead = 
+  @Benchmark
+  def topLevelRead =
     !aPtr
 
-  @Benchmark 
+  @Benchmark
   def topLevelWrite =
     !aPtr = a
 
-
   @Benchmark
   def innerRead =
-    !cPtr 
+    !cPtr
 
-  @Benchmark 
+  @Benchmark
   def innerWrite =
     !cPtr = c
 
   @Benchmark
-  def allocateFnPointer = 
+  def allocateFnPointer =
     Scope.confined(
       Ptr.upcall((a: Ptr[Int]) => !a + 1)
     )
 
-
-  @Benchmark 
+  @Benchmark
   def allocateIntPointer =
     Scope.confined(
       Ptr.copy(3)
     )
-
-  
-

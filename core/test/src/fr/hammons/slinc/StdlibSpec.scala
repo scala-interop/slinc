@@ -15,8 +15,8 @@ trait StdlibSpec(val slinc: Slinc) extends ScalaCheckSuite:
     def abs(a: Int): Int = Library.binding
     def labs(l: CLong): CLong = Library.binding
     def div(a: Int, b: Int): div_t = Library.binding
-    //def ldiv(a: Long, b: Long): ldiv_t = Library.binding
-    //def lldiv(a: Long, b: Long): lldiv_t = Library.binding
+    // def ldiv(a: Long, b: Long): ldiv_t = Library.binding
+    // def lldiv(a: Long, b: Long): lldiv_t = Library.binding
     def rand(): Int = Library.binding
     def qsort[A](
         array: Ptr[A],
@@ -43,20 +43,20 @@ trait StdlibSpec(val slinc: Slinc) extends ScalaCheckSuite:
   }
 
   property("labs gives back absolute CLongs") {
-    platformFocus(x64.Linux){
-      forAll(Gen.choose(Long.MinValue+1, Long.MaxValue)) { (l: Long) =>
+    platformFocus(x64.Linux) {
+      forAll(Gen.choose(Long.MinValue + 1, Long.MaxValue)) { (l: Long) =>
         assertEquals(Cstd.labs(l): Long, l.abs)
 
       }
     }.orElse(
       platformFocus(x64.Mac) {
-        forAll(Gen.choose(Long.MinValue+1, Long.MaxValue)) { (l: Long) =>
+        forAll(Gen.choose(Long.MinValue + 1, Long.MaxValue)) { (l: Long) =>
           assertEquals(Cstd.labs(l): Long, l.abs)
         }
       }
     ).orElse(
-      platformFocus(x64.Windows){
-        forAll(Gen.choose(Int.MinValue+1, Int.MaxValue)) {(i: Int) =>
+      platformFocus(x64.Windows) {
+        forAll(Gen.choose(Int.MinValue + 1, Int.MaxValue)) { (i: Int) =>
           assertEquals(Cstd.labs(i): Int, i.abs)
         }
       }
@@ -82,11 +82,11 @@ trait StdlibSpec(val slinc: Slinc) extends ScalaCheckSuite:
   test("ldiv") {
     assertEquals(Cstd.ldiv(5L, 2L), ldiv_t(2L, 1L))
   }
-  
+
   test("lldiv") {
     assertEquals(Cstd.lldiv(5L, 2L), lldiv_t(2L, 1L))
   }
-  */
+   */
   test("rand") {
     assertNotEquals(Cstd.rand(), Cstd.rand())
   }
@@ -191,24 +191,24 @@ trait StdlibSpec(val slinc: Slinc) extends ScalaCheckSuite:
   }
 
   property("strtod convert doubles from string") {
-    forAll {(d: Double) =>
-        Scope.confined {
-          val input = f"$d%f $d%f"
-          val maxSize = input.length()
-          val pStr0 = Ptr.copy(input)
+    forAll { (d: Double) =>
+      Scope.confined {
+        val input = f"$d%f $d%f"
+        val maxSize = input.length()
+        val pStr0 = Ptr.copy(input)
 
-          val ans1 = Ptr.blank[Ptr[Byte]]
-          val a1 = Cstd.strtod(pStr0, ans1)
-          assertEqualsDouble(a1, d, 0.1)
-          val pStr1 = !ans1
-          val r1 = pStr1.copyIntoString(maxSize)
-          assertEquals(r1, f" $d%f")
+        val ans1 = Ptr.blank[Ptr[Byte]]
+        val a1 = Cstd.strtod(pStr0, ans1)
+        assertEqualsDouble(a1, d, 0.1)
+        val pStr1 = !ans1
+        val r1 = pStr1.copyIntoString(maxSize)
+        assertEquals(r1, f" $d%f")
 
-          val ans2 = Ptr.blank[Ptr[Byte]]
-          val a2 = Cstd.strtod(pStr1, ans2)
-          assertEqualsDouble(a2, d, 0.1)
-          assertEquals(!(!ans2), 0.toByte)
-        }
+        val ans2 = Ptr.blank[Ptr[Byte]]
+        val a2 = Cstd.strtod(pStr1, ans2)
+        assertEqualsDouble(a2, d, 0.1)
+        assertEquals(!(!ans2), 0.toByte)
+      }
     }
   }
 

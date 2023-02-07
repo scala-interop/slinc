@@ -18,8 +18,7 @@ private[types] class Linux() extends TypesI.PlatformSpecific:
 
   val timeTProof: TimeTProof = ContextProof()
 
-
 object Linux extends HostDependentTypes:
-  type TimeT = Long 
-  type SizeT = Long 
+  type TimeT = Long
+  type SizeT = Long
   type CLong = Long

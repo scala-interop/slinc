@@ -5,7 +5,9 @@ import fr.hammons.slinc.ScopeI.PlatformSpecific
 import fr.hammons.slinc.modules.DescriptorModule
 import fr.hammons.slinc.modules.given
 
-class Slinc17(_jitManager: JitManager, linker: CLinker)(using val dm: DescriptorModule) extends Slinc:
+class Slinc17(_jitManager: JitManager, linker: CLinker)(using
+    val dm: DescriptorModule
+) extends Slinc:
   protected def jitManager = _jitManager
   protected def scopePlatformSpecific = Scope17(linker)
   protected def transitionsPlatformSpecific = Transitions17

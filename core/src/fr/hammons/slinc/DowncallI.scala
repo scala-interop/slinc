@@ -14,7 +14,7 @@ class DowncallI(platform: DowncallI.PlatformSpecific):
         getDowncallHelper[T],
         summonFrom {
           case dO: DescriptorOf[R] => Some(dO.descriptor)
-          case _               => None
+          case _                   => None
         }
       )
 

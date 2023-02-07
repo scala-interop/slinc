@@ -9,10 +9,10 @@ trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
   import slinc.{*, given}
 
   case class A(a: Int, b: Int) derives Struct
-  case class B(a: Int, b: A, c: Int) derives Struct 
-  case class C(a: Int, b: Byte, c: Short, d: Long, e: Float, f: Double) derives Struct 
+  case class B(a: Int, b: A, c: Int) derives Struct
+  case class C(a: Int, b: Byte, c: Short, d: Long, e: Float, f: Double)
+      derives Struct
   case class D(a: Byte, b: Ptr[Int], c: Byte) derives Struct
-
 
   test("can read and write jvm ints") {
     Scope.global {
@@ -124,21 +124,18 @@ trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
   yield A(a, b)
 
   property("can read/write arrays of A") {
-    forAll(Gen.containerOf[Array, A](genA)) {
-      (arr: Array[A]) =>
-        Scope.confined {
-          val mem = Ptr.copy(arr)
+    forAll(Gen.containerOf[Array, A](genA)) { (arr: Array[A]) =>
+      Scope.confined {
+        val mem = Ptr.copy(arr)
 
-          assertEquals(mem.asArray(arr.length).toSeq, arr.toSeq)
-        }
+        assertEquals(mem.asArray(arr.length).toSeq, arr.toSeq)
+      }
     }
   }
 
-
-
   property("can read/write structs with pointers") {
-    forAll { (a: Byte, b: Int, c: Byte) => 
-      Scope.confined{
+    forAll { (a: Byte, b: Int, c: Byte) =>
+      Scope.confined {
         val d = D(a, Ptr.copy(b), c)
         val ptr = Ptr.copy(d)
         val dPrime = !ptr
@@ -149,5 +146,3 @@ trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
       }
     }
   }
-
-  

@@ -6,8 +6,7 @@ import java.lang.foreign.SegmentAllocator
 import java.lang.foreign.MemorySegment
 import java.lang.foreign.MemoryAddress
 
-class Scope19(linker: Linker)
-    extends ScopeI.PlatformSpecific:
+class Scope19(linker: Linker) extends ScopeI.PlatformSpecific:
 
   val baseNull: Ptr[Any] = Ptr(
     Mem19(

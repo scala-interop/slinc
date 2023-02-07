@@ -13,8 +13,7 @@ import java.nio.file.Files
 import fr.hammons.slinc.modules.DescriptorModule
 import modules.descriptorModule17
 
-class Library17(linker: CLinker)
-    extends LibraryI.PlatformSpecific:
+class Library17(linker: CLinker) extends LibraryI.PlatformSpecific:
 
   override def getDowncall(
       address: Object,

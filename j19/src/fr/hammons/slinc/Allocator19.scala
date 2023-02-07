@@ -9,7 +9,7 @@ import fr.hammons.slinc.modules.descriptorModule19
 class Allocator19(
     segmentAllocator: SegmentAllocator,
     scope: MemorySession,
-    linker: Linker,
+    linker: Linker
 ) extends Allocator:
 
   override def upcall[Fn](descriptor: FunctionDescriptor, target: Fn): Mem =
@@ -21,11 +21,15 @@ class Allocator19(
       case Some(r) =>
         JFunctionDescriptor.of(
           descriptorModule19.toMemoryLayout(r),
-          descriptor.inputDescriptors.view.map(descriptorModule19.toMemoryLayout).toSeq*
+          descriptor.inputDescriptors.view
+            .map(descriptorModule19.toMemoryLayout)
+            .toSeq*
         )
       case _ =>
         JFunctionDescriptor.ofVoid(
-          descriptor.inputDescriptors.view.map(descriptorModule19.toMemoryLayout).toSeq*
+          descriptor.inputDescriptors.view
+            .map(descriptorModule19.toMemoryLayout)
+            .toSeq*
         )
 
     Mem19(

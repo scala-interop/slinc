@@ -53,7 +53,8 @@ object Tools:
         cacheLocation.nn.toAbsolutePath().nn.toString(),
         headerLocation.nn.toAbsolutePath().nn.toString()
       )
-      if cmd.! != 0 then throw Error(s"failed to compile $headerLocation: ${cmd.mkString(" ")}")
+      if cmd.! != 0 then
+        throw Error(s"failed to compile $headerLocation: ${cmd.mkString(" ")}")
 
   def loadCachedLibrary(name: String) =
     val cacheLocation = appDataStore.resolve(s"$name$sharedLibSuffix")

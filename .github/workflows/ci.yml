@@ -21,6 +21,8 @@ jobs:
           java-version: |
             17
             19
+      - name: Formatting Check 
+        run: ./mill mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll __.sources
       - name: Core tests
         run: |
           ./mill core.compile

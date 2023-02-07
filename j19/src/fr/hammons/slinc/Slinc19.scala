@@ -3,7 +3,9 @@ package fr.hammons.slinc
 import java.lang.foreign.Linker
 import fr.hammons.slinc.modules.{*, given}
 
-class Slinc19(_jitManager: JitManager, linker: Linker)(using val dm: DescriptorModule) extends Slinc:
+class Slinc19(_jitManager: JitManager, linker: Linker)(using
+    val dm: DescriptorModule
+) extends Slinc:
   protected def jitManager: JitManager = _jitManager
 
   protected def scopePlatformSpecific: ScopeI.PlatformSpecific =

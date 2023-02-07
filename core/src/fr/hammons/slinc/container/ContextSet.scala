@@ -12,4 +12,6 @@ object ContextSet:
       using c: ContextSet[ContextProof[D, B] *: ContextProof[C, A] *: T]
   ): ContextSet[ContextProof[C, A] *: T] = ContextSet(c.t.tail)
 
-  given proofFromSet[A,C <: Capabilities](using c: ContextSet[ContextProof[C,A] *: EmptyTuple]): ContextProof[C,A] = c.t.head
+  given proofFromSet[A, C <: Capabilities](using
+      c: ContextSet[ContextProof[C, A] *: EmptyTuple]
+  ): ContextProof[C, A] = c.t.head

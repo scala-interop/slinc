@@ -4,18 +4,20 @@ import fr.hammons.slinc.container.*
 import scala.quoted.*
 
 /** Typeclass that summons TypeDescriptors
-  * 
   */
 trait DescriptorOf[A]:
   val descriptor: TypeDescriptor
 
 object DescriptorOf:
-  /** Convenience method for summoning the TypeDescriptor attached to DescriptorOf.
-    * 
-    * @example DescriptorOf[Int] //returns IntDescriptor
+  /** Convenience method for summoning the TypeDescriptor attached to
+    * DescriptorOf.
+    *
+    * @example
+    *   DescriptorOf[Int] //returns IntDescriptor
     *
     * @param d
-    * @return TypeDescriptor for type A
+    * @return
+    *   TypeDescriptor for type A
     */
   def apply[A](using d: DescriptorOf[A]) = d.descriptor
 
@@ -42,7 +44,7 @@ object DescriptorOf:
   given DescriptorOf[Double] with
     val descriptor: TypeDescriptor = DoubleDescriptor
 
-  //this is the general DescriptorOf for all [[Ptr[A]]]
+  // this is the general DescriptorOf for all [[Ptr[A]]]
   private val ptrDescriptor = new DescriptorOf[Ptr[?]]:
     val descriptor: TypeDescriptor = PtrDescriptor
 
@@ -51,8 +53,10 @@ object DescriptorOf:
 
   def getDescriptorFor[A](using Quotes, Type[A]) =
     import quotes.reflect.*
-    val expr = Expr.summon[DescriptorOf[A]].getOrElse(
-      report.errorAndAbort(s"Cannot find a descriptor of ${Type.show[A]}")
-    )
+    val expr = Expr
+      .summon[DescriptorOf[A]]
+      .getOrElse(
+        report.errorAndAbort(s"Cannot find a descriptor of ${Type.show[A]}")
+      )
 
-    '{$expr.descriptor}
+    '{ $expr.descriptor }

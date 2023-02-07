@@ -118,7 +118,6 @@ object LibraryI:
     val owningClass = MacroHelpers.findOwningClass(Symbol.spliceOwner)
     val library = LibraryI.getLibrary[L](owningClass)
 
-
     val methodSymbol = MacroHelpers.findOwningMethod(Symbol.spliceOwner)
     val methodPositionExpr = MacroHelpers
       .getMethodSymbols(owningClass)
@@ -214,16 +213,28 @@ object LibraryI:
           )
         }
     report.info(
-      s"""|Binding doesn't need allocator: ${allocationlessInputs == mappedInputs && !needsAllocator(methodSymbol)}
-          |Binding has return that requires allocator: ${needsAllocator(methodSymbol)}
+      s"""|Binding doesn't need allocator: ${allocationlessInputs == mappedInputs && !needsAllocator(
+           methodSymbol
+         )}
+          |Binding has return that requires allocator: ${needsAllocator(
+           methodSymbol
+         )}
           |Binding has inputs that require allocation: ${allocationlessInputs != mappedInputs}
-          |Allocationless inputs: ${allocationlessInputs.map(_.asTerm.show(using Printer.TreeShortCode))}
-          |Mapped inputs: ${mappedInputs.map(_.asTerm.show(using Printer.TreeShortCode))}
-          |Generated code: ${code.asTerm.show(using Printer.TreeShortCode)}""".stripMargin
+          |Allocationless inputs: ${allocationlessInputs.map(
+           _.asTerm.show(using Printer.TreeShortCode)
+         )}
+          |Mapped inputs: ${mappedInputs.map(
+           _.asTerm.show(using Printer.TreeShortCode)
+         )}
+          |Generated code: ${code.asTerm.show(using
+           Printer.TreeShortCode
+         )}""".stripMargin
     )
     code
 
-  def getLibrary[L[_]](using q: Quotes)(using Type[L])(owningClass: q.reflect.Symbol): Expr[L[Any]] =
+  def getLibrary[L[_]](using q: Quotes)(using Type[L])(
+      owningClass: q.reflect.Symbol
+  ): Expr[L[Any]] =
     import quotes.reflect.*
 
     TypeRepr.of[L].appliedTo(owningClass.typeRef).asType match
@@ -245,13 +256,14 @@ object LibraryI:
     import quotes.reflect.*
     val name: LibraryLocation = LibraryName.libraryName[L]
     name match
-      case LibraryLocation.Standardard => '{ $platformSpecificExpr.getStandardLibLookup }
+      case LibraryLocation.Standardard =>
+        '{ $platformSpecificExpr.getStandardLibLookup }
       case LibraryLocation.Local(s) =>
         '{ $platformSpecificExpr.getLocalLookup(${ Expr(s) }) }
       case LibraryLocation.Path(s) =>
         '{ $platformSpecificExpr.getLibraryPathLookup(${ Expr(s) }) }
       case LibraryLocation.Resource(s) =>
-        '{ $platformSpecificExpr.getResourceLibLookup(${Expr(s)} ) }
+        '{ $platformSpecificExpr.getResourceLibLookup(${ Expr(s) }) }
 
   inline def getMethodAddress[L](l: Lookup) = ${
     getMethodAddressImpl[L]('l)
