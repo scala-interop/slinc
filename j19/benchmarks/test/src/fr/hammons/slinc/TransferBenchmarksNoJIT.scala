@@ -14,4 +14,4 @@ import java.util.concurrent.TimeUnit
   )
 )
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
-class BindingsBenchmarkNoJIT19 extends BindingsBenchmarkShape(Slinc19.noJit)
+class TransferBenchmarksNoJIT extends TransferBenchmarkShape(Slinc19.noJit)

@@ -14,4 +14,4 @@ import java.util.concurrent.TimeUnit
   )
 )
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
-class TransferStandardBenchmarks extends TransferBenchmarkShape(Slinc17.default)
+class TransferBenchmarksStandard extends TransferBenchmarkShape(Slinc17.default)

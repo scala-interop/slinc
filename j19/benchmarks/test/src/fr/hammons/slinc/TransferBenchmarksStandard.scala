@@ -8,10 +8,10 @@ import java.util.concurrent.TimeUnit
 @BenchmarkMode(Array(Throughput, SingleShotTime))
 @Fork(
   jvmArgsAppend = Array(
-    "--add-modules=jdk.incubator.foreign",
+    "--enable-preview",
     "--enable-native-access=ALL-UNNAMED"
     // "-XX:ActiveProcessorCount=1",
   )
 )
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
-class BindingsBenchmarkNoJIT extends BindingsBenchmarkShape(Slinc17.noJit)
+class TransferBenchmarksStandard extends TransferBenchmarkShape(Slinc19.default)
