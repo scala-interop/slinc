@@ -26,13 +26,16 @@ class Mem17(private[slinc] val mem: MemorySegment) extends Mem:
 
   override def readAddress(offset: Bytes): Mem =
     val addr: MemoryAddress = MemoryAccess
-      .getAddressAtOffset(mem, offset.toLong).nn    
+      .getAddressAtOffset(mem, offset.toLong)
+      .nn
 
     Mem17(
-      addr.asSegment(
+      addr
+        .asSegment(
           C_POINTER.nn.byteSize(),
           ResourceScope.globalScope()
-        ).nn
+        )
+        .nn
     )
 
   override def writeInt(v: Int, offset: Bytes): Unit =
@@ -61,8 +64,12 @@ class Mem17(private[slinc] val mem: MemorySegment) extends Mem:
   override def writeShort(v: Short, offset: Bytes): Unit =
     MemoryAccess.setShortAtOffset(mem, offset.toLong, v)
 
-  override def writeAddress(v: Mem, offset: Bytes): Unit = 
-    MemoryAccess.setAddressAtOffset(mem, offset.toLong, v.asAddress.asInstanceOf[Addressable])
+  override def writeAddress(v: Mem, offset: Bytes): Unit =
+    MemoryAccess.setAddressAtOffset(
+      mem,
+      offset.toLong,
+      v.asAddress.asInstanceOf[Addressable]
+    )
 
   override def readByte(offset: Bytes): Byte =
     MemoryAccess.getByteAtOffset(mem, offset.toLong)
@@ -74,10 +81,8 @@ class Mem17(private[slinc] val mem: MemorySegment) extends Mem:
     Mem17(resizeSegment(bytes))
 
   def resizeSegment(to: Bytes): MemorySegment =
-    if to.toLong == 0 then
-      mem
-    else
-      mem.address().nn.asSegment(to.toLong, mem.scope().nn).nn
+    if to.toLong == 0 then mem
+    else mem.address().nn.asSegment(to.toLong, mem.scope().nn).nn
 
   def readIntArray(offset: Bytes, size: Int): Array[Int] =
     val arr = Array.ofDim[Int](size)

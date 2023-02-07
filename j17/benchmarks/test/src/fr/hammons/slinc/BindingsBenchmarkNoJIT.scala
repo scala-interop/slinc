@@ -1,7 +1,7 @@
 package fr.hammons.slinc
 
 import org.openjdk.jmh.annotations.*,
-Mode.{SampleTime, SingleShotTime, Throughput}
+  Mode.{SampleTime, SingleShotTime, Throughput}
 import java.util.concurrent.TimeUnit
 
 @State(Scope.Thread)

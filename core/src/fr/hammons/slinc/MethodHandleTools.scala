@@ -111,7 +111,10 @@ object MethodHandleTools:
   def calculateMethodHandleImplementation[L](
       platformExpr: Expr[LibraryI.PlatformSpecific],
       addresses: Expr[IArray[Object]]
-  )(using Quotes, Type[L]): Expr[(IArray[MethodHandle], IArray[Seq[TypeDescriptor] => MethodHandle])] =
+  )(using
+      Quotes,
+      Type[L]
+  ): Expr[(IArray[MethodHandle], IArray[Seq[TypeDescriptor] => MethodHandle])] =
     import quotes.reflect.*
 
     val methodSymbols = MacroHelpers.getMethodSymbols(
@@ -168,7 +171,7 @@ object MethodHandleTools:
   inline def calculateMethodHandles[L](
       platformSpecific: LibraryI.PlatformSpecific,
       addresses: IArray[Object]
-  ): (IArray[MethodHandle], IArray[Seq[TypeDescriptor] => MethodHandle])  = ${
+  ): (IArray[MethodHandle], IArray[Seq[TypeDescriptor] => MethodHandle]) = ${
     calculateMethodHandleImplementation[L]('platformSpecific, 'addresses)
   }
 

@@ -1,7 +1,7 @@
 package fr.hammons.slinc
 
 import org.openjdk.jmh.annotations.*,
-Mode.{SampleTime, SingleShotTime, Throughput}
+  Mode.{SampleTime, SingleShotTime, Throughput}
 import java.util.concurrent.TimeUnit
 import fr.hammons.slinc.Scope
 import scala.util.Random
@@ -33,7 +33,7 @@ trait BindingsBenchmarkShape(val s: Slinc):
 
   val base = Seq.fill(10000)(Random.nextInt)
   val baseArr = base.toArray
-  
+
   val upcall: Ptr[(Ptr[Int], Ptr[Int]) => Int] = Scope.global {
     Ptr.upcall((a, b) =>
       val aVal = !a
@@ -49,11 +49,11 @@ trait BindingsBenchmarkShape(val s: Slinc):
     Cstd.abs(6)
 
   @Benchmark
-  def labs = 
+  def labs =
     Cstd.labs(-15.as[CLong])
 
   @Benchmark
-  def labs2 = 
+  def labs2 =
     Cstd2.labs(-15)
 
   @Benchmark
@@ -84,5 +84,3 @@ trait BindingsBenchmarkShape(val s: Slinc):
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   def scalasort =
     baseArr.sorted
-
-  

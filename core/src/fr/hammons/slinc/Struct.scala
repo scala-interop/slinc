@@ -16,12 +16,15 @@ class StructI(
     jitManager: JitManager
 )(using DescriptorModule):
   /** Summons up Descriptors for the members of Product A
-    * 
     *
-    * @tparam A The product type to summon a list of descriptors for
-    * @return List[TypeDescriptor]
+    * @tparam A
+    *   The product type to summon a list of descriptors for
+    * @return
+    *   List[TypeDescriptor]
     */
-  private inline def memberDescriptors[A](using m: Mirror.ProductOf[A]): List[TypeDescriptor] =
+  private inline def memberDescriptors[A](using
+      m: Mirror.ProductOf[A]
+  ): List[TypeDescriptor] =
     memberDescriptorsHelper[m.MirroredElemTypes]
   private inline def memberDescriptorsHelper[T <: Tuple]: List[TypeDescriptor] =
     inline erasedValue[T] match
@@ -30,9 +33,9 @@ class StructI(
       case _: EmptyTuple => Nil
 
   /** Summons up the names of members of the Product A
-    * 
     *
-    * @tparam A A product type representing a C struct.
+    * @tparam A
+    *   A product type representing a C struct.
     * @return
     */
   private inline def memberNames[A](using m: Mirror.ProductOf[A]) =

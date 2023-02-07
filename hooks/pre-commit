@@ -1,0 +1,3 @@
+#!/bin/sh
+
+./mill mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll __.sources

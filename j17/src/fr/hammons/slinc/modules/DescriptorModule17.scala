@@ -51,7 +51,10 @@ given descriptorModule17: DescriptorModule with
                 MemoryLayout.paddingLayout(paddingNeeded.toBits).nn,
                 layout
               )
-          (vector ++ toAdd, currentLocation + Bytes(toAdd.view.map(_.byteSize()).sum))
+          (
+            vector ++ toAdd,
+            currentLocation + Bytes(toAdd.view.map(_.byteSize()).sum)
+          )
       }
     val misalignment = currentLocation % alignment
     vector ++ (

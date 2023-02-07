@@ -25,7 +25,9 @@ class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
 
 object Ptr:
   extension (p: Ptr[Byte])
-    def copyIntoString(maxSize: Int)(using DescriptorOf[Byte], DescriptorModule) =
+    def copyIntoString(
+        maxSize: Int
+    )(using DescriptorOf[Byte], DescriptorModule) =
       var i = 0
       val resizedPtr = p.resize(Bytes(maxSize))
       while (i < maxSize && !resizedPtr(i) != 0) do i += 1

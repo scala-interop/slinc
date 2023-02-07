@@ -7,7 +7,6 @@ import fr.hammons.slinc.types.HostDependentTypes
 private[slinc] class Windows() extends TypesI.PlatformSpecific:
   val hostDependentTypes = Windows
 
-
   type CLong = Windows.CLong
   given cLongProof: CLongProof = ContextProof()
 
@@ -15,11 +14,11 @@ private[slinc] class Windows() extends TypesI.PlatformSpecific:
   override val sizeTProof: SizeTProof =
     ContextProof()
 
-  type TimeT = Windows.TimeT 
+  type TimeT = Windows.TimeT
   override val timeTProof: TimeTProof =
     ContextProof()
 
 object Windows extends HostDependentTypes:
   type CLong = Int
-  type SizeT = Long 
+  type SizeT = Long
   type TimeT = Long

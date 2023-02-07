@@ -57,7 +57,10 @@ given descriptorModule19: DescriptorModule with
                 MemoryLayout.paddingLayout(paddingNeeded.toBits).nn,
                 layout
               )
-          (vector ++ toAdd, currentLocation + Bytes(toAdd.view.map(_.byteSize()).sum))
+          (
+            vector ++ toAdd,
+            currentLocation + Bytes(toAdd.view.map(_.byteSize()).sum)
+          )
       }
     val misalignment = currentLocation % alignment
     vector ++ (
@@ -125,4 +128,5 @@ given descriptorModule19: DescriptorModule with
       case FloatDescriptor  => Bytes(4)
       case DoubleDescriptor => Bytes(8)
       case PtrDescriptor    => Bytes(ValueLayout.ADDRESS.nn.byteAlignment())
-      case sd: StructDescriptor => sd.members.view.map(_.descriptor).map(alignmentOf).max
+      case sd: StructDescriptor =>
+        sd.members.view.map(_.descriptor).map(alignmentOf).max

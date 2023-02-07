@@ -1,7 +1,7 @@
 package fr.hammons.slinc
 
 import org.openjdk.jmh.annotations.*,
-Mode.{SampleTime, SingleShotTime, Throughput}
+  Mode.{SampleTime, SingleShotTime, Throughput}
 import java.util.concurrent.TimeUnit
 
 @State(Scope.Thread)
@@ -14,4 +14,5 @@ import java.util.concurrent.TimeUnit
   )
 )
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
-class TransferBenchmarksStandard19 extends TransferBenchmarkShape(Slinc19.default)
+class TransferBenchmarksStandard19
+    extends TransferBenchmarkShape(Slinc19.default)

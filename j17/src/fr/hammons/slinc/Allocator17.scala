@@ -14,7 +14,7 @@ import fr.hammons.slinc.modules.descriptorModule17
 class Allocator17(
     segmentAllocator: SegmentAllocator,
     scope: ResourceScope,
-    linker: CLinker,
+    linker: CLinker
 ) extends Allocator:
 
   override def upcall[Fn](descriptor: FunctionDescriptor, target: Fn): Mem =

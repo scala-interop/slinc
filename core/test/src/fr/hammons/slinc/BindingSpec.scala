@@ -17,12 +17,12 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
 
     case class I36Struct(i: CInt, c: Ptr[CChar]) derives Struct
 
-    case class I36Inner(i: CInt) derives Struct 
+    case class I36Inner(i: CInt) derives Struct
     case class I36Outer(inner: Ptr[I36Inner]) derives Struct
 
     // issue 36 test bindings
     def i36_get_my_struct(): Ptr[I36Struct] = Library.binding
-    def i36_get_mystruct_by_value(): I36Struct  = Library.binding
+    def i36_get_mystruct_by_value(): I36Struct = Library.binding
     def i36_copy_my_struct(ptr: Ptr[I36Struct]): Unit = Library.binding
     def i36_nested(): Ptr[I36Outer] = Library.binding
 
@@ -50,7 +50,7 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
     assertEquals(struct.i, 42)
     assertEquals(struct.c.copyIntoString(100), "mylib")
 
-    Scope.confined{
+    Scope.confined {
       !ptr = Test.I36Struct(21, Ptr.copy("test"))
       Test.i36_copy_my_struct(ptr)
     }
@@ -60,6 +60,5 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
 
     val ptr2 = Test.i36_nested()
 
-    assertEquals((!(!ptr2).inner).i, 43) 
+    assertEquals((!(!ptr2).inner).i, 43)
   }
-

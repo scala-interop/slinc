@@ -17,6 +17,6 @@ private[slinc] class Mac() extends TypesI.PlatformSpecific:
   override val timeTProof: TimeTProof = ContextProof()
 
 object Mac extends HostDependentTypes:
-  type CLong = Long 
+  type CLong = Long
   type SizeT = Long
   type TimeT = Long

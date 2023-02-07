@@ -1,5 +1,4 @@
-package fr.hammons.slinc 
-
+package fr.hammons.slinc
 
 val slinc = Slinc.getRuntime()
 

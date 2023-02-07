@@ -10,7 +10,7 @@ object Bytes:
   extension (a: Bytes)
     inline def +(b: Bytes): Bytes = a + b
     inline def *(i: Int): Bytes = a * i
-    inline def *(b: Bytes): Bytes = a * b 
+    inline def *(b: Bytes): Bytes = a * b
     inline def %(b: Bytes): Bytes = a % b
     inline def -(b: Bytes): Bytes = a - b
     inline def toLong: Long = a
