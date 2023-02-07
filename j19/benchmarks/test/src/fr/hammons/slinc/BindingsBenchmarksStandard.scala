@@ -14,5 +14,4 @@ import java.util.concurrent.TimeUnit
   )
 )
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
-class BindingsBenchmarkStandard19
-    extends BindingsBenchmarkShape(Slinc19.default)
+class BindingsBenchmarksStandard extends BindingsBenchmarkShape(Slinc19.default)
