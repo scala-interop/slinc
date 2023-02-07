@@ -47,7 +47,7 @@ object MethodHandleTools:
   )(using
       Quotes,
       Type[R]
-  ) =
+  ): Expr[Object | Null] =
     import quotes.reflect.*
 
     val arity = exprs.size
@@ -65,28 +65,15 @@ object MethodHandleTools:
       .getOrElse(report.errorAndAbort("This class should exist!!"))
       .companionModule
 
-    val methodSymbol = mod.flatMap(
-      _.declaredMethods
-        .find(_.name == callName)
-    )
-
     val backupSymbol =
       backupMod.declaredMethods.find(_.name.endsWith(arity.toString()))
 
-    methodSymbol
+    backupSymbol
       .map(ms =>
         Apply(
-          Select(Ident(mod.get.termRef), ms),
+          Select(Ident(backupMod.termRef), ms),
           mh.asTerm :: exprs.map(_.asTerm).toList
-        ).asExpr
-      )
-      .orElse(
-        backupSymbol.map(ms =>
-          Apply(
-            Select(Ident(backupMod.termRef), ms),
-            mh.asTerm :: exprs.map(_.asTerm).toList
-          ).asExpr
-        )
+        ).asExprOf[Object | Null]
       )
       .getOrElse(
         '{ MethodHandleFacade.callVariadic($mh, ${ Varargs(exprs) }*) }
@@ -200,9 +187,15 @@ object MethodHandleTools:
       (meth, params) =>
         retType.asType match
           case '[r] =>
-            invokeArguments[r](
+            val invokeExpr = invokeArguments[r](
               methodHandleExpr,
               params.map(_.asExpr)
-            ).asTerm
+            )
+            val invokeResultExpr = '{
+              val invokeResult = $invokeExpr
+              if invokeResult == null then ().asInstanceOf[r]
+              else invokeResult.asInstanceOf[r]
+            }
+            invokeResultExpr.asTerm
               .changeOwner(meth)
     ).asExprOf[A]

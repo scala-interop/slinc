@@ -26,7 +26,7 @@ object Fn:
     toNativeCompatibleImpl('a)
   }
 
-  def toNativeCompatibleImpl[A](a: Expr[A])(using Quotes, Type[A]) =
+  def toNativeCompatibleImpl[A](a: Expr[A])(using Quotes, Type[A]): Expr[A] =
     import quotes.reflect.*
     val typeArgs = TypeRepr.of[A].typeArgs
     val inputTypes = typeArgs.init
@@ -57,7 +57,9 @@ object Fn:
                   .asTerm
                   .changeOwner(meth)
           }
-    ).asExpr
+    ).asExprOf[A]
+
+    report.info(lambda.show)
 
     Expr.betaReduce(lambda)
 

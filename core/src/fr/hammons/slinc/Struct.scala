@@ -10,11 +10,12 @@ import scala.compiletime.{
 import java.util.concurrent.atomic.AtomicReference
 import scala.reflect.ClassTag
 import modules.DescriptorModule
+import fr.hammons.slinc.modules.TransitionModule
 
 class StructI(
     transitionI: TransitionsI,
     jitManager: JitManager
-)(using DescriptorModule):
+)(using DescriptorModule, TransitionModule):
   /** Summons up Descriptors for the members of Product A
     *
     * @tparam A
@@ -88,6 +89,12 @@ class StructI(
       final def from(mem: Mem, offset: Bytes): A =
         receiver.from(mem, offset).asInstanceOf[A]
 
+      summon[TransitionModule].registerMethodArgumentTransition[A](
+        this.descriptor,
+        Allocator ?=> in(_)
+      )
+      summon[TransitionModule]
+        .registerMethodReturnTransition[A](this.descriptor, out)
       final def in(a: A)(using alloc: Allocator): Object =
         val mem = alloc.allocate(this.descriptor, 1)
         to(mem, Bytes(0), a)

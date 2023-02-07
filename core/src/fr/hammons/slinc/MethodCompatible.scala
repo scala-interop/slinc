@@ -11,8 +11,6 @@ object MethodCompatible:
   given MethodCompatible[Float] with {}
   given MethodCompatible[Double] with {}
 
-  given MethodCompatible[Seq[Variadic]] with {}
-
   private val mthdCompatPtr = new MethodCompatible[Ptr[?]] {}
   given [A]: MethodCompatible[Ptr[A]] =
     mthdCompatPtr.asInstanceOf[MethodCompatible[Ptr[A]]]

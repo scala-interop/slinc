@@ -8,15 +8,15 @@ import scala.reflect.ClassTag
 import fr.hammons.slinc.modules.DescriptorModule
 
 class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
-  def `unary_!`(using receive: Receive[A]) = receive.from(mem, offset)
+  def `unary_!`(using receive: Receive[A]): A = receive.from(mem, offset)
   def asArray(size: Int)(using
       ClassTag[A]
   )(using DescriptorOf[A], DescriptorModule)(using r: ReceiveBulk[A]) =
     r.from(mem.resize(DescriptorOf[A].size * size), offset, size)
 
   def `unary_!_=`(value: A)(using send: Send[A]) = send.to(mem, offset, value)
-  def apply(bytes: Bytes) = Ptr[A](mem, offset + bytes)
-  def apply(index: Int)(using DescriptorOf[A], DescriptorModule) =
+  def apply(bytes: Bytes): Ptr[A] = Ptr[A](mem, offset + bytes)
+  def apply(index: Int)(using DescriptorOf[A], DescriptorModule): Ptr[A] =
     Ptr[A](mem, offset + (DescriptorOf[A].size * index))
 
   def castTo[A]: Ptr[A] = this.asInstanceOf[Ptr[A]]
@@ -61,7 +61,7 @@ object Ptr:
     string.getBytes("ASCII").nn :+ 0.toByte
   )
 
-  inline def upcall[A](inline a: A)(using alloc: Allocator) =
+  inline def upcall[A](inline a: A)(using alloc: Allocator): Ptr[A] =
     val nFn = Fn.toNativeCompatible(a)
     val descriptor = FunctionDescriptor.fromFunction[A]
     Ptr[A](alloc.upcall(descriptor, nFn), Bytes(0))
