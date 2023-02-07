@@ -47,7 +47,8 @@ class StructI(
         Send[A],
         Receive[A],
         InAllocatingTransitionNeeded[A],
-        OutTransitionNeeded[A]
+        OutTransitionNeeded[A],
+        MethodCompatible[A]
 
   object Struct:
     inline def derived[A <: Product](using

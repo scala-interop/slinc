@@ -58,7 +58,7 @@ object LibraryI:
                   ()
                 case '[a] =>
                   Expr
-                    .summon[NativeInCompatible[a]]
+                    .summon[MethodCompatible[a]]
                     .map(_ => ())
                     .getOrElse(
                       report.errorAndAbort(
@@ -73,7 +73,7 @@ object LibraryI:
               case '[Unit] => ()
               case '[a] =>
                 Expr
-                  .summon[NativeOutCompatible[a]]
+                  .summon[MethodCompatible[a]]
                   .map(_ => ())
                   .getOrElse(
                     report.errorAndAbort(

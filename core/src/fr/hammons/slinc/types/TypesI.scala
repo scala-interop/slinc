@@ -95,6 +95,8 @@ object TypesI:
       CLong
     ]
 
+    given MethodCompatible[CLong] with {}
+
     given cLongProof: CLongProof
 
     type SizeTProof = ContextProof[
@@ -104,12 +106,16 @@ object TypesI:
     ]
     val sizeTProof: SizeTProof
 
+    given MethodCompatible[SizeT] with {}
+
     type TimeTProof = ContextProof[
       :?->[Int] *::: <-?:[Int] *::: :?->[Long] *::: <-?:[Long] *:::
         StandardCapabilities,
       TimeT
     ]
     val timeTProof: TimeTProof
+
+    given MethodCompatible[TimeT] with {}
 
   protected[slinc] val platformTypes: TypesI =
     val platform = (arch, os) match
