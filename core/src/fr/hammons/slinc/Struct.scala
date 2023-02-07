@@ -13,7 +13,6 @@ import modules.DescriptorModule
 import fr.hammons.slinc.modules.TransitionModule
 
 class StructI(
-    transitionI: TransitionsI,
     jitManager: JitManager
 )(using DescriptorModule, TransitionModule):
   /** Summons up Descriptors for the members of Product A
@@ -42,13 +41,10 @@ class StructI(
   private inline def memberNames[A](using m: Mirror.ProductOf[A]) =
     constValueTuple[m.MirroredElemLabels].toArray.map(_.toString())
 
-  import transitionI.given
   trait Struct[A <: Product]
       extends DescriptorOf[A],
         Send[A],
         Receive[A],
-        InAllocatingTransitionNeeded[A],
-        OutTransitionNeeded[A],
         MethodCompatible[A]
 
   object Struct:
@@ -98,8 +94,8 @@ class StructI(
       final def in(a: A)(using alloc: Allocator): Object =
         val mem = alloc.allocate(this.descriptor, 1)
         to(mem, Bytes(0), a)
-        transitionI.structMemIn(mem)
+        summon[TransitionModule].methodArgument(mem).asInstanceOf[Object]
 
       final def out(a: Object): A =
-        val mem = transitionI.structMemOut(a)
+        val mem = summon[TransitionModule].memReturn(a)
         from(mem, Bytes(0))

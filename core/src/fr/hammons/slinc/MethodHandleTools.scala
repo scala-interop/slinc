@@ -4,6 +4,7 @@ import scala.quoted.*
 import java.lang.invoke.MethodHandle
 import scala.compiletime.asMatchable
 import fr.hammons.slinc.modules.DescriptorModule
+import fr.hammons.slinc.modules.TransitionModule
 
 object MethodHandleTools:
   def exprNameMapping(expr: Expr[Any])(using Quotes): String =
@@ -82,18 +83,13 @@ object MethodHandleTools:
   inline def getVariadicContext(s: Seq[Variadic]) =
     s.map(_.use[DescriptorOf](l ?=> _ => l.descriptor))
 
-  inline def getVariadicExprs(s: Seq[Variadic]) = (alloc: Allocator) ?=>
-    s.map(
-      _.use[NativeInCompatible](nic ?=>
-        d =>
-          nic match
-            case i: InAllocatingTransitionNeeded[?] => i.in(d)
-            case i: InTransitionNeeded[?]           => i.in(d)
-            case i: NativeInCompatible[?] =>
-              val res = d.asInstanceOf[Any]
-              res
+  def getVariadicExprs(s: Seq[Variadic])(using tm: TransitionModule) =
+    (alloc: Allocator) ?=>
+      s.map(
+        _.use[DescriptorOf](dc ?=>
+          d => tm.methodArgument(dc.descriptor, d, alloc)
+        )
       )
-    )
 
   def calculateMethodHandleImplementation[L](
       platformExpr: Expr[LibraryI.PlatformSpecific],

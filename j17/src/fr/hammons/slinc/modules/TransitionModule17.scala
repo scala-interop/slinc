@@ -8,6 +8,13 @@ import fr.hammons.slinc.*
 import jdk.incubator.foreign.{MemoryAddress, ResourceScope, MemorySegment}
 
 given transitionModule17: TransitionModule with
+
+  override def memReturn(value: Object): Mem = Mem17(
+    value.asInstanceOf[MemorySegment]
+  )
+
+  override def methodArgument(m: Mem): Any = m.asBase
+
   private val maTransition: TrieMap[TypeDescriptor, Allocator ?=> ? => Any] =
     TrieMap(
       ByteDescriptor -> ((_: Allocator) ?=> (b: Byte) => b),

@@ -5,6 +5,8 @@ import scala.quoted.*
 import scala.util.TupledFunction
 import scala.annotation.experimental
 import scala.util.chaining.*
+import fr.hammons.slinc.modules.TransitionModule
+import java.lang.invoke.TypeDescriptor
 
 trait Fn[F, Inputs <: Tuple, Output]:
   type Function = F
@@ -32,6 +34,9 @@ object Fn:
     val inputTypes = typeArgs.init
     val outputType = typeArgs.last
     val names = LazyList.continually("zzzzz")
+    val tm = Expr
+      .summon[TransitionModule]
+      .getOrElse(report.errorAndAbort(s"Need transition module!"))
     val select =
       Select(a.asTerm, TypeRepr.of[A].typeSymbol.declaredMethod("apply").head)
     val lambda = Lambda(
@@ -45,17 +50,41 @@ object Fn:
           .map(_.asExpr)
           .zip(inputTypes.map(_.asType))
           .map { case (p, '[a]) =>
-            NativeOutCompatible.handleOutput[a](p).asTerm
+            val desc = Expr
+              .summon[DescriptorOf[a]]
+              .getOrElse(
+                report.errorAndAbort(
+                  s"Could not find descriptor for ${Type.show[a]}"
+                )
+              )
+            '{
+              $tm.functionArgument[a]($desc.descriptor, $p.asInstanceOf[Object])
+            }.asTerm
           }
           .pipe { terms =>
             outputType.asType match
+              case '[Unit] =>
+                '{
+                  ${ Expr.betaReduce(Apply(select, terms).asExpr) }
+                  ()
+                }.asTerm.changeOwner(meth)
               case '[r] =>
-                NativeInCompatible
-                  .handleInput(
-                    Expr.betaReduce(Apply(select, terms).asExprOf[r])
+                val desc = Expr
+                  .summon[DescriptorOf[r]]
+                  .getOrElse(
+                    report.errorAndAbort(
+                      s"Couldn't find descriptor for ${Type.show[r]}"
+                    )
                   )
-                  .asTerm
-                  .changeOwner(meth)
+                '{
+                  $tm
+                    .functionReturn[r](
+                      $desc.descriptor,
+                      ${ Expr.betaReduce(Apply(select, terms).asExprOf[r]) },
+                      null.asInstanceOf[Allocator]
+                    )
+                    .asInstanceOf[r]
+                }.asTerm.changeOwner(meth)
           }
     ).asExprOf[A]
 

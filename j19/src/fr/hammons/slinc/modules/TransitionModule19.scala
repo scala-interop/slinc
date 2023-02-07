@@ -49,6 +49,8 @@ given transitionModule19: TransitionModule with
       alloc: Allocator
   ): Any = maTransition(td)(using alloc).asInstanceOf[A => Any](value)
 
+  def methodArgument(m: Mem): Any = m.asBase
+
   override def methodReturn[A](td: TypeDescriptor, value: Object): A =
     mrTransition(td).asInstanceOf[Object => A](value)
 
@@ -61,3 +63,7 @@ given transitionModule19: TransitionModule with
       td: TypeDescriptor,
       fn: Object => A
   ): Unit = mrTransition.addOne(td, fn)
+
+  override def memReturn(value: Object): Mem = Mem19(
+    value.asInstanceOf[MemorySegment]
+  )

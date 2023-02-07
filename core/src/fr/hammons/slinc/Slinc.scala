@@ -14,7 +14,6 @@ trait Slinc:
   protected def jitManager: JitManager
 
   protected def scopePlatformSpecific: ScopeI.PlatformSpecific
-  protected def transitionsPlatformSpecific: TransitionsI.PlatformSpecific
   protected def libraryIPlatformSpecific: LibraryI.PlatformSpecific
 
   given dm: DescriptorModule
@@ -23,8 +22,7 @@ trait Slinc:
   private val useJit = Option(System.getProperty("sffi-jit"))
     .flatMap(_.nn.toBooleanOption)
     .getOrElse(true)
-  protected val transitionsI = TransitionsI(transitionsPlatformSpecific)
-  protected val structI = StructI(transitionsI, jitManager)
+  protected val structI = StructI(jitManager)
   val typesI = types.TypesI.platformTypes
   protected val scopeI = ScopeI(scopePlatformSpecific)
   protected val libraryI = LibraryI(libraryIPlatformSpecific)
@@ -34,7 +32,6 @@ trait Slinc:
   export libraryI.*
   export Convertible.as
   export PotentiallyConvertible.maybeAs
-  export transitionsI.given
   export structI.Struct
   export scopeI.given
   export container.ContextProof.given

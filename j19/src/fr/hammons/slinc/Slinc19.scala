@@ -12,9 +12,6 @@ class Slinc19(_jitManager: JitManager, linker: Linker)(using
   protected def scopePlatformSpecific: ScopeI.PlatformSpecific =
     Scope19(linker)
 
-  protected def transitionsPlatformSpecific: TransitionsI.PlatformSpecific =
-    Transitions19
-
   protected def libraryIPlatformSpecific: LibraryI.PlatformSpecific =
     Library19(linker)
 

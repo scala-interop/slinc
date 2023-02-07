@@ -2,7 +2,6 @@ package fr.hammons.slinc
 
 import scala.quoted.*
 import java.lang.invoke.MethodHandle
-import NativeInCompatible.PossiblyNeedsAllocator
 import scala.annotation.nowarn
 import fr.hammons.slinc.modules.TransitionModule
 
@@ -102,14 +101,6 @@ object LibraryI:
         true
       case _ => false
 
-  def makeAllTakeAlloc(
-      exprs: List[PossiblyNeedsAllocator]
-  )(using Quotes): List[Expr[Allocator => Any]] =
-    exprs.map { exp =>
-      if exp.isExprOf[Allocator => Any] then exp.asExprOf[Allocator => Any]
-      else '{ (_: Allocator) => $exp }
-    }
-
   def bindingImpl[R, L[_] <: LibraryI#Library[?]](using q: Quotes)(using
       Type[R],
       Type[L]
@@ -136,7 +127,7 @@ object LibraryI:
     val transitionModule = Expr
       .summon[TransitionModule]
       .getOrElse(report.errorAndAbort("Need transition module!!"))
-    val prefix: List[PossiblyNeedsAllocator] =
+    val prefix: List[Expr[Allocator => Any]] =
       if needsAllocator(methodSymbol) then
         List(
           '{ (a: Allocator) => $transitionModule.methodArgument(a) }
@@ -148,7 +139,7 @@ object LibraryI:
         .getInputsAndOutputType(methodSymbol)
         ._1
 
-    val standardInputs =
+    val standardInputs: List[Expr[Allocator => Any]] =
       prefix ++ MacroHelpers
         .getInputsAndOutputType(methodSymbol)
         ._1
@@ -170,20 +161,31 @@ object LibraryI:
           }
         }
 
-    val mappedInputs = inputs
-      .map(NativeInCompatible.handleInput)
-      .filter(!_.isExprOf[Seq[Variadic]])
-
-    val allocInputs = makeAllTakeAlloc(mappedInputs)
+    val rTransition: Expr[Object | Null => R] = Type.of[R] match
+      case '[Unit] =>
+        '{ (obj: Object | Null) => () }.asExprOf[Object | Null => R]
+      case '[r] =>
+        Expr
+          .summon[DescriptorOf[R]]
+          .map(e =>
+            '{ (obj: Object | Null) =>
+              $transitionModule.methodReturn[R]($e.descriptor, obj.nn)
+            }
+          )
+          .getOrElse(
+            report.errorAndAbort(
+              s"No descriptor found for return type ${Type.show[R]}"
+            )
+          )
 
     val code: Expr[R] =
-      if inputs.size == mappedInputs.size then
+      if inputs.size == standardInputs.size then
         val methodInvoke =
           '{ (a: Allocator) =>
             ${
               MethodHandleTools.invokeArguments[R](
                 methodHandle,
-                allocInputs.map(exp => '{ $exp(a) }).map(Expr.betaReduce)
+                standardInputs.map(exp => '{ $exp(a) }).map(Expr.betaReduce)
               )
             }
           }
@@ -191,22 +193,6 @@ object LibraryI:
         val scopeThing = Expr
           .summon[TempScope]
           .getOrElse(report.errorAndAbort("need temp allocator in scope"))
-        val rTransition: Expr[Object | Null => R] = Type.of[R] match
-          case '[Unit] =>
-            '{ (obj: Object | Null) => () }.asExprOf[Object | Null => R]
-          case '[r] =>
-            Expr
-              .summon[DescriptorOf[R]]
-              .map(e =>
-                '{ (obj: Object | Null) =>
-                  $transitionModule.methodReturn[R]($e.descriptor, obj.nn)
-                }
-              )
-              .getOrElse(
-                report.errorAndAbort(
-                  s"No descriptor found for return type ${Type.show[R]}"
-                )
-              )
 
         Expr
           .summon[DescriptorOf[R]]
@@ -225,17 +211,24 @@ object LibraryI:
         '{
           Scope.temp(using $scopeThing)((a: Allocator) ?=>
             ${
-              val normalInputs = Expr.ofSeq(allocInputs.map(e => '{ $e(a) }))
+              val normalInputs = Expr.ofSeq(standardInputs.map(e => '{ $e(a) }))
               val totalInputs = '{
-                $normalInputs ++ MethodHandleTools.getVariadicExprs($varargs)
-              }
-              NativeOutCompatible.handleOutput[R](
-                MethodHandleTools.invokeVariadicArguments(
-                  methodHandleGen,
-                  totalInputs,
-                  '{ MethodHandleTools.getVariadicContext($varargs) }
+                $normalInputs ++ MethodHandleTools.getVariadicExprs($varargs)(
+                  using $transitionModule
                 )
-              )
+              }
+
+              '{
+                $rTransition(
+                  ${
+                    MethodHandleTools.invokeVariadicArguments(
+                      methodHandleGen,
+                      totalInputs,
+                      '{ MethodHandleTools.getVariadicContext($varargs) }
+                    )
+                  }
+                )
+              }
             }
           )
         }
@@ -243,7 +236,7 @@ object LibraryI:
       s"""|Binding has return that requires allocator: ${needsAllocator(
            methodSymbol
          )}
-          |Mapped inputs: ${mappedInputs.map(
+          |Mapped inputs: ${standardInputs.map(
            _.asTerm.show(using Printer.TreeShortCode)
          )}
           |Generated code: ${code.asTerm.show(using

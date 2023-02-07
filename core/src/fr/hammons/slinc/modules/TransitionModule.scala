@@ -1,9 +1,6 @@
 package fr.hammons.slinc.modules
 
-import fr.hammons.slinc.TypeDescriptor
-import fr.hammons.slinc.Allocator
-import fr.hammons.slinc.Send
-import fr.hammons.slinc.Receive
+import fr.hammons.slinc.*
 
 trait TransitionModule:
   /** Transitions a method argument to the appropriate format
@@ -28,6 +25,8 @@ trait TransitionModule:
     */
   def methodArgument(a: Allocator): Any
 
+  def methodArgument(m: Mem): Any
+
   /** Transitions a return value into the Slinc format
     *
     * @param td
@@ -38,6 +37,8 @@ trait TransitionModule:
     *   A slinc compatible data object
     */
   def methodReturn[A](td: TypeDescriptor, value: Object): A
+
+  def memReturn(value: Object): Mem
 
   /** Registers a method argument transition
     *
@@ -62,3 +63,9 @@ trait TransitionModule:
       td: TypeDescriptor,
       fn: Object => A
   ): Unit
+
+  def functionArgument[A](td: TypeDescriptor, value: Object): A =
+    methodReturn[A](td, value)
+
+  def functionReturn[A](td: TypeDescriptor, value: A, alloc: Allocator): Any =
+    methodArgument[A](td, value, alloc)
