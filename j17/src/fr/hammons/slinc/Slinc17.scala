@@ -2,15 +2,15 @@ package fr.hammons.slinc
 
 import jdk.incubator.foreign.CLinker
 import fr.hammons.slinc.ScopeI.PlatformSpecific
-import fr.hammons.slinc.modules.DescriptorModule
+import fr.hammons.slinc.modules.{DescriptorModule, TransitionModule}
 import fr.hammons.slinc.modules.given
 
 class Slinc17(_jitManager: JitManager, linker: CLinker)(using
-    val dm: DescriptorModule
+    val dm: DescriptorModule,
+    val tm: TransitionModule
 ) extends Slinc:
   protected def jitManager = _jitManager
   protected def scopePlatformSpecific = Scope17(linker)
-  protected def transitionsPlatformSpecific = Transitions17
   protected def libraryIPlatformSpecific = Library17(linker)
 
 @SlincImpl(17)

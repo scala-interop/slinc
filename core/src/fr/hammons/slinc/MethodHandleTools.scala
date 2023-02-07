@@ -4,6 +4,7 @@ import scala.quoted.*
 import java.lang.invoke.MethodHandle
 import scala.compiletime.asMatchable
 import fr.hammons.slinc.modules.DescriptorModule
+import fr.hammons.slinc.modules.TransitionModule
 
 object MethodHandleTools:
   def exprNameMapping(expr: Expr[Any])(using Quotes): String =
@@ -47,7 +48,7 @@ object MethodHandleTools:
   )(using
       Quotes,
       Type[R]
-  ) =
+  ): Expr[Object | Null] =
     import quotes.reflect.*
 
     val arity = exprs.size
@@ -65,28 +66,15 @@ object MethodHandleTools:
       .getOrElse(report.errorAndAbort("This class should exist!!"))
       .companionModule
 
-    val methodSymbol = mod.flatMap(
-      _.declaredMethods
-        .find(_.name == callName)
-    )
-
     val backupSymbol =
       backupMod.declaredMethods.find(_.name.endsWith(arity.toString()))
 
-    methodSymbol
+    backupSymbol
       .map(ms =>
         Apply(
-          Select(Ident(mod.get.termRef), ms),
+          Select(Ident(backupMod.termRef), ms),
           mh.asTerm :: exprs.map(_.asTerm).toList
-        ).asExpr
-      )
-      .orElse(
-        backupSymbol.map(ms =>
-          Apply(
-            Select(Ident(backupMod.termRef), ms),
-            mh.asTerm :: exprs.map(_.asTerm).toList
-          ).asExpr
-        )
+        ).asExprOf[Object | Null]
       )
       .getOrElse(
         '{ MethodHandleFacade.callVariadic($mh, ${ Varargs(exprs) }*) }
@@ -95,18 +83,13 @@ object MethodHandleTools:
   inline def getVariadicContext(s: Seq[Variadic]) =
     s.map(_.use[DescriptorOf](l ?=> _ => l.descriptor))
 
-  inline def getVariadicExprs(s: Seq[Variadic]) = (alloc: Allocator) ?=>
-    s.map(
-      _.use[NativeInCompatible](nic ?=>
-        d =>
-          nic match
-            case i: InAllocatingTransitionNeeded[?] => i.in(d)
-            case i: InTransitionNeeded[?]           => i.in(d)
-            case i: NativeInCompatible[?] =>
-              val res = d.asInstanceOf[Any]
-              res
+  def getVariadicExprs(s: Seq[Variadic])(using tm: TransitionModule) =
+    (alloc: Allocator) ?=>
+      s.map(
+        _.use[DescriptorOf](dc ?=>
+          d => tm.methodArgument(dc.descriptor, d, alloc)
+        )
       )
-    )
 
   def calculateMethodHandleImplementation[L](
       platformExpr: Expr[LibraryI.PlatformSpecific],
@@ -200,9 +183,15 @@ object MethodHandleTools:
       (meth, params) =>
         retType.asType match
           case '[r] =>
-            invokeArguments[r](
+            val invokeExpr = invokeArguments[r](
               methodHandleExpr,
               params.map(_.asExpr)
-            ).asTerm
+            )
+            val invokeResultExpr = '{
+              val invokeResult = $invokeExpr
+              if invokeResult == null then ().asInstanceOf[r]
+              else invokeResult.asInstanceOf[r]
+            }
+            invokeResultExpr.asTerm
               .changeOwner(meth)
     ).asExprOf[A]

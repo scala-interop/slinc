@@ -2,4 +2,4 @@ package fr.hammons.slinc
 
 import container.*
 
-type Variadic = Container[DescriptorOf *::: NativeInCompatible *::: End]
+type Variadic = Container[DescriptorOf *::: MethodCompatible *::: End]

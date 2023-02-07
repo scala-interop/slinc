@@ -2,8 +2,8 @@ package fr.hammons.slinc
 
 import scala.quoted.*
 import java.lang.invoke.MethodHandle
-import NativeInCompatible.PossiblyNeedsAllocator
 import scala.annotation.nowarn
+import fr.hammons.slinc.modules.TransitionModule
 
 class LibraryI(platformSpecific: LibraryI.PlatformSpecific):
   trait Library[+L]:
@@ -58,7 +58,7 @@ object LibraryI:
                   ()
                 case '[a] =>
                   Expr
-                    .summon[NativeInCompatible[a]]
+                    .summon[MethodCompatible[a]]
                     .map(_ => ())
                     .getOrElse(
                       report.errorAndAbort(
@@ -73,7 +73,7 @@ object LibraryI:
               case '[Unit] => ()
               case '[a] =>
                 Expr
-                  .summon[NativeOutCompatible[a]]
+                  .summon[MethodCompatible[a]]
                   .map(_ => ())
                   .getOrElse(
                     report.errorAndAbort(
@@ -98,19 +98,10 @@ object LibraryI:
 
     getReturnType(s).asType match
       case '[r & Product] =>
-        Expr.summon[InAllocatingTransitionNeeded[r & Product]].isDefined
+        true
       case _ => false
 
-  def makeAllTakeAlloc(
-      exprs: List[PossiblyNeedsAllocator]
-  )(using Quotes): List[Expr[Allocator => Any]] =
-    exprs.map { exp =>
-      if exp.isExprOf[Allocator => Any] then exp.asExprOf[Allocator => Any]
-      else '{ (_: Allocator) => $exp }
-    }
-
-  def bindingImpl[R, L[_] <: LibraryI#Library[?]](using
-      Quotes,
+  def bindingImpl[R, L[_] <: LibraryI#Library[?]](using q: Quotes)(using
       Type[R],
       Type[L]
   ) =
@@ -133,12 +124,13 @@ object LibraryI:
     val address = '{ $library.addresses($methodPositionExpr) }
     checkMethodIsCompatible(methodSymbol)
 
-    val prefix: List[PossiblyNeedsAllocator] =
+    val transitionModule = Expr
+      .summon[TransitionModule]
+      .getOrElse(report.errorAndAbort("Need transition module!!"))
+    val prefix: List[Expr[Allocator => Any]] =
       if needsAllocator(methodSymbol) then
-        val summonAlloc =
-          Expr.summon[InTransitionNeeded[Allocator]].getOrElse(???)
         List(
-          '{ (a: Allocator) => $summonAlloc.in(a) }
+          '{ (a: Allocator) => $transitionModule.methodArgument(a) }
         )
       else Nil
 
@@ -147,49 +139,70 @@ object LibraryI:
         .getInputsAndOutputType(methodSymbol)
         ._1
 
-    val mappedInputs = inputs
-      .map(NativeInCompatible.handleInput)
-      .filter(!_.isExprOf[Seq[Variadic]])
+    val standardInputs: List[Expr[Allocator => Any]] =
+      prefix ++ MacroHelpers
+        .getInputsAndOutputType(methodSymbol)
+        ._1
+        .filter(!_.isExprOf[Seq[Variadic]])
+        .map { case '{ $e: t } =>
+          TypeRepr.of[t].widen.asType match
+            case '[widened] =>
+              e -> Expr
+                .summon[DescriptorOf[widened]]
+                .getOrElse(
+                  report.errorAndAbort(
+                    s"No descriptor found for ${Type.show[widened]}"
+                  )
+                )
+        }
+        .map { case (expr, desc) =>
+          '{ (alloc: Allocator) =>
+            $transitionModule.methodArgument($desc.descriptor, $expr, alloc)
+          }
+        }
 
-    val allocationlessInputs =
-      mappedInputs.filter(!_.isExprOf[Allocator => Object]).map(_.asExprOf[Any])
-
-    val allocInputs = makeAllTakeAlloc(mappedInputs)
+    val rTransition: Expr[Object | Null => R] = Type.of[R] match
+      case '[Unit] =>
+        '{ (obj: Object | Null) => () }.asExprOf[Object | Null => R]
+      case '[r] =>
+        Expr
+          .summon[DescriptorOf[R]]
+          .map(e =>
+            '{ (obj: Object | Null) =>
+              $transitionModule.methodReturn[R]($e.descriptor, obj.nn)
+            }
+          )
+          .getOrElse(
+            report.errorAndAbort(
+              s"No descriptor found for return type ${Type.show[R]}"
+            )
+          )
 
     val code: Expr[R] =
-      if inputs.size == mappedInputs.size then
-        if allocationlessInputs == mappedInputs && !needsAllocator(methodSymbol)
-        then
-          val invokation =
-            MethodHandleTools.invokeArguments[R](
-              methodHandle,
-              allocationlessInputs
-            )
-          NativeOutCompatible.handleOutput[R](invokation).asExprOf[R]
-        else
-          val methodInvoke =
-            '{ (a: Allocator) =>
-              ${
-                MethodHandleTools.invokeArguments[R](
-                  methodHandle,
-                  allocInputs.map(exp => '{ $exp(a) }).map(Expr.betaReduce)
-                )
-              }
+      if inputs.size == standardInputs.size then
+        val methodInvoke =
+          '{ (a: Allocator) =>
+            ${
+              MethodHandleTools.invokeArguments[R](
+                methodHandle,
+                standardInputs.map(exp => '{ $exp(a) }).map(Expr.betaReduce)
+              )
             }
-
-          val scopeThing = Expr
-            .summon[TempScope]
-            .getOrElse(report.errorAndAbort("need temp allocator in scope"))
-          val subCode = '{
-            Scope.temp(using $scopeThing)((a: Allocator) ?=>
-              ${
-                NativeOutCompatible.handleOutput[R](Expr.betaReduce('{
-                  $methodInvoke(a)
-                }))
-              }
-            )
           }
-          subCode
+
+        val scopeThing = Expr
+          .summon[TempScope]
+          .getOrElse(report.errorAndAbort("need temp allocator in scope"))
+
+        Expr
+          .summon[DescriptorOf[R]]
+          .map(e => '{ $transitionModule.methodReturn[R]($e.descriptor, _) })
+        val subCode = '{
+          Scope.temp(using $scopeThing)((a: Allocator) ?=>
+            $rTransition($methodInvoke(a))
+          )
+        }
+        subCode
       else
         val varargs = inputs.last.asExprOf[Seq[Variadic]]
         val scopeThing = Expr
@@ -198,32 +211,32 @@ object LibraryI:
         '{
           Scope.temp(using $scopeThing)((a: Allocator) ?=>
             ${
-              val normalInputs = Expr.ofSeq(allocInputs.map(e => '{ $e(a) }))
+              val normalInputs = Expr.ofSeq(standardInputs.map(e => '{ $e(a) }))
               val totalInputs = '{
-                $normalInputs ++ MethodHandleTools.getVariadicExprs($varargs)
-              }
-              NativeOutCompatible.handleOutput[R](
-                MethodHandleTools.invokeVariadicArguments(
-                  methodHandleGen,
-                  totalInputs,
-                  '{ MethodHandleTools.getVariadicContext($varargs) }
+                $normalInputs ++ MethodHandleTools.getVariadicExprs($varargs)(
+                  using $transitionModule
                 )
-              )
+              }
+
+              '{
+                $rTransition(
+                  ${
+                    MethodHandleTools.invokeVariadicArguments(
+                      methodHandleGen,
+                      totalInputs,
+                      '{ MethodHandleTools.getVariadicContext($varargs) }
+                    )
+                  }
+                )
+              }
             }
           )
         }
     report.info(
-      s"""|Binding doesn't need allocator: ${allocationlessInputs == mappedInputs && !needsAllocator(
+      s"""|Binding has return that requires allocator: ${needsAllocator(
            methodSymbol
          )}
-          |Binding has return that requires allocator: ${needsAllocator(
-           methodSymbol
-         )}
-          |Binding has inputs that require allocation: ${allocationlessInputs != mappedInputs}
-          |Allocationless inputs: ${allocationlessInputs.map(
-           _.asTerm.show(using Printer.TreeShortCode)
-         )}
-          |Mapped inputs: ${mappedInputs.map(
+          |Mapped inputs: ${standardInputs.map(
            _.asTerm.show(using Printer.TreeShortCode)
          )}
           |Generated code: ${code.asTerm.show(using

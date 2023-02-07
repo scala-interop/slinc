@@ -4,15 +4,13 @@ import java.lang.foreign.Linker
 import fr.hammons.slinc.modules.{*, given}
 
 class Slinc19(_jitManager: JitManager, linker: Linker)(using
-    val dm: DescriptorModule
+    val dm: DescriptorModule,
+    val tm: TransitionModule
 ) extends Slinc:
   protected def jitManager: JitManager = _jitManager
 
   protected def scopePlatformSpecific: ScopeI.PlatformSpecific =
     Scope19(linker)
-
-  protected def transitionsPlatformSpecific: TransitionsI.PlatformSpecific =
-    Transitions19
 
   protected def libraryIPlatformSpecific: LibraryI.PlatformSpecific =
     Library19(linker)

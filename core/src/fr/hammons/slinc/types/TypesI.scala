@@ -82,8 +82,7 @@ object TypesI:
   type <-:[A] = [B] =>> Convertible[A, B]
   type :?->[A] = [B] =>> PotentiallyConvertible[B, A]
   type <-?:[A] = [B] =>> PotentiallyConvertible[A, B]
-  type StandardCapabilities = DescriptorOf *::: NativeInCompatible *:::
-    NativeOutCompatible *::: Send *::: Receive *::: End
+  type StandardCapabilities = DescriptorOf *::: Send *::: Receive *::: End
 
   trait PlatformSpecific extends HostDependentTypes:
     val hostDependentTypes: HostDependentTypes & Singleton
@@ -95,6 +94,8 @@ object TypesI:
       CLong
     ]
 
+    given MethodCompatible[CLong] with {}
+
     given cLongProof: CLongProof
 
     type SizeTProof = ContextProof[
@@ -104,12 +105,16 @@ object TypesI:
     ]
     val sizeTProof: SizeTProof
 
+    given MethodCompatible[SizeT] with {}
+
     type TimeTProof = ContextProof[
       :?->[Int] *::: <-?:[Int] *::: :?->[Long] *::: <-?:[Long] *:::
         StandardCapabilities,
       TimeT
     ]
     val timeTProof: TimeTProof
+
+    given MethodCompatible[TimeT] with {}
 
   protected[slinc] val platformTypes: TypesI =
     val platform = (arch, os) match
