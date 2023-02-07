@@ -7,6 +7,17 @@ on:
 
 
 jobs: 
+  format-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3 
+      - uses: coursier/cache-action@v6
+      - uses: VirtusLab/scala-cli-setup@v0.1.20
+        with:
+          jvm: temurin:1.17
+          apps: mill
+      - run: mill mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll __.sources
+
   unit-tests:
     strategy: 
       matrix:
@@ -21,8 +32,6 @@ jobs:
           java-version: |
             17
             19
-      - name: Formatting Check 
-        run: ./mill mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll __.sources
       - name: Core tests
         run: |
           ./mill core.compile
