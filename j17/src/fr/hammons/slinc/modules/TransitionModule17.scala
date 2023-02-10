@@ -5,7 +5,7 @@ import fr.hammons.slinc.TypeDescriptor
 import scala.collection.concurrent.TrieMap
 import fr.hammons.slinc.*
 
-import jdk.incubator.foreign.{MemoryAddress, ResourceScope, MemorySegment}
+import jdk.incubator.foreign.{MemoryAddress, MemorySegment}
 
 given transitionModule17: TransitionModule with
 

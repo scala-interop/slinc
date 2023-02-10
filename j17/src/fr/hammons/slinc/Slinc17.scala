@@ -1,7 +1,6 @@
 package fr.hammons.slinc
 
 import jdk.incubator.foreign.CLinker
-import fr.hammons.slinc.ScopeI.PlatformSpecific
 import fr.hammons.slinc.modules.{DescriptorModule, TransitionModule}
 import fr.hammons.slinc.modules.given
 
