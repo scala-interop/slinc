@@ -1,17 +1,13 @@
 package fr.hammons.slinc
 
-import scala.util.TupledFunction
-import scala.annotation.experimental
-import scala.annotation.targetName
-import scala.compiletime.{erasedValue, summonInline}
 import scala.reflect.ClassTag
 import fr.hammons.slinc.modules.DescriptorModule
 
 class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
   def `unary_!`(using receive: Receive[A]): A = receive.from(mem, offset)
-  def asArray(size: Int)(using
-      ClassTag[A]
-  )(using DescriptorOf[A], DescriptorModule)(using r: ReceiveBulk[A]) =
+  def asArray(size: Int)(using DescriptorOf[A], DescriptorModule)(using
+      r: ReceiveBulk[A]
+  ) =
     r.from(mem.resize(DescriptorOf[A].size * size), offset, size)
 
   def `unary_!_=`(value: A)(using send: Send[A]) = send.to(mem, offset, value)

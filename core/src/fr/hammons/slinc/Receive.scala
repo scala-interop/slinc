@@ -9,6 +9,7 @@ import fr.hammons.slinc.modules.DescriptorModule
 import scala.annotation.nowarn
 
 class ReceiveI(val libraryPs: LibraryI.PlatformSpecific):
+  // todo: replace with `erased` once that's not experimental anymore
   @nowarn("msg=unused implicit parameter")
   inline given fnReceive[A](using Fn[A, ?, ?]): Receive[A] =
     new Receive[A]:

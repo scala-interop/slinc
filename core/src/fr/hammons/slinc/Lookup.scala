@@ -6,7 +6,7 @@ trait Lookup(libraryLocation: LibraryLocation):
   def lookup(name: String): Object
 
   def lookupError(name: String): Error = libraryLocation match
-    case LibraryLocation.Standardard =>
+    case LibraryLocation.Standard =>
       Error(s"Failed to load symbol $name from the standard library.")
     case LibraryLocation.Resource(location) =>
       Error(

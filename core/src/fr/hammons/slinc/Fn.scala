@@ -25,7 +25,9 @@ object Fn:
     toNativeCompatibleImpl('a)
   }
 
-  @nowarn
+  // todo: remove once https://github.com/lampepfl/dotty/issues/16863 is fixed
+  @nowarn("msg=unused implicit parameter")
+  @nowarn("msg=unused local definition")
   def toNativeCompatibleImpl[A](a: Expr[A])(using Quotes, Type[A]): Expr[A] =
     import quotes.reflect.*
     val typeArgs = TypeRepr.of[A].typeArgs

@@ -4,8 +4,7 @@ import scala.annotation.StaticAnnotation
 import scala.quoted.*
 import scala.annotation.nowarn
 
-@nowarn("msg=unused explicit parameter")
-class SlincImpl(version: Int) extends StaticAnnotation
+class SlincImpl(val version: Int) extends StaticAnnotation
 
 object SlincImpl:
   inline def findImpls(): Map[Int, () => Slinc] = ${

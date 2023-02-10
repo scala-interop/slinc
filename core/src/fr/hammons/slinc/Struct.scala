@@ -7,7 +7,6 @@ import scala.compiletime.{
   summonInline,
   constValueTuple
 }
-import java.util.concurrent.atomic.AtomicReference
 import scala.reflect.ClassTag
 import modules.DescriptorModule
 import fr.hammons.slinc.modules.TransitionModule

@@ -108,7 +108,6 @@ object LibraryI:
   // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
   @nowarn("msg=unused implicit parameter")
   @nowarn("msg=unused local definition")
-  @nowarn("msg=unused explicit parameter")
   def bindingImpl[R, L[_] <: LibraryI#Library[?]](using q: Quotes)(using
       Type[R],
       Type[L]
@@ -170,7 +169,7 @@ object LibraryI:
         }
     val rTransition: Expr[Object | Null => R] = Type.of[R] match
       case '[Unit] =>
-        '{ (obj: Object | Null) => () }.asExprOf[Object | Null => R]
+        '{ (_: Object | Null) => () }.asExprOf[Object | Null => R]
       case '[r] =>
         Expr
           .summon[DescriptorOf[R]]
@@ -279,7 +278,7 @@ object LibraryI:
   )(using Quotes, Type[L]) =
     val name: LibraryLocation = LibraryName.libraryName[L]
     name match
-      case LibraryLocation.Standardard =>
+      case LibraryLocation.Standard =>
         '{ $platformSpecificExpr.getStandardLibLookup }
       case LibraryLocation.Local(s) =>
         '{ $platformSpecificExpr.getLocalLookup(${ Expr(s) }) }

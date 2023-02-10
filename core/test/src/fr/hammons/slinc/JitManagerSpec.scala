@@ -1,6 +1,5 @@
 package fr.hammons.slinc
 
-import scala.compiletime.uninitialized
 import scala.quoted.staging.Compiler
 import scala.concurrent.Future
 import scala.concurrent.duration.*
@@ -27,7 +26,7 @@ class JitManagerSpec extends munit.FunSuite:
     var code: (() => Int) | Null = null
     import scala.language.unsafeNulls
     jitManager.jitc(() => 1, _('{ () => 2 }), code = _)
-    for i <- 0 until 4
+    for _ <- 0 until 4
     yield code()
 
     Await.result(

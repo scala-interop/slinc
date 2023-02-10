@@ -68,5 +68,5 @@ class Library19(linker: Linker) extends LibraryI.PlatformSpecific:
     )
 
   override def getStandardLibLookup: Lookup =
-    J19Lookup(linker.defaultLookup().nn, LibraryLocation.Standardard)
+    J19Lookup(linker.defaultLookup().nn, LibraryLocation.Standard)
 end Library19

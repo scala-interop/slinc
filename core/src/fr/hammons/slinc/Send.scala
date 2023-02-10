@@ -1,12 +1,12 @@
 package fr.hammons.slinc
 
 import scala.quoted.*
-import scala.annotation.targetName
 import scala.deriving.Mirror
-import scala.compiletime.{erasedValue, summonInline}
+import scala.compiletime.summonInline
 import scala.util.chaining.*
 import fr.hammons.slinc.container.{ContextProof, *:::, End}
 import fr.hammons.slinc.modules.DescriptorModule
+import scala.annotation.nowarn
 
 trait Send[A]:
   def to(mem: Mem, offset: Bytes, value: A): Unit
@@ -33,11 +33,16 @@ object Send:
         }
       ).asInstanceOf[Send[A]]
 
+  // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
+  @nowarn("msg=unused implicit parameter")
   private def asExprOf[A](expr: Expr[Any])(using Quotes, Type[A]) =
     import quotes.reflect.*
     if expr.isExprOf[A] then expr.asExprOf[A]
     else '{ $expr.asInstanceOf[A] }
 
+  // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
+  @nowarn("msg=unused implicit parameter")
+  @nowarn("msg=unused local definition")
   private def stagedHelper(
       layout: TypeDescriptor,
       mem: Expr[Mem],
@@ -142,15 +147,15 @@ object Send:
       case _: EmptyTuple => ()
 
   given Send[Int] with
-    inline def to(mem: Mem, offset: Bytes, value: Int) =
+    def to(mem: Mem, offset: Bytes, value: Int) =
       mem.writeInt(value, offset)
 
   given Send[Float] with
-    inline def to(mem: Mem, offset: Bytes, value: Float) =
+    def to(mem: Mem, offset: Bytes, value: Float) =
       mem.writeFloat(value, offset)
 
   given Send[Long] with
-    inline def to(mem: Mem, offset: Bytes, value: Long) =
+    def to(mem: Mem, offset: Bytes, value: Long) =
       mem.writeLong(value, offset)
 
   given Send[Double] with
