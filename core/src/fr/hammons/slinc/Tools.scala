@@ -1,14 +1,7 @@
 package fr.hammons.slinc
 
-import java.nio.file.{Files, Paths, Path}
+import java.nio.file.{Files, Paths}
 import types.{os, OS}
-import java.security.MessageDigest
-import java.util.HexFormat
-import fr.hammons.slinc.types.OS
-import fr.hammons.slinc.types.OS
-import java.nio.channels.Channel
-import java.nio.channels.ByteChannel
-import java.nio.channels.Channels
 import scala.sys.process.*
 
 object Tools:
@@ -20,6 +13,8 @@ object Tools:
         case OS.Linux => s"${System.getProperty("user.home").nn}/.cache/slinc/"
         case OS.Darwin =>
           s"${System.getProperty("user.home").nn}/Library/Application Support/"
+        // todo: write a better handling for this
+        case OS.Unknown => ???
       )
       .nn
 

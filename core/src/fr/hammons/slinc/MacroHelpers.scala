@@ -1,8 +1,12 @@
 package fr.hammons.slinc
 
 import scala.quoted.*
+import scala.annotation.nowarn
 
 private[slinc] object MacroHelpers:
+  // todo: remove once https://github.com/lampepfl/dotty/issues/16863 is fixed
+  @nowarn("msg=unused local definition")
+  @nowarn("msg=unused implicit parameter")
   def widenExpr(t: Expr[?])(using Quotes) =
     import quotes.reflect.*
     t match

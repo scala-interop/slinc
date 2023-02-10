@@ -2,14 +2,17 @@ package fr.hammons.slinc
 
 import scala.annotation.StaticAnnotation
 import scala.quoted.*
+import scala.annotation.nowarn
 
-class LibraryName(name: String) extends StaticAnnotation
+class LibraryName(val name: String) extends StaticAnnotation
 
+//todo: remove this once https://github.com/lampepfl/dotty/issues/16878 is fixed
+@nowarn("msg=unused explicit parameter")
 enum LibraryLocation:
   case Local(s: String)
   case Resource(s: String)
   case Path(s: String)
-  case Standardard
+  case Standard
 
 object LibraryName:
   def libraryName[L](using Quotes, Type[L]) =
@@ -29,4 +32,4 @@ object LibraryName:
         case s         => LibraryLocation.Local(s)
       }
       .headOption
-      .getOrElse(LibraryLocation.Standardard)
+      .getOrElse(LibraryLocation.Standard)

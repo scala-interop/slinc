@@ -11,24 +11,14 @@ import com.github.lolgab.mill.mima._
 import $ivy.`com.lihaoyi::mill-contrib-scoverage:`
 import mill.contrib.scoverage.{ScoverageModule, ScoverageReport}
 
-object v {
-  val munit = "1.0.0-M6"
-  val jmh = "1.33"
-  val jnr = "2.2.3"
-  val jna = "5.9.0"
-  val scoverage = "1.4.0"
-}
-
 object scoverage extends BaseModule with ScoverageReport 
 
 trait BaseModule extends ScoverageModule with ScalafmtModule {
   def scalaVersion = "3.3.0-RC2"
   def scoverageVersion = "2.0.7"
 
-  val munitVersion = "1.0.0-M6"
+  val munitVersion = "1.0.0-M7"
   val jmhV = "1.33"
-  val jnr = "2.2.3"
-  val jna = "5.9.0"
 
   def ivyDeps = Agg(
     ivy"org.scala-lang::scala3-staging:${scalaVersion()}"
@@ -163,11 +153,6 @@ object `runtime` extends BaseModule with PublishableModule {
   def pomSettings = pomTemplate("slinc-full")
 
   override def moduleDeps = Seq(j17, j19)
-
-  // override def ivyDeps = Agg(
-  //   ivy"fr.hammons::slinc-j17:${publishVersion()}",
-  //   ivy"fr.hammons::slinc-j19:${publishVersion()}"
-  // )
 
   object test extends Tests with TestModule.Munit {
     def ivyDeps = Agg(ivy"org.scalameta::munit:$munitVersion")
