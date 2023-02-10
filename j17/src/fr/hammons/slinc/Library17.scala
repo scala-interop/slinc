@@ -47,7 +47,7 @@ class Library17(linker: CLinker) extends LibraryI.PlatformSpecific:
     def lookup(name: String): Object =
       s.lookup(name).nn.orElseThrow(() => throw this.lookupError(name)).nn
   private val standardLibLookup =
-    J17Lookup(CLinker.systemLookup().nn, LibraryLocation.Standardard)
+    J17Lookup(CLinker.systemLookup().nn, LibraryLocation.Standard)
   override def getStandardLibLookup: Lookup =
     Tools.hashCode()
 
