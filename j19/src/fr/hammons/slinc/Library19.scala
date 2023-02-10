@@ -4,10 +4,7 @@ import java.lang.foreign.Linker
 import java.lang.invoke.MethodHandle
 import java.lang.foreign.{FunctionDescriptor as JFunctionDescriptor}
 import java.lang.foreign.Addressable
-import dotty.tools.dotc.core.SymbolLoader
 import java.lang.foreign.SymbolLookup
-import java.nio.file.Paths
-import java.nio.file.Files
 import fr.hammons.slinc.modules.descriptorModule19
 
 class Library19(linker: Linker) extends LibraryI.PlatformSpecific:
@@ -44,8 +41,6 @@ class Library19(linker: Linker) extends LibraryI.PlatformSpecific:
               .map(descriptorModule19.toMemoryLayout)
               .toSeq*
           )
-
-    val md = descriptor.toMethodType
 
     linker.downcallHandle(address.asInstanceOf[Addressable], fd).nn
 

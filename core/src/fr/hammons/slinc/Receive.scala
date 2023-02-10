@@ -1,19 +1,18 @@
 package fr.hammons.slinc
 
-import java.lang.reflect.Modifier
-
-import scala.annotation.targetName
 import scala.quoted.*
 import scala.compiletime.{erasedValue, summonInline}
 import scala.util.chaining.*
 import scala.deriving.Mirror
 import container.{ContextProof, *:::, End}
 import fr.hammons.slinc.modules.DescriptorModule
+import scala.annotation.nowarn
 
 class ReceiveI(val libraryPs: LibraryI.PlatformSpecific):
+  @nowarn("msg=unused implicit parameter")
   inline given fnReceive[A](using Fn[A, ?, ?]): Receive[A] =
     new Receive[A]:
-      def from(mem: Mem, offset: Bytes): A =
+      override def from(mem: Mem, offset: Bytes): A =
         val descriptor = FunctionDescriptor.fromFunction[A]
 
         MethodHandleTools.wrappedMH[A](
@@ -81,6 +80,8 @@ object Receive:
       }(transformsArray).asInstanceOf[Receive[A]]
   end staged
 
+  // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
+  @nowarn("msg=unused implicit parameter")
   private def stagedHelper(
       layout: TypeDescriptor,
       transformIndices: Map[String, Int],
@@ -139,6 +140,8 @@ object Receive:
           .flatMap(getTransforms)
       case _ => Seq.empty
 
+  // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
+  @nowarn("msg=unused local definition")
   private def constructFromTarget(clazz: Class[?], members: List[Expr[Any]])(
       using Quotes
   ) =

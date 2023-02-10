@@ -1,6 +1,6 @@
 package fr.hammons.slinc
 
-import scala.quoted.{ToExpr, Expr, Quotes}
+import scala.quoted.{ToExpr, Quotes}
 
 opaque type Bytes = Long
 

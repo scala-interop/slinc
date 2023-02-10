@@ -1,29 +1,24 @@
 package fr.hammons.slinc
 
 import Fn.andThen
-import scala.compiletime.uninitialized
 import java.util.concurrent.atomic.AtomicReference
 import scala.quoted.staging.*
 import java.util.concurrent.Executors
-import scala.concurrent.Promise
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.concurrent.ExecutionContext
 import scala.quoted.{Quotes, Expr}
 import scala.concurrent.Future
 import scala.concurrent.duration.*
-import scala.util.Failure.apply
 import scala.util.Failure
-import java.util.concurrent.atomic.AtomicMarkableReference
 import java.util.concurrent.atomic.AtomicInteger
-import scala.reflect.ClassTag
 
 type JitCompiler = [A] => ((Quotes) ?=> Expr[A]) => A
 object NoJitManager extends JitManager:
-  def jitc[F, Input <: Tuple, Output](
+  override def jitc[F, Input <: Tuple, Output](
       lowSpeed: F,
       highSpeed: JitCompiler => F,
       atomicRef: F => Unit
-  )(using f: Fn[F, Input, Output]): Unit = atomicRef(lowSpeed)
+  )(using Fn[F, Input, Output]): Unit = atomicRef(lowSpeed)
 
   def jitNow(): Unit = ()
 
@@ -32,11 +27,11 @@ class InstantJitManager(compiler: Compiler) extends JitManager:
   override def jitNow(): Unit = ???
 
   given Compiler = compiler
-  def jitc[F, Input <: Tuple, Output](
+  override def jitc[F, Input <: Tuple, Output](
       lowSpeed: F,
       highSpeed: JitCompiler => F,
       atomicRef: F => Unit
-  )(using f: Fn[F, Input, Output]): Unit = atomicRef(
+  )(using Fn[F, Input, Output]): Unit = atomicRef(
     highSpeed([A] => (fn: ((Quotes) ?=> Expr[A])) => run(fn))
   )
 trait JitManager:

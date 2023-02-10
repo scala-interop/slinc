@@ -1,12 +1,13 @@
 package fr.hammons.slinc
 
-import org.openjdk.jmh.annotations.*,
-  Mode.{SampleTime, SingleShotTime, Throughput}
+import org.openjdk.jmh.annotations.{Scope as _, *}
 import java.util.concurrent.TimeUnit
-import fr.hammons.slinc.Scope
 import scala.util.Random
+import scala.annotation.nowarn
 
 case class div_t(quot: Int, rem: Int)
+
+@nowarn("msg=unused explicit parameter")
 trait BindingsBenchmarkShape(val s: Slinc):
   import scala.language.unsafeNulls
   import s.{given, *}

@@ -13,8 +13,6 @@ class Allocator19(
 ) extends Allocator:
 
   override def upcall[Fn](descriptor: FunctionDescriptor, target: Fn): Mem =
-    val size = descriptor.inputDescriptors.size
-
     val mh = this.methodHandleFromFn(descriptor, target)
 
     val fd = descriptor.outputDescriptor match

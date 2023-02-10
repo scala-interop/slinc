@@ -1,7 +1,6 @@
 package fr.hammons.slinc.modules
 
 import fr.hammons.slinc.{StructDescriptor, Bytes, TypeDescriptor}
-import java.lang.invoke.MethodType
 
 /** A module used to perform Platform dependent work with a descriptor
   */

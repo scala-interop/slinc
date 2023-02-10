@@ -1,12 +1,6 @@
 package fr.hammons.slinc
 
-import scala.concurrent.ExecutionContext
-import scala.quoted.staging.Compiler
-import java.util.concurrent.Executor
-import java.util.concurrent.Executors
-import java.util.concurrent.ThreadFactory
 import scala.util.chaining.*
-import java.util.concurrent.atomic.AtomicReference
 import scala.compiletime.uninitialized
 import modules.{DescriptorModule, TransitionModule}
 
@@ -19,9 +13,6 @@ trait Slinc:
   given dm: DescriptorModule
   given tm: TransitionModule
 
-  private val useJit = Option(System.getProperty("sffi-jit"))
-    .flatMap(_.nn.toBooleanOption)
-    .getOrElse(true)
   protected val structI = StructI(jitManager)
   val typesI = types.TypesI.platformTypes
   protected val scopeI = ScopeI(scopePlatformSpecific)

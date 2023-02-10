@@ -1,12 +1,9 @@
 package fr.hammons.slinc
 
-import scala.annotation.targetName
 import scala.quoted.*
-import scala.util.TupledFunction
-import scala.annotation.experimental
 import scala.util.chaining.*
 import fr.hammons.slinc.modules.TransitionModule
-import java.lang.invoke.TypeDescriptor
+import scala.annotation.nowarn
 
 trait Fn[F, Inputs <: Tuple, Output]:
   type Function = F
@@ -28,6 +25,7 @@ object Fn:
     toNativeCompatibleImpl('a)
   }
 
+  @nowarn
   def toNativeCompatibleImpl[A](a: Expr[A])(using Quotes, Type[A]): Expr[A] =
     import quotes.reflect.*
     val typeArgs = TypeRepr.of[A].typeArgs

@@ -1,10 +1,6 @@
 package fr.hammons.slinc
 
-import org.openjdk.jmh.annotations.*,
-  Mode.{SampleTime, SingleShotTime, Throughput}
-import java.util.concurrent.TimeUnit
-import fr.hammons.slinc.Scope
-import scala.annotation.experimental
+import org.openjdk.jmh.annotations.{Scope as _, *}
 
 case class A(a: Int, b: B, c: Int)
 case class B(a: Int, b: Int)

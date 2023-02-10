@@ -1,13 +1,16 @@
 package fr.hammons.slinc
 
-import fr.hammons.slinc.StdlibSpec.{div_t, ldiv_t, lldiv_t}
+import fr.hammons.slinc.StdlibSpec.div_t
 import scala.util.Random
 import munit.ScalaCheckSuite
 import org.scalacheck.Prop.*
 import org.scalacheck.Gen
 import org.scalacheck.Arbitrary
 import fr.hammons.slinc.types.OS
+import scala.annotation.nowarn
 
+@nowarn("msg=unused explicit parameter")
+@nowarn("msg=unused implicit parameter")
 trait StdlibSpec(val slinc: Slinc) extends ScalaCheckSuite:
   import slinc.{given, *}
 

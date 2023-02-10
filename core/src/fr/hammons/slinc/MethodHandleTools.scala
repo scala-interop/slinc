@@ -3,8 +3,8 @@ package fr.hammons.slinc
 import scala.quoted.*
 import java.lang.invoke.MethodHandle
 import scala.compiletime.asMatchable
-import fr.hammons.slinc.modules.DescriptorModule
 import fr.hammons.slinc.modules.TransitionModule
+import scala.annotation.nowarn
 
 object MethodHandleTools:
   def exprNameMapping(expr: Expr[Any])(using Quotes): String =
@@ -30,6 +30,8 @@ object MethodHandleTools:
       case '[Object] => "O"
       case _         => "O"
 
+  // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
+  @nowarn("msg=unused implicit parameter")
   def invokeVariadicArguments(
       mhGen: Expr[Seq[TypeDescriptor] => MethodHandle],
       exprs: Expr[Seq[Any]],
@@ -42,6 +44,8 @@ object MethodHandleTools:
       )
     }
 
+  // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
+  @nowarn("msg=unused implicit parameter")
   def invokeArguments[R](
       mh: Expr[MethodHandle],
       exprs: Seq[Expr[Any]]
@@ -52,13 +56,6 @@ object MethodHandleTools:
     import quotes.reflect.*
 
     val arity = exprs.size
-    val callName = (exprs.map(exprNameMapping) :+ returnMapping[R]).mkString
-
-    val mod = Symbol
-      .requiredPackage("fr.hammons.slinc")
-      .declarations
-      .find(_.name == s"MethodHandleArity$arity")
-      .map(_.companionModule)
 
     val backupMod = TypeRepr
       .of[MethodHandleFacade]
@@ -91,6 +88,8 @@ object MethodHandleTools:
         )
       )
 
+      // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
+  @nowarn("msg=unused implicit parameter")
   def calculateMethodHandleImplementation[L](
       platformExpr: Expr[LibraryI.PlatformSpecific],
       addresses: Expr[IArray[Object]]
@@ -162,6 +161,9 @@ object MethodHandleTools:
     wrappedMHImpl[A]('methodHandle)
   }
 
+  // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
+  @nowarn("msg=unused implicit parameter")
+  @nowarn("msg=unused local definition")
   private def wrappedMHImpl[A](
       methodHandleExpr: Expr[MethodHandle]
   )(using Quotes, Type[A]) =
