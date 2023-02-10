@@ -26,7 +26,6 @@ trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
 
   inline def canReadWrite[A](using
       Arbitrary[A],
-      Send[A],
       Receive[A],
       DescriptorOf[A]
   ) = property(s"can read/write ${nameOf[A]}") {

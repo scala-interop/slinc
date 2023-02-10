@@ -51,7 +51,6 @@ object core
     with PublishableModule
     with FacadeGenerationModule
     with BenchmarksModule {
-
   def javacOptions =
     super.javacOptions() ++ Seq("--release", "17")
 
@@ -62,8 +61,7 @@ object core
       "-project", "slinc"
     )
   }
-
-
+  
   def pomSettings = pomTemplate("slinc-core")
 
   def specializationArity = 4

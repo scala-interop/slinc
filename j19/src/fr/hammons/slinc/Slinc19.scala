@@ -5,7 +5,8 @@ import fr.hammons.slinc.modules.{*, given}
 
 class Slinc19(_jitManager: JitManager, linker: Linker)(using
     val dm: DescriptorModule,
-    val tm: TransitionModule
+    val tm: TransitionModule,
+    val rwm: ReadWriteModule
 ) extends Slinc:
   protected def jitManager: JitManager = _jitManager
 

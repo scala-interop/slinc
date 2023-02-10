@@ -3,6 +3,7 @@ package fr.hammons.slinc
 import scala.util.chaining.*
 import scala.compiletime.uninitialized
 import modules.{DescriptorModule, TransitionModule}
+import fr.hammons.slinc.modules.ReadWriteModule
 
 trait Slinc:
   protected def jitManager: JitManager
@@ -12,6 +13,7 @@ trait Slinc:
 
   given dm: DescriptorModule
   given tm: TransitionModule
+  given rwm: ReadWriteModule
 
   protected val structI = StructI(jitManager)
   val typesI = types.TypesI.platformTypes
