@@ -6,8 +6,41 @@ import java.lang.foreign.{FunctionDescriptor as JFunctionDescriptor}
 import java.lang.foreign.Addressable
 import java.lang.foreign.SymbolLookup
 import fr.hammons.slinc.modules.descriptorModule19
+import fr.hammons.slinc
 
 class Library19(linker: Linker) extends LibraryI.PlatformSpecific:
+
+  override def getDowncall(descriptor: slinc.FunctionDescriptor): MethodHandle =
+    val fd = descriptor.outputDescriptor match
+      case Some(r) =>
+        JFunctionDescriptor
+          .of(
+            descriptorModule19.toMemoryLayout(r),
+            descriptor.inputDescriptors.view
+              .map(descriptorModule19.toMemoryLayout)
+              .toSeq*
+          )
+          .nn
+          .asVariadic(
+            descriptor.variadicDescriptors.view
+              .map(descriptorModule19.toMemoryLayout)
+              .toSeq*
+          )
+      case _ =>
+        JFunctionDescriptor
+          .ofVoid(
+            descriptor.inputDescriptors.view
+              .map(descriptorModule19.toMemoryLayout)
+              .toSeq*
+          )
+          .nn
+          .asVariadic(
+            descriptor.variadicDescriptors.view
+              .map(descriptorModule19.toMemoryLayout)
+              .toSeq*
+          )
+
+    linker.downcallHandle(fd).nn
 
   override def getDowncall(
       address: Object,

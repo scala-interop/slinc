@@ -157,14 +157,15 @@ object MethodHandleTools:
     calculateMethodHandleImplementation[L]('platformSpecific, 'addresses)
   }
 
-  inline def wrappedMH[A](methodHandle: MethodHandle) = ${
-    wrappedMHImpl[A]('methodHandle)
+  inline def wrappedMH[A](mem: Mem, methodHandle: MethodHandle) = ${
+    wrappedMHImpl[A]('mem, 'methodHandle)
   }
 
   // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
   @nowarn("msg=unused implicit parameter")
   @nowarn("msg=unused local definition")
   private def wrappedMHImpl[A](
+      mem: Expr[Mem],
       methodHandleExpr: Expr[MethodHandle]
   )(using Quotes, Type[A]) =
     import quotes.reflect.*
@@ -176,7 +177,7 @@ object MethodHandleTools:
 
     val paramNames = LazyList.iterate("a")(a => a ++ a)
 
-    Lambda(
+    val expr = Lambda(
       Symbol.spliceOwner,
       MethodType(paramNames.take(inputTypes.size).toList)(
         _ => inputTypes,
@@ -187,7 +188,8 @@ object MethodHandleTools:
           case '[r] =>
             val invokeExpr = invokeArguments[r](
               methodHandleExpr,
-              params.map(_.asExpr)
+              '{ $mem.asBase } +:
+                params.map(_.asExpr)
             )
             val invokeResultExpr = '{
               val invokeResult = $invokeExpr
@@ -197,3 +199,5 @@ object MethodHandleTools:
             invokeResultExpr.asTerm
               .changeOwner(meth)
     ).asExprOf[A]
+
+    expr

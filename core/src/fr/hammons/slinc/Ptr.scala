@@ -4,12 +4,25 @@ import scala.reflect.ClassTag
 import fr.hammons.slinc.modules.DescriptorModule
 import fr.hammons.slinc.modules.ReadWriteModule
 
+import scala.compiletime.summonFrom
+
 class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
-  def `unary_!`(using receive: Receive[A]): A = receive.from(mem, offset)
+  inline def `unary_!`(using rwm: ReadWriteModule): A = summonFrom {
+    case descO: DescriptorOf[A] => rwm.read(mem, offset)
+    case f: Fn[A, ?, ?] =>
+      rwm.readFn(
+        mem,
+        FunctionDescriptor.fromFunction[A],
+        mh => MethodHandleTools.wrappedMH[A](_, mh)
+      )
+  }
+
   def asArray(size: Int)(using DescriptorOf[A], DescriptorModule)(using
-      r: ReceiveBulk[A]
-  ) =
-    r.from(mem.resize(DescriptorOf[A].size * size), offset, size)
+      r: ReadWriteModule
+  ): IArray[A] =
+    IArray.unsafeFromArray(
+      r.readArray(mem.resize(DescriptorOf[A].size * size), offset, size)
+    )
 
   def `unary_!_=`(value: A)(using rwM: ReadWriteModule)(using DescriptorOf[A]) =
     rwM.write(mem, offset, value)
@@ -25,7 +38,7 @@ object Ptr:
   extension (p: Ptr[Byte])
     def copyIntoString(
         maxSize: Int
-    )(using DescriptorOf[Byte], DescriptorModule) =
+    )(using DescriptorOf[Byte], DescriptorModule, ReadWriteModule) =
       var i = 0
       val resizedPtr = p.resize(Bytes(maxSize))
       while (i < maxSize && !resizedPtr(i) != 0) do i += 1

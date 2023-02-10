@@ -31,6 +31,10 @@ object LibraryI:
         descriptor: FunctionDescriptor
     ): MethodHandle
 
+    def getDowncall(
+        descriptor: FunctionDescriptor
+    ): MethodHandle
+
     def getLocalLookup(name: String): Lookup
     def getLibraryPathLookup(name: String): Lookup
     def getStandardLibLookup: Lookup

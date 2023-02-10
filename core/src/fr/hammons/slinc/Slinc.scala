@@ -15,11 +15,10 @@ trait Slinc:
   given tm: TransitionModule
   given rwm: ReadWriteModule
 
-  protected val structI = StructI(jitManager)
+  protected val structI = new StructI
   val typesI = types.TypesI.platformTypes
   protected val scopeI = ScopeI(scopePlatformSpecific)
   protected val libraryI = LibraryI(libraryIPlatformSpecific)
-  val receiveI = ReceiveI(libraryIPlatformSpecific)
 
   export typesI.{*, given}
   export libraryI.*
@@ -28,7 +27,6 @@ trait Slinc:
   export structI.Struct
   export scopeI.given
   export container.ContextProof.given
-  export receiveI.given
 
   object x64:
     val Linux: types.x64.Linux.type = types.x64.Linux
