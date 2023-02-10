@@ -126,7 +126,6 @@ given descriptorModule17: DescriptorModule with
       sd, {
         val originalMembers = sd.members.map(toMemoryLayout)
         val alignment = alignmentOf(sd)
-        val offsets = memberOffsets(sd)
         MemoryLayout
           .structLayout(genLayoutList(originalMembers, alignment)*)
           .nn

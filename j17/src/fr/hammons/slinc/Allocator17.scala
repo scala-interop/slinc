@@ -6,9 +6,6 @@ import jdk.incubator.foreign.{
   CLinker,
   FunctionDescriptor as JFunctionDescriptor
 }, CLinker.C_POINTER
-import java.lang.invoke.MethodHandles
-import java.lang.invoke.MethodType
-import java.lang.invoke.MethodHandle
 import fr.hammons.slinc.modules.descriptorModule17
 
 class Allocator17(
@@ -18,7 +15,6 @@ class Allocator17(
 ) extends Allocator:
 
   override def upcall[Fn](descriptor: FunctionDescriptor, target: Fn): Mem =
-    val size = descriptor.inputDescriptors.size
     val mh = methodHandleFromFn(descriptor, target)
     val fd = descriptor.outputDescriptor match
       case Some(r) =>

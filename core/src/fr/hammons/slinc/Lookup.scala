@@ -1,6 +1,5 @@
 package fr.hammons.slinc
 
-import java.nio.file.Path
 import java.nio.file.Paths
 
 trait Lookup(libraryLocation: LibraryLocation):

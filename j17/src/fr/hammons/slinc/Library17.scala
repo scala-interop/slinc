@@ -2,15 +2,9 @@ package fr.hammons.slinc
 
 import java.lang.invoke.MethodHandle
 import jdk.incubator.foreign.{FunctionDescriptor as JFunctionDescriptor}
-import jdk.incubator.foreign.MemorySegment
-import jdk.incubator.foreign.MemoryAddress
-import java.lang.invoke.MethodType
 import jdk.incubator.foreign.CLinker
 import jdk.incubator.foreign.SymbolLookup
 import jdk.incubator.foreign.Addressable
-import java.nio.file.Paths
-import java.nio.file.Files
-import fr.hammons.slinc.modules.DescriptorModule
 import modules.descriptorModule17
 
 class Library17(linker: CLinker) extends LibraryI.PlatformSpecific:

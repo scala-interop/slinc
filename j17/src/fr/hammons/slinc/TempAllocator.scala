@@ -4,8 +4,7 @@ import jdk.incubator.foreign.{
   CLinker,
   ResourceScope,
   MemoryAddress,
-  MemorySegment,
-  SegmentAllocator
+  MemorySegment
 }
 
 final class TempAllocator17:

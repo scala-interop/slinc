@@ -1,6 +1,5 @@
 package fr.hammons.slinc
 
-import fr.hammons.slinc.ScopeI.PlatformSpecific
 import java.lang.invoke.{MethodHandle, MethodType, MethodHandles}
 import fr.hammons.slinc.modules.DescriptorModule
 

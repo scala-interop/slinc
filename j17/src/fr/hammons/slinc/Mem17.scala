@@ -3,7 +3,7 @@ package fr.hammons.slinc
 import jdk.incubator.foreign.MemorySegment
 import jdk.incubator.foreign.MemoryAccess
 import jdk.incubator.foreign.ResourceScope
-import jdk.incubator.foreign.CLinker.{C_CHAR, C_INT, C_POINTER}
+import jdk.incubator.foreign.CLinker.{C_INT, C_POINTER}
 import jdk.incubator.foreign.Addressable
 import jdk.incubator.foreign.MemoryAddress
 
@@ -84,7 +84,7 @@ class Mem17(private[slinc] val mem: MemorySegment) extends Mem:
     if to.toLong == 0 then mem
     else mem.address().nn.asSegment(to.toLong, mem.scope().nn).nn
 
-  def readIntArray(offset: Bytes, size: Int): Array[Int] =
+  override def readIntArray(offset: Bytes, size: Int): Array[Int] =
     val arr = Array.ofDim[Int](size)
     val resizedMem = resizeSegment(Bytes(size * C_INT.nn.byteSize()))
     MemorySegment.ofArray(arr).nn.copyFrom(resizedMem)

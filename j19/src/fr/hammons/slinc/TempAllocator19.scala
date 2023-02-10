@@ -1,7 +1,6 @@
 package fr.hammons.slinc
 
 import java.lang.foreign.{MemorySession, MemorySegment}
-import java.lang.foreign.MemoryAddress
 import java.lang.foreign.SegmentAllocator
 
 final class TempAllocator19:
@@ -46,4 +45,3 @@ object TempAllocator19:
   val localAllocator: SegmentAllocator =
     (bytesNeeded, alignment) =>
       allocator.get.nn.allocate(bytesNeeded, alignment)
-  private val powersOf2 = LazyList.iterate(1L)(_ << 1)

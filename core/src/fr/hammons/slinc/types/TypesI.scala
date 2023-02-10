@@ -1,10 +1,7 @@
 package fr.hammons.slinc.types
 
-import scala.annotation.targetName
-import scala.compiletime.constValue
 import fr.hammons.slinc.*
 import fr.hammons.slinc.container.*
-import dotty.tools.dotc.config.Platform
 
 class TypesI protected[slinc] (
     protected val platformSpecific: TypesI.PlatformSpecific

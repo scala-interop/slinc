@@ -2,8 +2,9 @@ package fr.hammons.slinc
 
 import scala.quoted.*
 import java.lang.invoke.MethodHandle
-import scala.annotation.nowarn
 import fr.hammons.slinc.modules.TransitionModule
+import scala.compiletime.asMatchable
+import scala.annotation.nowarn
 
 class LibraryI(platformSpecific: LibraryI.PlatformSpecific):
   trait Library[+L]:
@@ -35,6 +36,8 @@ object LibraryI:
     def getStandardLibLookup: Lookup
     def getResourceLibLookup(location: String): Lookup
 
+  // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
+  @nowarn("msg=unused local definition")
   def checkMethodIsCompatible(using q: Quotes)(s: q.reflect.Symbol): Unit =
     import quotes.reflect.*
 
@@ -84,15 +87,16 @@ object LibraryI:
 
         }
 
-  @nowarn
   def getReturnType(using q: Quotes)(s: quotes.reflect.Symbol) =
     import quotes.reflect.*
     if s.isDefDef then
-      s.typeRef.translucentSuperType match
+      s.typeRef.translucentSuperType.asMatchable match
         case TypeLambda(_, _, ret: LambdaType) => ret.resType
         case ret: LambdaType                   => ret.resType
     else report.errorAndAbort("This symbol isn't a method!")
 
+  // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
+  @nowarn("msg=unused local definition")
   def needsAllocator(using q: Quotes)(s: q.reflect.Symbol): Boolean =
     import quotes.reflect.*
 
@@ -101,6 +105,10 @@ object LibraryI:
         true
       case _ => false
 
+  // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
+  @nowarn("msg=unused implicit parameter")
+  @nowarn("msg=unused local definition")
+  @nowarn("msg=unused explicit parameter")
   def bindingImpl[R, L[_] <: LibraryI#Library[?]](using q: Quotes)(using
       Type[R],
       Type[L]
@@ -160,7 +168,6 @@ object LibraryI:
             $transitionModule.methodArgument($desc.descriptor, $expr, alloc)
           }
         }
-
     val rTransition: Expr[Object | Null => R] = Type.of[R] match
       case '[Unit] =>
         '{ (obj: Object | Null) => () }.asExprOf[Object | Null => R]
@@ -245,6 +252,8 @@ object LibraryI:
     )
     code
 
+  // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
+  @nowarn("msg=unused local definition")
   def getLibrary[L[_]](using q: Quotes)(using Type[L])(
       owningClass: q.reflect.Symbol
   ): Expr[L[Any]] =
@@ -263,10 +272,11 @@ object LibraryI:
     getLookupImpl[L]('platformSpecific)
   }
 
+  // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
+  @nowarn("msg=unused implicit parameter")
   def getLookupImpl[L](
       platformSpecificExpr: Expr[PlatformSpecific]
   )(using Quotes, Type[L]) =
-    import quotes.reflect.*
     val name: LibraryLocation = LibraryName.libraryName[L]
     name match
       case LibraryLocation.Standardard =>
@@ -282,6 +292,8 @@ object LibraryI:
     getMethodAddressImpl[L]('l)
   }
 
+  // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
+  @nowarn("msg=unused implicit parameter")
   def getMethodAddressImpl[L](l: Expr[Lookup])(using Quotes, Type[L]) =
     import quotes.reflect.*
 
