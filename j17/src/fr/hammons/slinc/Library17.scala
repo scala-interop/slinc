@@ -6,6 +6,7 @@ import jdk.incubator.foreign.CLinker
 import jdk.incubator.foreign.SymbolLookup
 import jdk.incubator.foreign.Addressable
 import modules.descriptorModule17
+import fr.hammons.slinc
 
 class Library17(linker: CLinker) extends LibraryI.PlatformSpecific:
 
@@ -41,6 +42,35 @@ class Library17(linker: CLinker) extends LibraryI.PlatformSpecific:
     val md = descriptor.toMethodType
 
     linker.downcallHandle(address.asInstanceOf[Addressable], md, fd).nn
+
+  def getDowncall(descriptor: slinc.FunctionDescriptor): MethodHandle =
+    val fd = descriptor.outputDescriptor match
+      case Some(r) =>
+        JFunctionDescriptor.of(
+          descriptorModule17.toMemoryLayout(r),
+          descriptor.inputDescriptors.view
+            .map(descriptorModule17.toMemoryLayout)
+            .concat(
+              descriptor.variadicDescriptors.view
+                .map(descriptorModule17.toMemoryLayout)
+                .map(CLinker.asVarArg)
+            )
+            .toSeq*
+        )
+      case _ =>
+        JFunctionDescriptor.ofVoid(
+          descriptor.inputDescriptors.view
+            .map(descriptorModule17.toMemoryLayout)
+            .concat(
+              descriptor.variadicDescriptors.view
+                .map(descriptorModule17.toMemoryLayout)
+                .map(CLinker.asVarArg)
+            )
+            .toSeq*
+        )
+
+    val md = descriptor.toMethodType
+    linker.downcallHandle(md, fd).nn
 
   class J17Lookup(s: SymbolLookup, libraryLocation: LibraryLocation)
       extends Lookup(libraryLocation):

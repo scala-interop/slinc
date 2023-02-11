@@ -1,7 +1,5 @@
 package fr.hammons.slinc
 
-import scala.annotation.experimental
-
 sealed trait Scope:
   def apply[A](fn: Allocator ?=> A): A
 

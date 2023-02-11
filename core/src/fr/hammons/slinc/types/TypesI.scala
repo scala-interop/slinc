@@ -79,7 +79,7 @@ object TypesI:
   type <-:[A] = [B] =>> Convertible[A, B]
   type :?->[A] = [B] =>> PotentiallyConvertible[B, A]
   type <-?:[A] = [B] =>> PotentiallyConvertible[A, B]
-  type StandardCapabilities = DescriptorOf *::: Send *::: Receive *::: End
+  type StandardCapabilities = DescriptorOf *::: End
 
   trait PlatformSpecific extends HostDependentTypes:
     val hostDependentTypes: HostDependentTypes & Singleton
