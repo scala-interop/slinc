@@ -10,8 +10,6 @@ import fr.hammons.slinc.types.OS
 import scala.annotation.nowarn
 
 //todo: remove when https://github.com/lampepfl/dotty/issues/16876 is fixed
-@nowarn("msg=unused explicit parameter")
-@nowarn("msg=unused implicit parameter")
 trait StdlibSpec(val slinc: Slinc) extends ScalaCheckSuite:
   import slinc.{given, *}
 

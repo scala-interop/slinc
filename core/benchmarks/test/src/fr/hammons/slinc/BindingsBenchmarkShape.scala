@@ -7,7 +7,6 @@ import scala.annotation.nowarn
 
 case class div_t(quot: Int, rem: Int)
 
-@nowarn("msg=unused explicit parameter")
 trait BindingsBenchmarkShape(val s: Slinc):
   import scala.language.unsafeNulls
   import s.{given, *}
