@@ -21,7 +21,7 @@ import scala.collection.concurrent.TrieMap
 
 given descriptorModule17: DescriptorModule with
   val chm: TrieMap[StructDescriptor, GroupLayout] = TrieMap.empty
-  val offsets: TrieMap[StructDescriptor, IArray[Bytes]] = TrieMap.empty
+  val offsets: TrieMap[List[TypeDescriptor], IArray[Bytes]] = TrieMap.empty
 
   def toCarrierType(td: TypeDescriptor): Class[?] = td match
     case ByteDescriptor      => classOf[Byte]
@@ -81,12 +81,12 @@ given descriptorModule17: DescriptorModule with
       s.members.view.map(_.descriptor).map(alignmentOf).max
     case _ => sizeOf(td)
 
-  override def memberOffsets(sd: StructDescriptor): IArray[Bytes] =
+  override def memberOffsets(sd: List[TypeDescriptor]): IArray[Bytes] =
     offsets.getOrElseUpdate(
       sd, {
         val ll = genLayoutList(
-          sd.members.map(toMemoryLayout),
-          sd.members.view.map(_.descriptor).map(alignmentOf).max
+          sd.map(toMemoryLayout(_).withName("").nn),
+          sd.view.map(alignmentOf).max
         )
         IArray.from(
           ll match

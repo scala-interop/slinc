@@ -10,7 +10,7 @@ import java.lang.foreign.GroupLayout
 
 given descriptorModule19: DescriptorModule with
   private val sdt = TrieMap.empty[StructDescriptor, GroupLayout]
-  private val offsets = TrieMap.empty[StructDescriptor, IArray[Bytes]]
+  private val offsets = TrieMap.empty[List[TypeDescriptor], IArray[Bytes]]
 
   def toMemoryLayout(td: TypeDescriptor): MemoryLayout = td match
     case ByteDescriptor       => ValueLayout.JAVA_BYTE.nn
@@ -81,12 +81,12 @@ given descriptorModule19: DescriptorModule with
     case PtrDescriptor       => classOf[MemoryAddress]
     case _: StructDescriptor => classOf[MemorySegment]
 
-  override def memberOffsets(sd: StructDescriptor): IArray[Bytes] =
+  override def memberOffsets(sd: List[TypeDescriptor]): IArray[Bytes] =
     offsets.getOrElseUpdate(
       sd, {
         val ll = genLayoutList(
-          sd.members.view.map(toMemoryLayout).toSeq,
-          sd.members.view.map(_.descriptor).map(alignmentOf).max
+          sd.map(toMemoryLayout(_).withName("").nn).toSeq,
+          sd.map(alignmentOf).max
         )
         IArray.from(
           ll match

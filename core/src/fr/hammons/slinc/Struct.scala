@@ -11,8 +11,10 @@ import scala.reflect.ClassTag
 import modules.DescriptorModule
 import fr.hammons.slinc.modules.TransitionModule
 import fr.hammons.slinc.modules.ReadWriteModule
+import fr.hammons.slinc.modules.Reader
+import fr.hammons.slinc.modules.Writer
 
-trait Struct[A <: Product] extends DescriptorOf[A], MethodCompatible[A]
+trait Struct[A <: Product] extends DescriptorOf[A]
 
 object Struct:
   private inline def memberDescriptors[A](using
@@ -34,12 +36,19 @@ object Struct:
   private inline def memberNames[A](using m: Mirror.ProductOf[A]) =
     constValueTuple[m.MirroredElemLabels].toArray.map(_.toString())
 
-  private inline def writeGen[A <: Product](
-      offsets: IArray[Bytes],
-      value: A,
-      mem: Mem
-  )(using m: Mirror.ProductOf[A], rwm: ReadWriteModule) =
-    writeGenHelper(offsets, 0, Tuple.fromProductTyped(value), mem)
+  private inline def writeGen[A <: Product](using
+      m: Mirror.ProductOf[A],
+      rwm: ReadWriteModule,
+      dm: DescriptorModule
+  ): Writer[A] =
+    val offsets = dm.memberOffsets(memberDescriptors[A])
+    (mem, offset, value) =>
+      writeGenHelper(
+        offsets.map(_ + offset),
+        0,
+        Tuple.fromProductTyped(value),
+        mem
+      )
 
   private inline def writeGenHelper[A <: Tuple](
       offsets: IArray[Bytes],
@@ -55,13 +64,17 @@ object Struct:
         writeGenHelper(offsets, index + 1, tuple.tail, mem)
       case EmptyTuple => ()
 
-  private inline def readGen[A <: Product](
-      offsets: IArray[Bytes],
-      mem: Mem
-  )(using m: Mirror.ProductOf[A], rwm: ReadWriteModule): A =
-    val elems: m.MirroredElemTypes =
-      readGenHelper[m.MirroredElemTypes](offsets, 0, mem)
-    m.fromTuple(elems)
+  private inline def readGen[A <: Product](using
+      m: Mirror.ProductOf[A],
+      rwm: ReadWriteModule,
+      dm: DescriptorModule
+  ): Reader[A] =
+    val offsets: IArray[Bytes] = dm.memberOffsets(memberDescriptors[A])
+    (mem, offset) => {
+      val elems: m.MirroredElemTypes =
+        readGenHelper[m.MirroredElemTypes](offsets.map(_ + offset), 0, mem)
+      m.fromTuple(elems)
+    }
 
   private inline def readGenHelper[A <: Tuple](
       offsets: IArray[Bytes],
@@ -81,25 +94,19 @@ object Struct:
   inline def derived[A <: Product](using
       m: Mirror.ProductOf[A],
       ct: ClassTag[A]
-  )(using DescriptorModule, ReadWriteModule, TransitionModule) = new Struct[A]:
-    val descriptor: StructDescriptor = StructDescriptor(
+  )(using ReadWriteModule, TransitionModule) = new Struct[A]:
+    type Inner = A
+    val descriptor: StructDescriptor { type Inner = A } = new StructDescriptor(
       memberDescriptors[A].view
         .zip(memberNames[A])
         .map(StructMemberDescriptor.apply)
         .toList,
       ct.runtimeClass,
       m.fromProduct(_)
-    )
-
-    private val offsetsArray = descriptor.offsets
-
-    summon[ReadWriteModule].registerWriter[A]((m, b, a) =>
-      writeGen(offsetsArray.map(_ + b), a, m)
-    )(using this)
-
-    summon[ReadWriteModule].registerReader((m, b) =>
-      readGen(offsetsArray.map(_ + b), m)
-    )(using this)
+    ):
+      type Inner = A
+      val reader = readGen[A]
+      val writer = writeGen[A]
 
     summon[TransitionModule].registerMethodArgumentTransition[A](
       this.descriptor,
