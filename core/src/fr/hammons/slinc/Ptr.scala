@@ -19,7 +19,7 @@ class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
 
   def asArray(size: Int)(using DescriptorOf[A], DescriptorModule)(using
       r: ReadWriteModule
-  ): IArray[A] =
+  )(using ClassTag[A]): IArray[A] =
     IArray.unsafeFromArray(
       r.readArray(mem.resize(DescriptorOf[A].size * size), offset, size)
     )

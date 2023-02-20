@@ -2,92 +2,61 @@ package fr.hammons.slinc.modules
 
 import scala.collection.concurrent.TrieMap
 import fr.hammons.slinc.*
-import scala.reflect.ClassTag
 import java.lang.invoke.MethodHandle
+import scala.reflect.ClassTag
 
 given readWriteModule19: ReadWriteModule with
   val l19 = Library19(Slinc19.linker)
-  val writerCache: TrieMap[TypeDescriptor, (Mem, Bytes, ?) => Unit] =
-    TrieMap.empty
+  val writerCache = DependentTrieMap[Writer]
 
-  val arrayWriterCache: TrieMap[TypeDescriptor, (Mem, Bytes, ?) => Unit] =
-    TrieMap.empty
+  val arrayWriterCache = DependentTrieMap[[I] =>> Writer[Array[I]]]
 
-  val readerCache: TrieMap[TypeDescriptor, (Mem, Bytes) => ?] = TrieMap.empty
+  val readerCache = DependentTrieMap[Reader]
 
-  val arrayReaderCache: TrieMap[TypeDescriptor, (Mem, Bytes, Int) => ?] =
-    TrieMap.empty
+  val arrayReaderCache = DependentTrieMap[ArrayReader]
 
   val fnCache: TrieMap[FunctionDescriptor, Mem => ?] = TrieMap.empty
 
-  registerWriter[Byte]((mem, offset, value) => mem.writeByte(value, offset))
-  registerWriter[Short]((mem, offset, value) => mem.writeShort(value, offset))
-  registerWriter[Int]((mem, offset, value) => mem.writeInt(value, offset))
-  registerWriter[Long]((mem, offset, value) => mem.writeLong(value, offset))
-  registerWriter[Float]((mem, offset, value) => mem.writeFloat(value, offset))
-  registerWriter[Double]((mem, offset, value) => mem.writeDouble(value, offset))
-  registerWriter[Ptr[Any]]((mem, offset, value) =>
-    mem.writeAddress(value.mem, offset)
-  )
+  val byteWriter = (mem, offset, value) => mem.writeByte(value, offset)
+  val shortWriter = (mem, offset, value) => mem.writeShort(value, offset)
+  val intWriter = (mem, offset, value) => mem.writeInt(value, offset)
+  val longWriter = (mem, offset, value) => mem.writeLong(value, offset)
+  val floatWriter = (mem, offset, value) => mem.writeFloat(value, offset)
+  val doubleWriter = (mem, offset, value) => mem.writeDouble(value, offset)
+  val memWriter = (mem, offset, value) => mem.writeAddress(value, offset)
 
-  registerReader[Byte]((mem, offset) => mem.readByte(offset))
-  registerReader[Short]((mem, offset) => mem.readShort(offset))
-  registerReader[Int]((mem, offset) => mem.readInt(offset))
-  registerReader[Long]((mem, offset) => mem.readLong(offset))
-  registerReader[Float]((mem, offset) => mem.readFloat(offset))
-  registerReader[Double]((mem, offset) => mem.readDouble(offset))
-  registerReader[Ptr[Any]]((mem, offset) =>
-    Ptr(mem.readAddress(offset), Bytes(0))
-  )
-
-  arrayWriterCache.addOne(
-    ByteDescriptor,
-    (mem: Mem, offset: Bytes, value: Array[Byte]) =>
-      mem.writeByteArray(value, offset)
-  )
-
-  arrayWriterCache.addOne(
-    IntDescriptor,
-    (mem: Mem, offset: Bytes, value: Array[Int]) =>
-      mem.writeIntArray(value, offset)
-  )
+  val byteReader = (mem, offset) => mem.readByte(offset)
+  val shortReader = (mem, offset) => mem.readShort(offset)
+  val intReader = (mem, offset) => mem.readInt(offset)
+  val longReader = (mem, offset) => mem.readLong(offset)
+  val floatReader = (mem, offset) => mem.readFloat(offset)
+  val doubleReader = (mem, offset) => mem.readDouble(offset)
+  val memReader = (mem, offset) => mem.readAddress(offset)
 
   override def write[A](memory: Mem, offset: Bytes, value: A)(using
       DescriptorOf[A]
-  ): Unit = writerCache(DescriptorOf[A])
-    .asInstanceOf[(Mem, Bytes, A) => Unit](memory, offset, value)
+  ): Unit =
+    val desc = DescriptorOf[A]
+    writerCache.getOrElseUpdate(desc, desc.writer)(memory, offset, value)
 
   override def writeArray[A](memory: Mem, offset: Bytes, value: Array[A])(using
       DescriptorOf[A]
-  ): Unit = arrayWriterCache(DescriptorOf[A])
-    .asInstanceOf[(Mem, Bytes, Array[A]) => Unit](memory, offset, value)
-
-  override def registerReader[A](fn: (Mem, Bytes) => A)(using
-      DescriptorOf[A],
-      ClassTag[A]
   ): Unit =
-    readerCache.addOne(DescriptorOf[A], fn)
-    arrayReaderCache.addOne(
-      DescriptorOf[A],
-      (mem: Mem, offset: Bytes, num: Int) =>
-        var i = 0
-        val buffer = Array.ofDim[A](num)
-        val elemSize = DescriptorOf[A].size
-        while i < num do
-          buffer(i) = fn(mem, offset + (elemSize * i))
-          i += 1
-        buffer
+    val desc = DescriptorOf[A]
+    arrayWriterCache.getOrElseUpdate(desc, desc.arrayWriter)(
+      memory,
+      offset,
+      value
     )
 
   override def read[A](memory: Mem, offset: Bytes)(using DescriptorOf[A]): A =
-    readerCache(DescriptorOf[A]) match
-      case fn: ((Mem, Bytes) => A) => fn(memory, offset)
-      case fn => throw Error(s"$fn doesn't match the expected type!!")
+    val desc = DescriptorOf[A]
+    readerCache.getOrElseUpdate(desc, desc.reader)(memory, offset)
 
   override def readFn[A](
       mem: Mem,
       descriptor: FunctionDescriptor,
-      fn: => MethodHandle => Mem => ?
+      fn: => MethodHandle => Mem => A
   )(using Fn[A, ?, ?]): A =
     fnCache.getOrElseUpdate(descriptor, fn(l19.getDowncall(descriptor))) match
       case upcall: (Mem => A) => upcall(mem)
@@ -97,22 +66,12 @@ given readWriteModule19: ReadWriteModule with
         )
 
   override def readArray[A](memory: Mem, offset: Bytes, size: Int)(using
-      DescriptorOf[A]
-  ): Array[A] = arrayReaderCache(DescriptorOf[A]) match
-    case fn: ((Mem, Bytes, Int) => Array[A]) => fn(memory, offset, size)
-    case huh =>
-      throw Error(
-        s"Value $huh doesn't match the type format expected. Please report this severe error!!"
-      )
-
-  override def registerWriter[A](fn: (Mem, Bytes, A) => Unit)(using
-      DescriptorOf[A]
-  ): Unit =
-    writerCache.addOne(DescriptorOf[A] -> fn)
-    arrayWriterCache.addOne(
-      DescriptorOf[A] -> ((mem: Mem, offset: Bytes, value: Array[A]) =>
-        value.zipWithIndex.map((v, i) =>
-          fn(mem, offset + DescriptorOf[A].size * i, v)
-        )
-      )
+      DescriptorOf[A],
+      ClassTag[A]
+  ): Array[A] =
+    val desc = DescriptorOf[A]
+    arrayReaderCache.getOrElseUpdate(desc, desc.arrayReader)(
+      memory,
+      offset,
+      size
     )
