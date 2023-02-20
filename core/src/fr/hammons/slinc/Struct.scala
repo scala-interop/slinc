@@ -12,14 +12,9 @@ import modules.DescriptorModule
 import fr.hammons.slinc.modules.TransitionModule
 import fr.hammons.slinc.modules.ReadWriteModule
 
-class StructI(using DescriptorModule, TransitionModule, ReadWriteModule):
-  /** Summons up Descriptors for the members of Product A
-    *
-    * @tparam A
-    *   The product type to summon a list of descriptors for
-    * @return
-    *   List[TypeDescriptor]
-    */
+trait Struct[A <: Product] extends DescriptorOf[A], MethodCompatible[A]
+
+object Struct:
   private inline def memberDescriptors[A](using
       m: Mirror.ProductOf[A]
   ): List[TypeDescriptor] =
@@ -83,43 +78,40 @@ class StructI(using DescriptorModule, TransitionModule, ReadWriteModule):
         inline EmptyTuple match
           case a: A => a
 
-  trait Struct[A <: Product] extends DescriptorOf[A], MethodCompatible[A]
+  inline def derived[A <: Product](using
+      m: Mirror.ProductOf[A],
+      ct: ClassTag[A]
+  )(using DescriptorModule, ReadWriteModule, TransitionModule) = new Struct[A]:
+    val descriptor: StructDescriptor = StructDescriptor(
+      memberDescriptors[A].view
+        .zip(memberNames[A])
+        .map(StructMemberDescriptor.apply)
+        .toList,
+      ct.runtimeClass,
+      m.fromProduct(_)
+    )
 
-  object Struct:
-    inline def derived[A <: Product](using
-        m: Mirror.ProductOf[A],
-        ct: ClassTag[A]
-    ) = new Struct[A]:
-      val descriptor: StructDescriptor = StructDescriptor(
-        memberDescriptors[A].view
-          .zip(memberNames[A])
-          .map(StructMemberDescriptor.apply)
-          .toList,
-        ct.runtimeClass,
-        m.fromProduct(_)
-      )
+    private val offsetsArray = descriptor.offsets
 
-      private val offsetsArray = descriptor.offsets
+    summon[ReadWriteModule].registerWriter[A]((m, b, a) =>
+      writeGen(offsetsArray.map(_ + b), a, m)
+    )(using this)
 
-      summon[ReadWriteModule].registerWriter[A]((m, b, a) =>
-        writeGen(offsetsArray.map(_ + b), a, m)
-      )(using this)
+    summon[ReadWriteModule].registerReader((m, b) =>
+      readGen(offsetsArray.map(_ + b), m)
+    )(using this)
 
-      summon[ReadWriteModule].registerReader((m, b) =>
-        readGen(offsetsArray.map(_ + b), m)
-      )(using this)
+    summon[TransitionModule].registerMethodArgumentTransition[A](
+      this.descriptor,
+      Allocator ?=> in(_)
+    )
+    summon[TransitionModule]
+      .registerMethodReturnTransition[A](this.descriptor, out)
+    final def in(a: A)(using alloc: Allocator): Object =
+      val mem = alloc.allocate(this.descriptor, 1)
+      summon[ReadWriteModule].write(mem, Bytes(0), a)(using this)
+      summon[TransitionModule].methodArgument(mem).asInstanceOf[Object]
 
-      summon[TransitionModule].registerMethodArgumentTransition[A](
-        this.descriptor,
-        Allocator ?=> in(_)
-      )
-      summon[TransitionModule]
-        .registerMethodReturnTransition[A](this.descriptor, out)
-      final def in(a: A)(using alloc: Allocator): Object =
-        val mem = alloc.allocate(this.descriptor, 1)
-        summon[ReadWriteModule].write(mem, Bytes(0), a)(using this)
-        summon[TransitionModule].methodArgument(mem).asInstanceOf[Object]
-
-      final def out(a: Object): A =
-        val mem = summon[TransitionModule].memReturn(a)
-        summon[ReadWriteModule].read[A](mem, Bytes(0))(using this)
+    final def out(a: Object): A =
+      val mem = summon[TransitionModule].memReturn(a)
+      summon[ReadWriteModule].read[A](mem, Bytes(0))(using this)

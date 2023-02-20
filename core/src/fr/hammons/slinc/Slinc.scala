@@ -15,7 +15,6 @@ trait Slinc:
   given tm: TransitionModule
   given rwm: ReadWriteModule
 
-  protected val structI = new StructI
   val typesI = types.TypesI.platformTypes
   protected val scopeI = ScopeI(scopePlatformSpecific)
   protected val libraryI = LibraryI(libraryIPlatformSpecific)
@@ -24,7 +23,6 @@ trait Slinc:
   export libraryI.*
   export Convertible.as
   export PotentiallyConvertible.maybeAs
-  export structI.Struct
   export scopeI.given
   export container.ContextProof.given
 
