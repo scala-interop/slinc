@@ -27,16 +27,20 @@ object Tools:
 
   def sendResourceToCache(name: String): Unit =
     Files.createDirectories(appDataStore)
-    val cacheLocation = appDataStore.resolve(s"$name.c")
-
+    val cachedSharedLibLocation = appDataStore.resolve(s"$name$sharedLibSuffix")
+    val cachedNativeSrcLocation = appDataStore.resolve(s"$name.c")
+    if !Files.exists(cachedSharedLibLocation) then
+      val stream = getClass().getResourceAsStream(s"/native/$name$sharedLibSuffix")
+      if stream != null then Files.copy(stream,cachedSharedLibLocation)
+      return
     if !Files.exists(appDataStore.resolve(s"$name.c")) then
-      val stream = getClass().getResourceAsStream(s"/native/$name.c")
-      if stream != null then Files.copy(stream, cacheLocation)
-      else throw Error(s"Could not find resource /native/$name.c")
+        val stream = getClass().getResourceAsStream(s"/native/$name.c")
+        if stream != null then Files.copy(stream, cachedNativeSrcLocation)
+        else throw Error(s"Could not find resource /native/$name.c")
 
   def compileCachedResourceIfNeeded(name: String): Unit =
     val cacheLocation = appDataStore.resolve(s"$name$sharedLibSuffix")
-    val headerLocation = appDataStore.resolve(s"$name.c")
+    val nativeSrcLocation = appDataStore.resolve(s"$name.c")
 
     if !Files.exists(cacheLocation) then
       val cmd = Seq(
@@ -46,11 +50,10 @@ object Tools:
         "-Os",
         "-o",
         cacheLocation.nn.toAbsolutePath().nn.toString(),
-        headerLocation.nn.toAbsolutePath().nn.toString()
+        nativeSrcLocation.nn.toAbsolutePath().nn.toString()
       )
       if cmd.! != 0 then
-        throw Error(s"failed to compile $headerLocation: ${cmd.mkString(" ")}")
-
+        throw Error(s"failed to compile $nativeSrcLocation: ${cmd.mkString(" ")}")
   def loadCachedLibrary(name: String) =
     val cacheLocation = appDataStore.resolve(s"$name$sharedLibSuffix")
     System.load(cacheLocation.nn.toAbsolutePath().nn.toString())
