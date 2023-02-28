@@ -92,7 +92,7 @@ class Library17(linker: CLinker) extends LibraryI.PlatformSpecific:
     System.loadLibrary(sharedLibLocation)
     J17Lookup(
       SymbolLookup.loaderLookup().nn,
-      LibraryLocation.Local(sharedLibLocation)
+      LibraryLocation.Resource(name,candidates)
     )
 
     

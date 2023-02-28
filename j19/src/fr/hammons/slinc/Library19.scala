@@ -95,7 +95,7 @@ class Library19(linker: Linker) extends LibraryI.PlatformSpecific:
     System.loadLibrary(sharedLibLocation)
     J19Lookup(
       SymbolLookup.loaderLookup().nn,
-      LibraryLocation.Local(sharedLibLocation)
+      LibraryLocation.Resource(name,candidates)
     )
 
   override def getStandardLibLookup: Lookup =
