@@ -86,15 +86,16 @@ class Library17(linker: CLinker) extends LibraryI.PlatformSpecific:
     System.loadLibrary(libName)
     J17Lookup(SymbolLookup.loaderLookup().nn, LibraryLocation.Path(libName))
 
-  override def getResourceLibLookup(location: String): Lookup =
-    Tools.sendResourceToCache(location)
-    Tools.compileCachedResourceIfNeeded(location)
-    Tools.loadCachedLibrary(location)
-
+    
+  override def getResourceLibLookup(name:String,candidates: List[String]): Lookup =
+    val sharedLibLocation = prepareSharedLibFromResource(name,candidates).toAbsolutePath().toString()
+    System.loadLibrary(sharedLibLocation)
     J17Lookup(
       SymbolLookup.loaderLookup().nn,
-      LibraryLocation.Resource(location)
+      LibraryLocation.Local(sharedLibLocation)
     )
+
+    
 
   override def getLocalLookup(libPath: String): Lookup =
     System.load(libPath)

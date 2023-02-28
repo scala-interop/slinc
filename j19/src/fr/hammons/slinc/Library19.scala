@@ -90,14 +90,12 @@ class Library19(linker: Linker) extends LibraryI.PlatformSpecific:
 
     J19Lookup(SymbolLookup.loaderLookup().nn, LibraryLocation.Local(name))
 
-  override def getResourceLibLookup(location: String): Lookup =
-    Tools.sendResourceToCache(location)
-    Tools.compileCachedResourceIfNeeded(location)
-    Tools.loadCachedLibrary(location)
-
+  override def getResourceLibLookup(name:String,candidates: List[String]): Lookup =
+    val sharedLibLocation = prepareSharedLibFromResource(name,candidates).toAbsolutePath().toString()
+    System.loadLibrary(sharedLibLocation)
     J19Lookup(
       SymbolLookup.loaderLookup().nn,
-      LibraryLocation.Resource(location)
+      LibraryLocation.Local(sharedLibLocation)
     )
 
   override def getStandardLibLookup: Lookup =

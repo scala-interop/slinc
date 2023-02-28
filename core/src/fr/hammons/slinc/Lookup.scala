@@ -8,9 +8,9 @@ trait Lookup(libraryLocation: LibraryLocation):
   def lookupError(name: String): Error = libraryLocation match
     case LibraryLocation.Standard =>
       Error(s"Failed to load symbol $name from the standard library.")
-    case LibraryLocation.Resource(location) =>
+    case LibraryLocation.Resource(name,candidates) =>
       Error(
-        s"Failed to load symbol $name from resource $location. This could be caused by resource collision. Is the resource name unique enough?"
+        s"Failed to load symbol $name from resource. This could be caused by resource collision. Is the resource name unique enough?"
       )
     case LibraryLocation.Local(location) =>
       val absPath = Paths.get(location).nn.toAbsolutePath.nn
