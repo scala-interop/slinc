@@ -4,11 +4,28 @@ import org.openjdk.jmh.annotations.{Scope as _, *}
 import java.util.concurrent.TimeUnit
 import scala.util.Random
 import scala.annotation.nowarn
+import fr.hammons.slinc.modules.LibModule
 
 case class div_t(quot: Int, rem: Int)
 
 trait BindingsBenchmarkShape(val s: Slinc):
   import scala.language.unsafeNulls
+
+  trait Cstd3 derives Lib:
+    def abs(i: Int): Int
+
+  import s.given LibModule
+
+  @Benchmark
+  def abs2 =
+    Lib[Cstd3].abs(-4)
+
+  lazy val cstd3 = Lib[Cstd3]
+
+  @Benchmark
+  def abs3 =
+    cstd3.abs(-4)
+
   import s.{given, *}
 
   object Cstd derives Library:

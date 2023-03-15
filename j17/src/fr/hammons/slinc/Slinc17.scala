@@ -4,14 +4,16 @@ import jdk.incubator.foreign.CLinker
 import fr.hammons.slinc.modules.{
   DescriptorModule,
   TransitionModule,
-  ReadWriteModule
+  ReadWriteModule,
+  LibModule
 }
 import fr.hammons.slinc.modules.given
 
 class Slinc17(_jitManager: JitManager, linker: CLinker)(using
     val dm: DescriptorModule,
     val tm: TransitionModule,
-    val rwm: ReadWriteModule
+    val rwm: ReadWriteModule,
+    val lm: LibModule
 ) extends Slinc:
   protected def jitManager = _jitManager
   protected def scopePlatformSpecific = Scope17(linker)

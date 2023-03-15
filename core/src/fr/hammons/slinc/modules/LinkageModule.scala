@@ -1,0 +1,11 @@
+package fr.hammons.slinc.modules
+
+import java.lang.invoke.MethodHandle
+import fr.hammons.slinc.*
+
+trait LinkageModule:
+  type CSymbol
+  def defaultLookup(name: String): Option[CSymbol]
+  def getDowncall(descriptor: FunctionDescriptor): MethodHandle
+  // todo: stop-gap for method handles, to get rid of ASAP
+  def tempScope(): Scope

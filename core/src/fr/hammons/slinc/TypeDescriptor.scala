@@ -10,6 +10,7 @@ import fr.hammons.slinc.modules.{
 }
 import scala.annotation.nowarn
 import scala.reflect.ClassTag
+import scala.quoted.*
 
 /** Describes types used by C interop
   */
@@ -47,6 +48,22 @@ sealed trait TypeDescriptor:
       while i < a.length do
         writer(mem, size * i + offset, a(i))
         i += 1
+
+object TypeDescriptor:
+  @nowarn("msg=unused implicit parameter")
+  @nowarn("msg=unused local definition")
+  def fromTypeRepr(using q: Quotes)(
+      typeRepr: q.reflect.TypeRepr
+  ): Expr[TypeDescriptor] =
+    import quotes.reflect.*
+
+    val descOf = typeRepr.asType match
+      case '[a] =>
+        Expr
+          .summon[DescriptorOf[a]]
+          .getOrElse(report.errorAndAbort(s"No Descriptor for ${Type.show[a]}"))
+
+    '{ $descOf.descriptor }
 
 case object ByteDescriptor extends TypeDescriptor:
   type Inner = Byte
