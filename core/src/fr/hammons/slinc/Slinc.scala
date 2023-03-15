@@ -2,8 +2,7 @@ package fr.hammons.slinc
 
 import scala.util.chaining.*
 import scala.compiletime.uninitialized
-import modules.{DescriptorModule, TransitionModule}
-import fr.hammons.slinc.modules.ReadWriteModule
+import fr.hammons.slinc.modules.*
 
 trait Slinc:
   protected def jitManager: JitManager
@@ -14,6 +13,7 @@ trait Slinc:
   given dm: DescriptorModule
   given tm: TransitionModule
   given rwm: ReadWriteModule
+  given lm: LibModule
 
   val typesI = types.TypesI.platformTypes
   protected val scopeI = ScopeI(scopePlatformSpecific)

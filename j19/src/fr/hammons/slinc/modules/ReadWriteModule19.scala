@@ -6,7 +6,6 @@ import java.lang.invoke.MethodHandle
 import scala.reflect.ClassTag
 
 given readWriteModule19: ReadWriteModule with
-  val l19 = Library19(Slinc19.linker)
   val writerCache = DependentTrieMap[Writer]
 
   val arrayWriterCache = DependentTrieMap[[I] =>> Writer[Array[I]]]
@@ -58,7 +57,10 @@ given readWriteModule19: ReadWriteModule with
       descriptor: FunctionDescriptor,
       fn: => MethodHandle => Mem => A
   )(using Fn[A, ?, ?]): A =
-    fnCache.getOrElseUpdate(descriptor, fn(l19.getDowncall(descriptor))) match
+    fnCache.getOrElseUpdate(
+      descriptor,
+      fn(LinkageModule19.getDowncall(descriptor))
+    ) match
       case upcall: (Mem => A) => upcall(mem)
       case huh =>
         throw Error(

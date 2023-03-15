@@ -7,7 +7,6 @@ import scala.reflect.ClassTag
 
 given readWriteModule17: ReadWriteModule with
   // todo: eliminate this
-  val l17 = Library17(Slinc17.linker)
   val fnCache: TrieMap[FunctionDescriptor, Mem => ?] =
     TrieMap.empty
 
@@ -65,7 +64,7 @@ given readWriteModule17: ReadWriteModule with
       fn: => MethodHandle => Mem => A
   )(using Fn[A, ?, ?]): A =
     fnCache
-      .getOrElseUpdate(descriptor, fn(l17.getDowncall(descriptor)))
+      .getOrElseUpdate(descriptor, fn(LinkageModule17.getDowncall(descriptor)))
       .asInstanceOf[Mem => A](mem)
 
   override def readArray[A](memory: Mem, offset: Bytes, size: Int)(using
