@@ -61,7 +61,11 @@ object TypeDescriptor:
       case '[a] =>
         Expr
           .summon[DescriptorOf[a]]
-          .getOrElse(report.errorAndAbort(s"No Descriptor for ${Type.show[a]}"))
+          .getOrElse(
+            report.errorAndAbort(
+              s"No Descriptor for ${typeRepr.show(using Printer.TypeReprStructure)}"
+            )
+          )
 
     '{ $descOf.descriptor }
 

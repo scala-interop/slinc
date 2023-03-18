@@ -42,6 +42,6 @@ trait ReadWriteModule:
   ): Array[A]
   def readFn[A](
       mem: Mem,
-      descriptor: FunctionDescriptor,
+      descriptor: CFunctionDescriptor,
       fn: => MethodHandle => Mem => A
   )(using Fn[A, ?, ?]): A

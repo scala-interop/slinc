@@ -1,6 +1,5 @@
 package fr.hammons.slinc.modules
 
-import java.lang.invoke.MethodHandle
 import fr.hammons.slinc.*
 import java.util.concurrent.atomic.AtomicReference
 
@@ -10,25 +9,27 @@ given libModule19: LibModule with
   override val runtimeVersion: Int = 19
 
   override def getLibrary(
-      desc: List[(String, FunctionDescriptor)],
+      desc: List[CFunctionDescriptor],
       generators: List[CFunctionBindingGenerator]
   ): LibBacking[?] =
     import LinkageModule19.*
     val fns = desc
       .zip(generators)
       .map:
-        case ((name, fd), generator) =>
-          val addr = defaultLookup(name).get
-          val mh: MethodHandle = getDowncall(fd).bindTo(addr).nn
+        case (cfd, generator) =>
+          val addr = defaultLookup(cfd.name).get
+          val mh: MethodHandler = MethodHandler((v: Seq[Variadic]) =>
+            getDowncall(cfd, v).bindTo(addr).nn
+          )
           val transitions = IArray.from(
-            fd.inputDescriptors
+            cfd.inputDescriptors
               .map: td =>
                 (a: Allocator) ?=> transitionModule19.methodArgument(td, _, a)
               .map: fn =>
                 (a: Allocator, b: Any) => fn(using a)(b)
           )
 
-          val retTransition: OutputTransition = fd.outputDescriptor
+          val retTransition: OutputTransition = cfd.returnDescriptor
             .map: td =>
               (o: Object | Null) =>
                 transitionModule19.methodReturn[Object](td, o.nn)
@@ -36,7 +37,17 @@ given libModule19: LibModule with
               ().asInstanceOf[Object]
 
           val fn =
-            generator.generate(mh, transitions, retTransition, tempScope())
+            if !cfd.isVariadic then
+              generator.generate(mh, transitions, retTransition, tempScope())
+            else
+              generator.generateVariadic(
+                mh,
+                transitions,
+                (descriptor, alloc, value) =>
+                  transitionModule19.methodArgument(descriptor, value, alloc),
+                retTransition,
+                tempScope()
+              )
 
           AtomicReference(fn)
     LibBacking(IArray.from(fns)).asInstanceOf[LibBacking[?]]

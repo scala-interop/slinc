@@ -9,6 +9,8 @@ import scala.annotation.nowarn
 trait LibSpec(val slinc: Slinc) extends ScalaCheckSuite {
   import modules.LibModule
 
+  import slinc.{given, *}
+
   trait GoodLib derives Lib:
     def abs(a: Int): Int
 
@@ -41,12 +43,24 @@ trait LibSpec(val slinc: Slinc) extends ScalaCheckSuite {
     assertNoDiff(error, "")
   }
 
-  test("variadic support".ignore) {
+  test("variadic support") {
     val error = compileErrors("""
     trait VariadicLib derives Lib:
-      def sprintf(ret: Ptr[Byte], string: Ptr[Byte], args: Variadic*): Unit
+      def sprintf(ret: Ptr[Byte], string: Ptr[Byte], args: Seq[Variadic]): Unit
     """)
 
+    trait VariadicLib derives Lib:
+      def sprintf(ret: Ptr[Byte], string: Ptr[Byte], args: Seq[Variadic]): Unit
+
     assertNoDiff(error, "")
+
+    Scope.confined {
+      val format = Ptr.copy("%i hello %s %i")
+      val buffer = Ptr.blankArray[Byte](256)
+
+      assertEquals(format.copyIntoString(200), "%i hello %s %i")
+      Lib[VariadicLib].sprintf(buffer, format, Seq(1, Ptr.copy("hello"), 2))
+      assertEquals(buffer.copyIntoString(256), "1 hello hello 2")
+    }
   }
 }

@@ -5,8 +5,9 @@ import fr.hammons.slinc.modules.LibModule
 import java.util.concurrent.atomic.AtomicStampedReference
 import scala.annotation.nowarn
 
+import fr.hammons.slinc.CFunctionDescriptor
 trait Lib[L]:
-  val description: List[(String, FunctionDescriptor)]
+  val description: List[CFunctionDescriptor]
   val generation: List[CFunctionBindingGenerator]
   private var lib: AtomicStampedReference[LibBacking[L]] =
     AtomicStampedReference(null, 0)
@@ -31,66 +32,30 @@ object Lib:
     import quotes.reflect.*
     val repr = TypeRepr.of[L]
 
-    val memberTypes =
-      repr.classSymbol.get.declaredMethods.map:
-        repr.memberType
+    val names = repr.classSymbol.get.declaredMethods.map: method =>
+      Expr(method.name)
 
-    val names = repr.classSymbol.get.declaredMethods.map:
-      _.name
-
-    val functionsArgsAndReturns = names
-      .zip(memberTypes)
-      .map:
-        case (_, MethodType(_, args, ret)) =>
-          args -> ret
-
-        case (name, t) =>
-          report.errorAndAbort(s"Method $name has unsupported type ${t.show}")
-
-    val functionArgumentAndReturnDescriptors = functionsArgsAndReturns.map:
-      case (argTypes, returnType) =>
-        argTypes.map(TypeDescriptor.fromTypeRepr) -> Option.unless(
-          returnType =:= TypeRepr.of[Unit]
-        )(TypeDescriptor.fromTypeRepr(returnType))
-
-    val functionDescriptions =
-      functionArgumentAndReturnDescriptors.map:
-        case (args, ret) =>
-          val retDesc = ret.map(exp => '{ Some($exp) }).getOrElse('{ None })
-          '{ FunctionDescriptor(${ Expr.ofList(args) }, Nil, $retDesc) }
-
-    val structure =
-      names.map(Expr.apply).zip(functionDescriptions)
+    val descriptors = Expr.ofList(
+      names.map: methodNameExpr =>
+        '{
+          CFunctionDescriptor[L]($methodNameExpr)
+        }
+    )
 
     val generators = Expr.ofList(
-      names.map(methodName =>
+      names.map: methodNameExpr =>
         '{
           CFunctionBindingGenerator[L](
-            ${ Expr(methodName) }
+            $methodNameExpr
           )
         }
-      )
     )
 
     '{
       new Lib[L]:
-        val description = ${ Expr.ofList(structure.map(Expr.ofTuple)) }
-        val generation = ${ generators }
+        val description = $descriptors
+        val generation = $generators
     }
-
-  @nowarn
-  private def getTypeDescriptor(using q: Quotes)(
-      typeRepr: q.reflect.TypeRepr
-  ): Expr[TypeDescriptor] =
-    import quotes.reflect.*
-
-    val descOf = typeRepr.asType match
-      case '[a] =>
-        Expr
-          .summon[DescriptorOf[a]]
-          .getOrElse(report.errorAndAbort(s"No descriptor for ${Type.show[a]}"))
-
-    '{ $descOf.descriptor }
 
   @nowarn
   private def summonImpl[A](

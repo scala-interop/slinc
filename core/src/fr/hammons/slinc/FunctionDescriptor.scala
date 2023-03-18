@@ -10,6 +10,12 @@ final case class FunctionDescriptor(
     variadicDescriptors: Seq[TypeDescriptor],
     outputDescriptor: Option[TypeDescriptor]
 ):
+  def toCFunctionDescriptor() = CFunctionDescriptor(
+    "",
+    inputDescriptors,
+    variadicDescriptors.isEmpty,
+    outputDescriptor
+  )
   def addVarargs(args: TypeDescriptor*) =
     FunctionDescriptor(inputDescriptors, args, outputDescriptor)
 

@@ -1,7 +1,5 @@
 package fr.hammons.slinc.modules
 
-import fr.hammons.slinc.FunctionDescriptor
-
 import java.lang.invoke.MethodHandle
 import java.lang.foreign.Linker
 import java.lang.foreign.{FunctionDescriptor as JFunctionDescriptor}
@@ -19,27 +17,33 @@ object LinkageModule19 extends LinkageModule:
   override def defaultLookup(name: String): Option[CSymbol] =
     lookup.lookup(name).nn.toScala
 
-  override def getDowncall(descriptor: FunctionDescriptor): MethodHandle =
-    val fd = descriptor.outputDescriptor match
+  override def getDowncall(
+      descriptor: CFunctionDescriptor,
+      varargs: Seq[Variadic]
+  ): MethodHandle =
+    val fdGen = descriptor.returnDescriptor match
       case None =>
         JFunctionDescriptor
           .ofVoid(
-            descriptor.inputDescriptors.view.map(toMemoryLayout).toSeq*
-          )
-          .nn
-          .asVariadic(
-            descriptor.variadicDescriptors.view.map(toMemoryLayout).toSeq*
+            _*
           )
       case Some(value) =>
         JFunctionDescriptor
           .of(
             toMemoryLayout(value),
-            descriptor.inputDescriptors.view.map(toMemoryLayout).toSeq*
+            _*
           )
-          .nn
-          .asVariadic(
-            descriptor.variadicDescriptors.view.map(toMemoryLayout).toSeq*
-          )
+
+    val fd = fdGen(
+      descriptor.inputDescriptors.view
+        .map(toMemoryLayout)
+        .concat(
+          varargs.view
+            .map(_.use[DescriptorOf](dc ?=> _ => dc.descriptor))
+            .map(toMemoryLayout)
+        )
+        .toSeq
+    )
 
     linker.downcallHandle(fd).nn
   end getDowncall
