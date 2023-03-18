@@ -7,7 +7,7 @@ import scala.reflect.ClassTag
 
 given readWriteModule17: ReadWriteModule with
   // todo: eliminate this
-  val fnCache: TrieMap[FunctionDescriptor, Mem => ?] =
+  val fnCache: TrieMap[CFunctionDescriptor, Mem => ?] =
     TrieMap.empty
 
   val readerCache = DependentTrieMap[Reader]
@@ -60,11 +60,14 @@ given readWriteModule17: ReadWriteModule with
 
   override def readFn[A](
       mem: Mem,
-      descriptor: FunctionDescriptor,
+      descriptor: CFunctionDescriptor,
       fn: => MethodHandle => Mem => A
   )(using Fn[A, ?, ?]): A =
     fnCache
-      .getOrElseUpdate(descriptor, fn(LinkageModule17.getDowncall(descriptor)))
+      .getOrElseUpdate(
+        descriptor,
+        fn(LinkageModule17.getDowncall(descriptor, Nil))
+      )
       .asInstanceOf[Mem => A](mem)
 
   override def readArray[A](memory: Mem, offset: Bytes, size: Int)(using

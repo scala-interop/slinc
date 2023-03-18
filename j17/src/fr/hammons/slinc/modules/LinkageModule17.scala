@@ -1,7 +1,7 @@
 package fr.hammons.slinc.modules
 
-import jdk.incubator.foreign.{FunctionDescriptor as JFunctionDescriptor, *}
-import fr.hammons.slinc.*
+import fr.hammons.slinc.{FunctionDescriptor as _, *}
+import jdk.incubator.foreign.*
 import scala.jdk.OptionConverters.*
 import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodType
@@ -16,51 +16,44 @@ object LinkageModule17 extends LinkageModule:
   override def defaultLookup(name: String): Option[CSymbol] =
     lookup.lookup(name).nn.toScala
 
-  override def getDowncall(descriptor: FunctionDescriptor): MethodHandle =
-    val fd = descriptor.outputDescriptor match
-      case None =>
-        JFunctionDescriptor.ofVoid(
-          descriptor.inputDescriptors.view
-            .map(toMemoryLayout)
-            .concat(
-              descriptor.variadicDescriptors.view
-                .map(toMemoryLayout)
-                .map(CLinker.asVarArg)
-            )
-            .toSeq*
-        )
-      case Some(value) =>
-        JFunctionDescriptor.of(
-          toMemoryLayout(value),
-          descriptor.inputDescriptors.view
-            .map(toMemoryLayout)
-            .concat(
-              descriptor.variadicDescriptors.view
-                .map(toMemoryLayout)
-                .map(CLinker.asVarArg)
-            )
-            .toSeq*
-        )
+  override def getDowncall(
+      descriptor: CFunctionDescriptor,
+      varArgs: Seq[Variadic]
+  ): MethodHandle =
+    val variadicDescriptors =
+      varArgs.view.map(_.use[DescriptorOf](d ?=> _ => d.descriptor))
+    val fdConstructor = descriptor.returnDescriptor match
+      case None        => FunctionDescriptor.ofVoid(_*)
+      case Some(value) => FunctionDescriptor.of(toMemoryLayout(value), _*)
 
-    val mt = descriptor match
-      case FunctionDescriptor(head +: tail, variadicDescriptors, None) =>
-        VoidHelper.methodTypeV(
-          toCarrierType(head),
-          tail.view.concat(variadicDescriptors).map(toCarrierType).toSeq*
-        )
-      case FunctionDescriptor(
-            head +: tail,
-            variadicDescriptors,
-            Some(outputDescriptor)
-          ) =>
-        MethodType.methodType(
-          toCarrierType(outputDescriptor),
-          toCarrierType(head),
-          tail.view.concat(variadicDescriptors).map(toCarrierType).toSeq*
-        )
-      case FunctionDescriptor(_, _, None) => VoidHelper.methodTypeV()
-      case FunctionDescriptor(_, _, Some(outputDescriptor)) =>
-        MethodType.methodType(toCarrierType(outputDescriptor))
+    val fd = fdConstructor(
+      descriptor.inputDescriptors.view
+        .map(toMemoryLayout)
+        .concat(variadicDescriptors.map(toMemoryLayout).map(CLinker.asVarArg))
+        .toSeq
+    )
+
+    val mtConstructor = (carriers: Seq[Class[?]]) =>
+      descriptor.returnDescriptor.map(toCarrierType) match
+        case None =>
+          carriers match
+            case head +: tail =>
+              VoidHelper.methodTypeV(head, tail*)
+            case _ =>
+              VoidHelper.methodTypeV()
+        case Some(returnCarrier) =>
+          carriers match
+            case head +: tail =>
+              MethodType.methodType(returnCarrier, head, tail*)
+            case _ =>
+              MethodType.methodType(returnCarrier)
+
+    val mt = mtConstructor(
+      descriptor.inputDescriptors.view
+        .concat(variadicDescriptors)
+        .map(toCarrierType)
+        .toSeq
+    )
 
     linker.downcallHandle(mt, fd).nn
   end getDowncall

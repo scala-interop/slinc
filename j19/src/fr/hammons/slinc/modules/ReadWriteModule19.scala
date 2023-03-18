@@ -14,7 +14,7 @@ given readWriteModule19: ReadWriteModule with
 
   val arrayReaderCache = DependentTrieMap[ArrayReader]
 
-  val fnCache: TrieMap[FunctionDescriptor, Mem => ?] = TrieMap.empty
+  val fnCache: TrieMap[CFunctionDescriptor, Mem => ?] = TrieMap.empty
 
   val byteWriter = (mem, offset, value) => mem.writeByte(value, offset)
   val shortWriter = (mem, offset, value) => mem.writeShort(value, offset)
@@ -54,12 +54,12 @@ given readWriteModule19: ReadWriteModule with
 
   override def readFn[A](
       mem: Mem,
-      descriptor: FunctionDescriptor,
+      descriptor: CFunctionDescriptor,
       fn: => MethodHandle => Mem => A
   )(using Fn[A, ?, ?]): A =
     fnCache.getOrElseUpdate(
       descriptor,
-      fn(LinkageModule19.getDowncall(descriptor))
+      fn(LinkageModule19.getDowncall(descriptor, Nil))
     ) match
       case upcall: (Mem => A) => upcall(mem)
       case huh =>

@@ -12,7 +12,7 @@ class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
     case f: Fn[A, ?, ?] =>
       rwm.readFn(
         mem,
-        FunctionDescriptor.fromFunction[A],
+        FunctionDescriptor.fromFunction[A].toCFunctionDescriptor(),
         mh => MethodHandleTools.wrappedMH[A](_, mh)
       )
   }

@@ -1,45 +1,58 @@
 package fr.hammons.slinc.modules
 
-import fr.hammons.slinc.FunctionDescriptor
-
 import fr.hammons.slinc.LibBacking
 import fr.hammons.slinc.Allocator
 import java.util.concurrent.atomic.AtomicReference
-import java.lang.invoke.MethodHandle
 import fr.hammons.slinc.CFunctionBindingGenerator
 import fr.hammons.slinc.OutputTransition
+import fr.hammons.slinc.CFunctionDescriptor
+import fr.hammons.slinc.MethodHandler
+import fr.hammons.slinc.Variadic
 
 given libraryModule17: LibModule with
   val runtimeVersion = 17
   import LinkageModule17.*
 
   override def getLibrary(
-      desc: List[(String, FunctionDescriptor)],
+      desc: List[CFunctionDescriptor],
       generators: List[CFunctionBindingGenerator]
   ): LibBacking[?] =
     val fns = desc
       .zip(generators)
       .map:
-        case ((name, fd), generator) =>
-          val addr = defaultLookup(name).get
-          val mh: MethodHandle =
-            getDowncall(fd).bindTo(addr).nn
+        case (cfd, generator) =>
+          val addr = defaultLookup(cfd.name).get
+          val mh: MethodHandler = MethodHandler((v: Seq[Variadic]) =>
+            getDowncall(cfd, v).bindTo(addr).nn
+          )
+          // getDowncall(cfd).bindTo(addr).nn
           val transitions = IArray.from(
-            fd.inputDescriptors
+            cfd.inputDescriptors
               .map(td =>
                 (a: Allocator) ?=> transitionModule17.methodArgument(td, _, a)
               )
               .map(fn => (a: Allocator, b: Any) => fn(using a)(b))
           )
 
-          val retTransition: OutputTransition = fd.outputDescriptor
+          val retTransition: OutputTransition = cfd.returnDescriptor
             .map: td =>
               (o: Object | Null) =>
                 transitionModule17.methodReturn[AnyRef](td, o.nn)
             .getOrElse: (_: Object | Null) =>
               ().asInstanceOf[Object]
+
           val fn =
-            generator.generate(mh, transitions, retTransition, tempScope())
+            if !cfd.isVariadic then
+              generator.generate(mh, transitions, retTransition, tempScope())
+            else
+              generator.generateVariadic(
+                mh,
+                transitions,
+                (td, alloc, a) =>
+                  transitionModule17.methodArgument(td, a, alloc),
+                retTransition,
+                tempScope()
+              )
 
           AtomicReference(fn)
 
