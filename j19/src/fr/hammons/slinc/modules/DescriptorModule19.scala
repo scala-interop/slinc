@@ -13,14 +13,15 @@ given descriptorModule19: DescriptorModule with
   private val offsets = TrieMap.empty[List[TypeDescriptor], IArray[Bytes]]
 
   def toMemoryLayout(td: TypeDescriptor): MemoryLayout = td match
-    case ByteDescriptor       => ValueLayout.JAVA_BYTE.nn
-    case ShortDescriptor      => ValueLayout.JAVA_SHORT.nn
-    case IntDescriptor        => ValueLayout.JAVA_INT.nn
-    case LongDescriptor       => ValueLayout.JAVA_LONG.nn
-    case FloatDescriptor      => ValueLayout.JAVA_FLOAT.nn
-    case DoubleDescriptor     => ValueLayout.JAVA_DOUBLE.nn
-    case PtrDescriptor        => ValueLayout.ADDRESS.nn
-    case sd: StructDescriptor => toGroupLayout(sd)
+    case ByteDescriptor         => ValueLayout.JAVA_BYTE.nn
+    case ShortDescriptor        => ValueLayout.JAVA_SHORT.nn
+    case IntDescriptor          => ValueLayout.JAVA_INT.nn
+    case LongDescriptor         => ValueLayout.JAVA_LONG.nn
+    case FloatDescriptor        => ValueLayout.JAVA_FLOAT.nn
+    case DoubleDescriptor       => ValueLayout.JAVA_DOUBLE.nn
+    case PtrDescriptor          => ValueLayout.ADDRESS.nn
+    case sd: StructDescriptor   => toGroupLayout(sd)
+    case ad: AliasDescriptor[?] => toMemoryLayout(ad.real)
 
   def toMemoryLayout(smd: StructMemberDescriptor): MemoryLayout =
     toMemoryLayout(smd.descriptor).withName(smd.name).nn
@@ -72,14 +73,15 @@ given descriptorModule19: DescriptorModule with
     )
 
   def toCarrierType(td: TypeDescriptor): Class[?] = td match
-    case ByteDescriptor      => classOf[Byte]
-    case ShortDescriptor     => classOf[Short]
-    case IntDescriptor       => classOf[Int]
-    case LongDescriptor      => classOf[Long]
-    case FloatDescriptor     => classOf[Float]
-    case DoubleDescriptor    => classOf[Double]
-    case PtrDescriptor       => classOf[MemoryAddress]
-    case _: StructDescriptor => classOf[MemorySegment]
+    case ByteDescriptor         => classOf[Byte]
+    case ShortDescriptor        => classOf[Short]
+    case IntDescriptor          => classOf[Int]
+    case LongDescriptor         => classOf[Long]
+    case FloatDescriptor        => classOf[Float]
+    case DoubleDescriptor       => classOf[Double]
+    case PtrDescriptor          => classOf[MemoryAddress]
+    case _: StructDescriptor    => classOf[MemorySegment]
+    case ad: AliasDescriptor[?] => toCarrierType(ad.real)
 
   override def memberOffsets(sd: List[TypeDescriptor]): IArray[Bytes] =
     offsets.getOrElseUpdate(
@@ -109,14 +111,15 @@ given descriptorModule19: DescriptorModule with
     )
 
   override def sizeOf(td: TypeDescriptor): Bytes = td match
-    case ByteDescriptor       => Bytes(1)
-    case ShortDescriptor      => Bytes(2)
-    case IntDescriptor        => Bytes(4)
-    case LongDescriptor       => Bytes(8)
-    case FloatDescriptor      => Bytes(4)
-    case DoubleDescriptor     => Bytes(8)
-    case PtrDescriptor        => Bytes(ValueLayout.ADDRESS.nn.byteSize())
-    case sd: StructDescriptor => Bytes(toGroupLayout(sd).byteSize())
+    case ByteDescriptor         => Bytes(1)
+    case ShortDescriptor        => Bytes(2)
+    case IntDescriptor          => Bytes(4)
+    case LongDescriptor         => Bytes(8)
+    case FloatDescriptor        => Bytes(4)
+    case DoubleDescriptor       => Bytes(8)
+    case PtrDescriptor          => Bytes(ValueLayout.ADDRESS.nn.byteSize())
+    case sd: StructDescriptor   => Bytes(toGroupLayout(sd).byteSize())
+    case ad: AliasDescriptor[?] => sizeOf(ad.real)
 
   override def alignmentOf(td: TypeDescriptor): Bytes =
     import java.lang.foreign.ValueLayout
@@ -130,3 +133,5 @@ given descriptorModule19: DescriptorModule with
       case PtrDescriptor    => Bytes(ValueLayout.ADDRESS.nn.byteAlignment())
       case sd: StructDescriptor =>
         sd.members.view.map(_.descriptor).map(alignmentOf).max
+      case ad: AliasDescriptor[?] =>
+        alignmentOf(ad.real)

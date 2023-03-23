@@ -4,12 +4,13 @@ import munit.ScalaCheckSuite
 import org.scalacheck.Prop.*
 import java.{util as ju}
 import scala.annotation.nowarn
+import fr.hammons.slinc.types.CLong
 
 @nowarn("msg=unused import")
 trait LibSpec(val slinc: Slinc) extends ScalaCheckSuite {
   import modules.LibModule
 
-  import slinc.{given, *}
+  import slinc.{CLong as _, given, *}
 
   trait GoodLib derives Lib:
     def abs(a: Int): Int
@@ -19,15 +20,16 @@ trait LibSpec(val slinc: Slinc) extends ScalaCheckSuite {
 
   import slinc.given LibModule
   property("good lib works") {
+    val goodLib = Lib.instance[GoodLib]
     forAll { (i: Int) =>
-      assertEquals(Lib[GoodLib].abs(i), i.abs)
+      assertEquals(goodLib.abs(i), i.abs)
     }
 
   }
 
   test("bad function name lib fails") {
     intercept[ju.NoSuchElementException] {
-      Lib[BadFunctionName]
+      Lib.instance[BadFunctionName]
     }
   }
 
@@ -52,6 +54,8 @@ trait LibSpec(val slinc: Slinc) extends ScalaCheckSuite {
     trait VariadicLib derives Lib:
       def sprintf(ret: Ptr[Byte], string: Ptr[Byte], args: Seq[Variadic]): Unit
 
+    val variadicLib = Lib.instance[VariadicLib]
+
     assertNoDiff(error, "")
 
     Scope.confined {
@@ -59,8 +63,27 @@ trait LibSpec(val slinc: Slinc) extends ScalaCheckSuite {
       val buffer = Ptr.blankArray[Byte](256)
 
       assertEquals(format.copyIntoString(200), "%i hello %s %i")
-      Lib[VariadicLib].sprintf(buffer, format, Seq(1, Ptr.copy("hello"), 2))
+      variadicLib.sprintf(buffer, format, Seq(1, Ptr.copy("hello"), 2))
       assertEquals(buffer.copyIntoString(256), "1 hello hello 2")
     }
+  }
+
+  test("platform dependent types") {
+    val maybeError = compileErrors("""
+    trait PlatformLib derives Lib:
+      def labs(long: CLong): CLong
+    """)
+
+    trait PlatformLib derives Lib:
+      def labs(long: CLong): CLong
+
+    assertNoDiff(maybeError, "")
+
+    val platformLib = Lib.instance[PlatformLib]
+
+    val input = CLong(-3)
+    val expectedOutput = CLong(3)
+
+    assertEquals(platformLib.labs(input), expectedOutput)
   }
 }

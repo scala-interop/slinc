@@ -24,14 +24,15 @@ given descriptorModule17: DescriptorModule with
   val offsets: TrieMap[List[TypeDescriptor], IArray[Bytes]] = TrieMap.empty
 
   def toCarrierType(td: TypeDescriptor): Class[?] = td match
-    case ByteDescriptor      => classOf[Byte]
-    case ShortDescriptor     => classOf[Short]
-    case IntDescriptor       => classOf[Int]
-    case LongDescriptor      => classOf[Long]
-    case FloatDescriptor     => classOf[Float]
-    case DoubleDescriptor    => classOf[Double]
-    case PtrDescriptor       => classOf[MemoryAddress]
-    case _: StructDescriptor => classOf[MemorySegment]
+    case ByteDescriptor         => classOf[Byte]
+    case ShortDescriptor        => classOf[Short]
+    case IntDescriptor          => classOf[Int]
+    case LongDescriptor         => classOf[Long]
+    case FloatDescriptor        => classOf[Float]
+    case DoubleDescriptor       => classOf[Double]
+    case PtrDescriptor          => classOf[MemoryAddress]
+    case _: StructDescriptor    => classOf[MemorySegment]
+    case ad: AliasDescriptor[?] => toCarrierType(ad.real)
 
   def genLayoutList(
       layouts: Seq[MemoryLayout],
@@ -75,6 +76,7 @@ given descriptorModule17: DescriptorModule with
     case PtrDescriptor    => Bytes(toMemoryLayout(PtrDescriptor).byteSize())
     case sd: StructDescriptor =>
       Bytes(toGroupLayout(sd).byteSize())
+    case ad: AliasDescriptor[?] => sizeOf(ad.real)
 
   override def alignmentOf(td: TypeDescriptor): Bytes = td match
     case s: StructDescriptor =>
@@ -109,14 +111,15 @@ given descriptorModule17: DescriptorModule with
     )
 
   def toMemoryLayout(td: TypeDescriptor): MemoryLayout = td match
-    case ByteDescriptor       => C_CHAR.nn
-    case ShortDescriptor      => C_SHORT.nn
-    case IntDescriptor        => C_INT.nn
-    case LongDescriptor       => C_LONG_LONG.nn
-    case FloatDescriptor      => C_FLOAT.nn
-    case DoubleDescriptor     => C_DOUBLE.nn
-    case PtrDescriptor        => C_POINTER.nn
-    case sd: StructDescriptor => toGroupLayout(sd)
+    case ByteDescriptor         => C_CHAR.nn
+    case ShortDescriptor        => C_SHORT.nn
+    case IntDescriptor          => C_INT.nn
+    case LongDescriptor         => C_LONG_LONG.nn
+    case FloatDescriptor        => C_FLOAT.nn
+    case DoubleDescriptor       => C_DOUBLE.nn
+    case PtrDescriptor          => C_POINTER.nn
+    case sd: StructDescriptor   => toGroupLayout(sd)
+    case ad: AliasDescriptor[?] => toMemoryLayout(ad.real)
 
   def toMemoryLayout(smd: StructMemberDescriptor): MemoryLayout =
     toMemoryLayout(smd.descriptor).withName(smd.name).nn

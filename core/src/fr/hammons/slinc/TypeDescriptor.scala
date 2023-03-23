@@ -63,55 +63,57 @@ object TypeDescriptor:
           .summon[DescriptorOf[a]]
           .getOrElse(
             report.errorAndAbort(
-              s"No Descriptor for ${typeRepr.show(using Printer.TypeReprStructure)}"
+              s"No Descriptor for ${typeRepr.show(using Printer.TypeReprShortCode)}"
             )
           )
 
     '{ $descOf.descriptor }
 
-case object ByteDescriptor extends TypeDescriptor:
+sealed trait RealTypeDescriptor extends TypeDescriptor
+
+case object ByteDescriptor extends RealTypeDescriptor:
   type Inner = Byte
   @nowarn("msg=unused implicit parameter")
   override val reader = readWriteModule.byteReader
   @nowarn("msg=unused implicit parameter")
   override val writer = readWriteModule.byteWriter
 
-case object ShortDescriptor extends TypeDescriptor:
+case object ShortDescriptor extends RealTypeDescriptor:
   type Inner = Short
   @nowarn("msg=unused implicit parameter")
   val reader = readWriteModule.shortReader
   @nowarn("msg=unused implicit parameter")
   val writer = readWriteModule.shortWriter
 
-case object IntDescriptor extends TypeDescriptor:
+case object IntDescriptor extends RealTypeDescriptor:
   type Inner = Int
   @nowarn("msg=unused implicit parameter")
   val reader = readWriteModule.intReader
   @nowarn("msg=unused implicit parameter")
   val writer = readWriteModule.intWriter
 
-case object LongDescriptor extends TypeDescriptor:
+case object LongDescriptor extends RealTypeDescriptor:
   type Inner = Long
   @nowarn("msg=unused implicit parameter")
   val reader = readWriteModule.longReader
   @nowarn("msg=unused implicit parameter")
   val writer = readWriteModule.longWriter
 
-case object FloatDescriptor extends TypeDescriptor:
+case object FloatDescriptor extends RealTypeDescriptor:
   type Inner = Float
   @nowarn("msg=unused implicit parameter")
   val reader = readWriteModule.floatReader
   @nowarn("msg=unused implicit parameter")
   val writer = readWriteModule.floatWriter
 
-case object DoubleDescriptor extends TypeDescriptor:
+case object DoubleDescriptor extends RealTypeDescriptor:
   type Inner = Double
   @nowarn("msg=unused implicit parameter")
   val reader = readWriteModule.doubleReader
   @nowarn("msg=unused implicit parameter")
   val writer = readWriteModule.doubleWriter
 
-case object PtrDescriptor extends TypeDescriptor:
+case object PtrDescriptor extends RealTypeDescriptor:
   type Inner = Ptr[?]
   @nowarn("msg=unused implicit parameter")
   override val reader = (mem, offset) =>
@@ -142,4 +144,19 @@ trait StructDescriptor(
     val members: List[StructMemberDescriptor],
     val clazz: Class[?],
     val transform: Tuple => Product
-) extends TypeDescriptor
+) extends RealTypeDescriptor
+
+trait AliasDescriptor[A](val real: RealTypeDescriptor) extends TypeDescriptor:
+  type Inner = A
+
+  given bkwd: Conversion[Inner, real.Inner] with
+    def apply(x: Inner): real.Inner = x.asInstanceOf[real.Inner]
+
+  given fwd: Conversion[real.Inner, Inner] with
+    def apply(x: real.Inner): Inner = x.asInstanceOf[Inner]
+
+  override def size(using dm: DescriptorModule): Bytes = dm.sizeOf(real)
+  override def alignment(using dm: DescriptorModule): Bytes =
+    dm.alignmentOf(real)
+  override def toCarrierType(using dm: DescriptorModule): Class[?] =
+    dm.toCarrierType(real)
