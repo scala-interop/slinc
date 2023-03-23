@@ -8,6 +8,8 @@ import fr.hammons.slinc.OutputTransition
 import fr.hammons.slinc.CFunctionDescriptor
 import fr.hammons.slinc.MethodHandler
 import fr.hammons.slinc.Variadic
+import fr.hammons.slinc.AliasDescriptor
+import fr.hammons.slinc.StructDescriptor
 
 given libraryModule17: LibModule with
   val runtimeVersion = 17
@@ -25,14 +27,28 @@ given libraryModule17: LibModule with
           val mh: MethodHandler = MethodHandler((v: Seq[Variadic]) =>
             getDowncall(cfd, v).bindTo(addr).nn
           )
-          // getDowncall(cfd).bindTo(addr).nn
-          val transitions = IArray.from(
-            cfd.inputDescriptors
-              .map(td =>
-                (a: Allocator) ?=> transitionModule17.methodArgument(td, _, a)
+
+          val allocatingReturn = cfd.returnDescriptor
+            .map:
+              case ad: AliasDescriptor[?] => ad.real
+              case a                      => a
+            .exists:
+              case _: StructDescriptor => true
+              case _                   => false
+
+          val prefixTransition =
+            if allocatingReturn then
+              List((a: Allocator, _: Any) =>
+                transitionModule17.methodArgument(a)
               )
-              .map(fn => (a: Allocator, b: Any) => fn(using a)(b))
-          )
+            else Nil
+
+          val regularTransitions =
+            cfd.inputDescriptors
+              .map: td =>
+                (a: Allocator) ?=> transitionModule17.methodArgument(td, _, a)
+              .map: fn =>
+                (a: Allocator, b: Any) => fn(using a)(b)
 
           val retTransition: OutputTransition = cfd.returnDescriptor
             .map: td =>
@@ -42,17 +58,15 @@ given libraryModule17: LibModule with
               ().asInstanceOf[Object]
 
           val fn =
-            if !cfd.isVariadic then
-              generator.generate(mh, transitions, retTransition, tempScope())
-            else
-              generator.generateVariadic(
-                mh,
-                transitions,
-                (td, alloc, a) =>
-                  transitionModule17.methodArgument(td, a, alloc),
-                retTransition,
-                tempScope()
-              )
+            generator.generate(
+              mh,
+              IArray.from(prefixTransition ++ regularTransitions),
+              transitionModule17,
+              retTransition,
+              tempScope(),
+              allocatingReturn,
+              cfd.isVariadic
+            )
 
           AtomicReference(fn)
 

@@ -68,6 +68,18 @@ trait LibSpec(val slinc: Slinc) extends ScalaCheckSuite {
     }
   }
 
+  test("allocating returns") {
+    import slinc.given
+    case class div_t(quot: Int, rem: Int) derives Struct
+
+    trait AllocatingLib derives Lib:
+      def div(i: Int, r: Int): div_t
+
+    val allocatingLib = Lib.instance[AllocatingLib]
+
+    assertEquals(allocatingLib.div(5, 2), div_t(2, 1))
+  }
+
   test("platform dependent types") {
     val maybeError = compileErrors("""
     trait PlatformLib derives Lib:

@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit
 import scala.util.Random
 import scala.annotation.nowarn
 import fr.hammons.slinc.modules.LibModule
+import org.openjdk.jmh.infra.Blackhole
 
 case class div_t(quot: Int, rem: Int)
 
@@ -60,6 +61,17 @@ trait BindingsBenchmarkShape(val s: Slinc):
       else 1
     )
   }
+
+  val path = Random.nextBoolean()
+
+  @Benchmark
+  def ifmark(blackhole: Blackhole) =
+    if path then blackhole.consume(1 + 2)
+    else blackhole.consume(2 + 3)
+
+  @Benchmark
+  def noifmark(blackhole: Blackhole) =
+    blackhole.consume(1 + 2)
 
   @Benchmark
   def abs =
