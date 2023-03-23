@@ -96,17 +96,18 @@ object Struct:
       ct: ClassTag[A]
   )(using ReadWriteModule, TransitionModule) = new Struct[A]:
     type Inner = A
-    val descriptor: StructDescriptor { type Inner = A } = new StructDescriptor(
-      memberDescriptors[A].view
-        .zip(memberNames[A])
-        .map(StructMemberDescriptor.apply)
-        .toList,
-      ct.runtimeClass,
-      m.fromProduct(_)
-    ):
-      type Inner = A
-      val reader = readGen[A]
-      val writer = writeGen[A]
+    lazy val descriptor: StructDescriptor { type Inner = A } =
+      new StructDescriptor(
+        memberDescriptors[A].view
+          .zip(memberNames[A])
+          .map(StructMemberDescriptor.apply)
+          .toList,
+        ct.runtimeClass,
+        m.fromProduct(_)
+      ):
+        type Inner = A
+        val reader = readGen[A]
+        val writer = writeGen[A]
 
     summon[TransitionModule].registerMethodArgumentTransition[A](
       this.descriptor,

@@ -5,7 +5,6 @@ import fr.hammons.slinc.modules.LibModule
 import java.util.concurrent.atomic.AtomicStampedReference
 import scala.annotation.nowarn
 
-import fr.hammons.slinc.CFunctionDescriptor
 trait Lib[L]:
   val description: List[CFunctionDescriptor]
   val generation: List[CFunctionBindingGenerator]
@@ -22,7 +21,7 @@ trait Lib[L]:
     l.asInstanceOf[LibBacking[L]]
 
 object Lib:
-  transparent inline def apply[A](using l: Lib[A], lm: LibModule) =
+  transparent inline def instance[A](using l: Lib[A], lm: LibModule) =
     ${ summonImpl[A]('l, 'lm) }
 
   inline def derived[L]: Lib[L] = ${ derivedImpl[L]() }

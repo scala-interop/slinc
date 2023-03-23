@@ -18,9 +18,9 @@ trait BindingsBenchmarkShape(val s: Slinc):
 
   @Benchmark
   def abs2 =
-    Lib[Cstd3].abs(-4)
+    Lib.instance[Cstd3].abs(-4)
 
-  lazy val cstd3 = Lib[Cstd3]
+  lazy val cstd3 = Lib.instance[Cstd3]
 
   @Benchmark
   def abs3 =

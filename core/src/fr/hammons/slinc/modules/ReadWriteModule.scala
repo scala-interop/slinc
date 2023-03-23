@@ -2,7 +2,6 @@ package fr.hammons.slinc.modules
 
 import fr.hammons.slinc.*
 import java.lang.invoke.MethodHandle
-import scala.collection.concurrent.TrieMap
 import scala.reflect.ClassTag
 
 type Reader[A] = (Mem, Bytes) => A
@@ -32,10 +31,22 @@ trait ReadWriteModule:
   def write[A](memory: Mem, offset: Bytes, value: A)(using
       DescriptorOf[A]
   ): Unit
+  def writeAlias(
+      memory: Mem,
+      offset: Bytes,
+      realTypeDescriptor: RealTypeDescriptor,
+      value: realTypeDescriptor.Inner
+  ): Unit
   def writeArray[A](memory: Mem, offset: Bytes, value: Array[A])(using
       DescriptorOf[A]
   ): Unit
   def read[A](memory: Mem, offset: Bytes)(using DescriptorOf[A]): A
+
+  def readAlias(
+      memory: Mem,
+      offset: Bytes,
+      typeDescriptor: RealTypeDescriptor
+  ): typeDescriptor.Inner
   def readArray[A](memory: Mem, offset: Bytes, size: Int)(using
       DescriptorOf[A],
       ClassTag[A]

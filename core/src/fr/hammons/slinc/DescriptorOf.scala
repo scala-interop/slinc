@@ -7,7 +7,7 @@ import scala.annotation.nowarn
 /** Typeclass that summons TypeDescriptors
   */
 trait DescriptorOf[A] extends MethodCompatible[A]:
-  val descriptor: TypeDescriptor { type Inner = A }
+  lazy val descriptor: TypeDescriptor { type Inner = A }
 
 object DescriptorOf:
   /** Convenience method for summoning the TypeDescriptor attached to
@@ -28,26 +28,27 @@ object DescriptorOf:
   ): DescriptorOf[A] = c.tup.head
 
   given DescriptorOf[Byte] with
-    val descriptor: TypeDescriptor { type Inner = Byte } = ByteDescriptor
+    lazy val descriptor: TypeDescriptor { type Inner = Byte } = ByteDescriptor
 
   given DescriptorOf[Short] with
-    val descriptor: TypeDescriptor { type Inner = Short } = ShortDescriptor
+    lazy val descriptor: TypeDescriptor { type Inner = Short } = ShortDescriptor
 
   given DescriptorOf[Int] with
-    val descriptor: TypeDescriptor { type Inner = Int } = IntDescriptor
+    lazy val descriptor: TypeDescriptor { type Inner = Int } = IntDescriptor
 
   given DescriptorOf[Long] with
-    val descriptor: TypeDescriptor { type Inner = Long } = LongDescriptor
+    lazy val descriptor: TypeDescriptor { type Inner = Long } = LongDescriptor
 
   given DescriptorOf[Float] with
-    val descriptor: TypeDescriptor { type Inner = Float } = FloatDescriptor
+    lazy val descriptor: TypeDescriptor { type Inner = Float } = FloatDescriptor
 
   given DescriptorOf[Double] with
-    val descriptor: TypeDescriptor { type Inner = Double } = DoubleDescriptor
+    lazy val descriptor: TypeDescriptor { type Inner = Double } =
+      DoubleDescriptor
 
   // this is the general DescriptorOf for all [[Ptr[A]]]
   private val ptrDescriptor = new DescriptorOf[Ptr[?]]:
-    val descriptor: TypeDescriptor { type Inner = Ptr[?] } = PtrDescriptor
+    lazy val descriptor: TypeDescriptor { type Inner = Ptr[?] } = PtrDescriptor
 
   given [A]: DescriptorOf[Ptr[A]] =
     ptrDescriptor.asInstanceOf[DescriptorOf[Ptr[A]]]

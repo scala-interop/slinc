@@ -46,13 +46,22 @@ given transitionModule19: TransitionModule with
   override def methodArgument[A](
       td: TypeDescriptor,
       value: A,
-      alloc: Allocator
-  ): Any = maTransition(td)(using alloc).asInstanceOf[A => Any](value)
+      allocator: Allocator
+  ): Any =
+    val rtd = td match
+      case ad: AliasDescriptor[?] => ad.real
+      case _                      => td
+
+    maTransition(rtd)(using allocator).asInstanceOf[A => Any](value)
 
   def methodArgument(m: Mem): Any = m.asBase
 
   override def methodReturn[A](td: TypeDescriptor, value: Object): A =
-    mrTransition(td).asInstanceOf[Object => A](value)
+    val rtd = td match
+      case ad: AliasDescriptor[?] => ad.real
+      case _                      => td
+
+    mrTransition(rtd).asInstanceOf[Object => A](value)
 
   override def registerMethodArgumentTransition[A](
       td: TypeDescriptor,
