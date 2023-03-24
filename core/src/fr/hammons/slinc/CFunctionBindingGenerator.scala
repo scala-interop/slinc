@@ -1,59 +1,52 @@
 package fr.hammons.slinc
 
-import java.lang.invoke.MethodHandle
 import scala.quoted.*
 import scala.annotation.nowarn
-import fr.hammons.slinc.modules.TransitionModule
+import fr.hammons.slinc.CFunctionRuntimeInformation.{
+  InputTransition,
+  ReturnTransition
+}
+import fr.hammons.slinc.CFunctionBindingGenerator.VariadicTransition
 
-type InputTransition = (Allocator, Any) => Any
-type OutputTransition = (Object | Null) => AnyRef
 trait CFunctionBindingGenerator:
   def generate(
       methodHandler: MethodHandler,
-      inputTransitions: IArray[InputTransition],
-      variadicTransition: TransitionModule,
-      outputTransition: OutputTransition,
-      scope: Scope,
-      allocatingReturn: Boolean,
-      variadic: Boolean
+      transitionSet: CFunctionRuntimeInformation,
+      variadicTransition: VariadicTransition,
+      scope: Scope
   ): AnyRef
 
 object CFunctionBindingGenerator:
-  private case class LambdaInputs(
-      normalArgs: List[Expr[Any]],
-      varArgs: Option[Expr[Seq[Variadic]]]
-  )
+  type VariadicTransition = (Allocator, Seq[Variadic]) => Seq[Any]
 
-  private def getVariadicExprs(
-      s: Seq[Variadic],
-      variadicTransition: TransitionModule,
-      allocator: Allocator
-  ): Seq[Any] =
-    s.map: vararg =>
-      vararg.use[DescriptorOf](dc ?=>
-        d => variadicTransition.methodArgument(dc.descriptor, d, allocator)
-      )
+  private enum LambdaInputs:
+    case Standard(args: List[Expr[Any]])
+    case VariadicInputs(args: List[Expr[Any]], varArgs: Expr[Seq[Variadic]])
 
+  private object LambdaInputs:
+    def choose(args: List[Expr[Any]], isVariadic: Boolean)(
+        variadicInput: => Expr[Seq[Variadic]]
+    ) = if isVariadic then
+      LambdaInputs.VariadicInputs(args, varArgs = variadicInput)
+    else LambdaInputs.Standard(args)
+
+  @nowarn("msg=unused implicit parameter")
   private def invokation(
-      vTransition: Expr[TransitionModule],
+      variadicTransition: Expr[VariadicTransition],
       mh: Expr[MethodHandler]
   )(using Quotes) =
-    (alloc: Expr[Allocator], args: LambdaInputs) =>
-      args.varArgs match
-        case None =>
+    (alloc: Expr[Allocator], inputs: LambdaInputs) =>
+      inputs match
+        case LambdaInputs.Standard(args) =>
           MethodHandleTools.invokeArguments(
             '{ $mh.nonVariadic },
-            args.normalArgs
+            args
           )
-        case Some(varArgs) =>
+        case LambdaInputs.VariadicInputs(args, varArgs) =>
           '{
             MethodHandleFacade.callVariadic(
               $mh.variadic($varArgs),
-              ${ Expr.ofList(args.normalArgs) } ++ getVariadicExprs(
-                $varArgs,
-                $vTransition,
-                $alloc
-              )*
+              ${ Expr.ofList(args) } ++ $variadicTransition($alloc, $varArgs)*
             )
           }
 
@@ -63,11 +56,12 @@ object CFunctionBindingGenerator:
     applyImpl[L]('name)
   }
 
-  private def lambda2(
+  @nowarn("msg=unused implicit parameter")
+  private def lambda(
       argNumbers: Int,
       scope: Expr[Scope],
       inputTransitions: Expr[IArray[InputTransition]],
-      outputTransition: Expr[OutputTransition],
+      outputTransition: Expr[ReturnTransition],
       allocatingReturn: Boolean,
       varArg: Boolean
   )(
@@ -95,15 +89,15 @@ object CFunctionBindingGenerator:
         def inputExprs(alloc: Expr[Allocator])(using q: Quotes) =
           val prefix = if allocatingReturn then List(alloc.asTerm) else Nil
           val toTransform = if varArg then inputs.init else inputs
-          LambdaInputs(
+          LambdaInputs.choose(
             prefix
               .concat(toTransform)
               .map(_.asExpr)
               .zipWithIndex
               .map: (exp, i) =>
                 '{ $inputTransitions(${ Expr(i) })($alloc, $exp) },
-            Option.unless(!varArg)(inputs.last.asExprOf[Seq[Variadic]])
-          )
+            varArg
+          )(inputs.last.asExprOf[Seq[Variadic]])
 
         '{
           $scope { alloc ?=>
@@ -132,28 +126,29 @@ object CFunctionBindingGenerator:
       new CFunctionBindingGenerator:
         def generate(
             methodHandler: MethodHandler,
-            inputTransitions: IArray[InputTransition],
-            variadicTransition: TransitionModule,
-            outputTransition: OutputTransition,
-            scope: Scope,
-            allocatingReturn: Boolean,
-            variadic: Boolean
-        ): AnyRef = ${
-          val lamdaGen = (allocatingReturn: Boolean, variadic: Boolean) =>
-            lambda2(
-              methodSymbol.paramSymss.map(_.size).sum,
-              'scope,
-              'inputTransitions,
-              'outputTransition,
-              allocatingReturn,
-              variadic
-            )(invokation('variadicTransition, 'methodHandler))
+            functionInformation: CFunctionRuntimeInformation,
+            variadicTransition: VariadicTransition,
+            scope: Scope
+        ): AnyRef =
+          ${
+            def lambdaGen(allocatingReturn: Boolean, variadic: Boolean) =
+              lambda(
+                methodSymbol.paramSymss.map(_.size).sum,
+                'scope,
+                '{ functionInformation.inputTransitions },
+                '{ functionInformation.returnTransition },
+                allocatingReturn,
+                variadic
+              )(invokation('variadicTransition, 'methodHandler))
 
-          '{
-            if allocatingReturn && variadic then ${ lamdaGen(true, true) }
-            else if allocatingReturn then ${ lamdaGen(true, false) }
-            else if variadic then ${ lamdaGen(false, true) }
-            else ${ lamdaGen(false, false) }
+            '{
+              if functionInformation.isVariadic && functionInformation.returnAllocates
+              then ${ lambdaGen(allocatingReturn = true, variadic = true) }
+              else if functionInformation.isVariadic then
+                ${ lambdaGen(allocatingReturn = false, variadic = true) }
+              else if functionInformation.returnAllocates then
+                ${ lambdaGen(allocatingReturn = true, variadic = false) }
+              else ${ lambdaGen(allocatingReturn = false, variadic = false) }
+            }
           }
-        }
     }

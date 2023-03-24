@@ -22,44 +22,20 @@ given libModule19: LibModule with
             getDowncall(cfd, v).bindTo(addr).nn
           )
 
-          val allocatingReturn = cfd.returnDescriptor
-            .map:
-              case ad: AliasDescriptor[?] => ad.real
-              case a                      => a
-            .exists:
-              case _: StructDescriptor => true
-              case _                   => false
-
-          val prefixTransition =
-            if allocatingReturn then
-              List((a: Allocator, _: Any) =>
-                transitionModule19.methodArgument(a)
-              )
-            else Nil
-
-          val regularTransitions =
-            cfd.inputDescriptors
-              .map: td =>
-                (a: Allocator) ?=> transitionModule19.methodArgument(td, _, a)
-              .map: fn =>
-                (a: Allocator, b: Any) => fn(using a)(b)
-
-          val retTransition: OutputTransition = cfd.returnDescriptor
-            .map: td =>
-              (o: Object | Null) =>
-                transitionModule19.methodReturn[Object](td, o.nn)
-            .getOrElse: (_: Object | Null) =>
-              ().asInstanceOf[Object]
-
           val fn =
             generator.generate(
               mh,
-              IArray.from(prefixTransition.concat(regularTransitions)),
-              transitionModule19,
-              retTransition,
-              tempScope(),
-              allocatingReturn,
-              cfd.isVariadic
+              CFunctionRuntimeInformation(cfd),
+              (allocator, varArgs) =>
+                varArgs.map: varArg =>
+                  varArg.use[DescriptorOf]: descriptorOf ?=>
+                    data =>
+                      transitionModule19.methodArgument(
+                        descriptorOf.descriptor,
+                        data,
+                        allocator
+                      ),
+              tempScope()
             )
 
           AtomicReference(fn)
