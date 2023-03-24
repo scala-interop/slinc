@@ -1,13 +1,13 @@
 package fr.hammons.slinc.modules
 
 import fr.hammons.slinc.LibBacking
-import fr.hammons.slinc.Allocator
 import java.util.concurrent.atomic.AtomicReference
 import fr.hammons.slinc.CFunctionBindingGenerator
-import fr.hammons.slinc.OutputTransition
 import fr.hammons.slinc.CFunctionDescriptor
 import fr.hammons.slinc.MethodHandler
 import fr.hammons.slinc.Variadic
+import fr.hammons.slinc.CFunctionRuntimeInformation
+import fr.hammons.slinc.DescriptorOf
 
 given libraryModule17: LibModule with
   val runtimeVersion = 17
@@ -25,34 +25,22 @@ given libraryModule17: LibModule with
           val mh: MethodHandler = MethodHandler((v: Seq[Variadic]) =>
             getDowncall(cfd, v).bindTo(addr).nn
           )
-          // getDowncall(cfd).bindTo(addr).nn
-          val transitions = IArray.from(
-            cfd.inputDescriptors
-              .map(td =>
-                (a: Allocator) ?=> transitionModule17.methodArgument(td, _, a)
-              )
-              .map(fn => (a: Allocator, b: Any) => fn(using a)(b))
-          )
-
-          val retTransition: OutputTransition = cfd.returnDescriptor
-            .map: td =>
-              (o: Object | Null) =>
-                transitionModule17.methodReturn[AnyRef](td, o.nn)
-            .getOrElse: (_: Object | Null) =>
-              ().asInstanceOf[Object]
 
           val fn =
-            if !cfd.isVariadic then
-              generator.generate(mh, transitions, retTransition, tempScope())
-            else
-              generator.generateVariadic(
-                mh,
-                transitions,
-                (td, alloc, a) =>
-                  transitionModule17.methodArgument(td, a, alloc),
-                retTransition,
-                tempScope()
-              )
+            generator.generate(
+              mh,
+              CFunctionRuntimeInformation(cfd),
+              (allocator, varArgs) =>
+                varArgs.map: varArg =>
+                  varArg.use[DescriptorOf]: descriptorOf ?=>
+                    data =>
+                      transitionModule17.methodArgument(
+                        descriptorOf.descriptor,
+                        data,
+                        allocator
+                      ),
+              tempScope()
+            )
 
           AtomicReference(fn)
 

@@ -1,59 +1,112 @@
 package fr.hammons.slinc
 
-import java.lang.invoke.MethodHandle
 import scala.quoted.*
 import scala.annotation.nowarn
+import fr.hammons.slinc.CFunctionRuntimeInformation.{
+  InputTransition,
+  ReturnTransition
+}
+import fr.hammons.slinc.CFunctionBindingGenerator.VariadicTransition
 
-type InputTransition = (Allocator, Any) => Any
-type OutputTransition = (Object | Null) => AnyRef
-type VariadicInputTransition = (TypeDescriptor, Allocator, Any) => Any
 trait CFunctionBindingGenerator:
   def generate(
       methodHandler: MethodHandler,
-      inputTransitions: IArray[InputTransition],
-      outputTransition: OutputTransition,
-      scope: Scope
-  ): AnyRef
-
-  def generateVariadic(
-      methodHandler: MethodHandler,
-      inputTransitions: IArray[InputTransition],
-      variadicTransition: VariadicInputTransition,
-      outputTransition: OutputTransition,
+      transitionSet: CFunctionRuntimeInformation,
+      variadicTransition: VariadicTransition,
       scope: Scope
   ): AnyRef
 
 object CFunctionBindingGenerator:
-  private def getVariadicExprs(
-      s: Seq[Variadic],
-      variadicTransition: VariadicInputTransition,
-      allocator: Allocator
-  ): Seq[Any] =
-    s.map: vararg =>
-      vararg.use[DescriptorOf](dc ?=>
-        d => variadicTransition(dc.descriptor, allocator, d)
-      )
+  type VariadicTransition = (Allocator, Seq[Variadic]) => Seq[Any]
+
+  private enum LambdaInputs:
+    case Standard(args: List[Expr[Any]])
+    case VariadicInputs(args: List[Expr[Any]], varArgs: Expr[Seq[Variadic]])
+
+  private object LambdaInputs:
+    def choose(args: List[Expr[Any]], isVariadic: Boolean)(
+        variadicInput: => Expr[Seq[Variadic]]
+    ) = if isVariadic then
+      LambdaInputs.VariadicInputs(args, varArgs = variadicInput)
+    else LambdaInputs.Standard(args)
 
   @nowarn("msg=unused implicit parameter")
-  private def invokeVariadicArguments(
-      mhGen: Expr[Seq[Variadic] => MethodHandle],
-      inputs: Expr[Seq[Any]],
-      varArgs: Expr[Seq[Variadic]],
-      variadicTransition: Expr[VariadicInputTransition],
-      alloc: Expr[Allocator]
+  private def invokation(
+      variadicTransition: Expr[VariadicTransition],
+      mh: Expr[MethodHandler]
   )(using Quotes) =
-    '{
-      MethodHandleFacade.callVariadic(
-        $mhGen($varArgs),
-        $inputs ++ getVariadicExprs($varArgs, $variadicTransition, $alloc)*
-      )
-    }
+    (alloc: Expr[Allocator], inputs: LambdaInputs) =>
+      inputs match
+        case LambdaInputs.Standard(args) =>
+          MethodHandleTools.invokeArguments(
+            '{ $mh.nonVariadic },
+            args
+          )
+        case LambdaInputs.VariadicInputs(args, varArgs) =>
+          '{
+            MethodHandleFacade.callVariadic(
+              $mh.variadic($varArgs),
+              ${ Expr.ofList(args) } ++ $variadicTransition($alloc, $varArgs)*
+            )
+          }
 
   inline def apply[L](
       name: String
   ): CFunctionBindingGenerator = ${
     applyImpl[L]('name)
   }
+
+  @nowarn("msg=unused implicit parameter")
+  private def lambda(
+      argNumbers: Int,
+      scope: Expr[Scope],
+      inputTransitions: Expr[IArray[InputTransition]],
+      outputTransition: Expr[ReturnTransition],
+      allocatingReturn: Boolean,
+      varArg: Boolean
+  )(
+      invocationExpr: Quotes ?=> (
+          Expr[Allocator],
+          LambdaInputs
+      ) => Expr[Object | Null]
+  )(using Quotes) =
+    import quotes.reflect.*
+
+    val names = List.fill(argNumbers)("a")
+    val argTypes =
+      if varArg then
+        List.fill(argNumbers - 1)(TypeRepr.of[Object]) :+ TypeRepr
+          .of[Seq[Variadic]]
+      else List.fill(argNumbers)(TypeRepr.of[Object])
+
+    val methodType =
+      MethodType(names)(_ => argTypes, _ => TypeRepr.of[Object])
+
+    Lambda(
+      Symbol.spliceOwner,
+      methodType,
+      (sym, inputs) =>
+        def inputExprs(alloc: Expr[Allocator])(using q: Quotes) =
+          val prefix = if allocatingReturn then List(alloc.asTerm) else Nil
+          val toTransform = if varArg then inputs.init else inputs
+          LambdaInputs.choose(
+            prefix
+              .concat(toTransform)
+              .map(_.asExpr)
+              .zipWithIndex
+              .map: (exp, i) =>
+                '{ $inputTransitions(${ Expr(i) })($alloc, $exp) },
+            varArg
+          )(inputs.last.asExprOf[Seq[Variadic]])
+
+        '{
+          $scope { alloc ?=>
+            $outputTransition(
+              ${ invocationExpr('alloc, inputExprs('alloc)) }
+            )
+          }
+        }.asTerm.changeOwner(sym)
+    ).asExprOf[AnyRef]
 
   @nowarn("msg=unused implicit parameter")
   private def applyImpl[L](name: Expr[String])(using
@@ -69,124 +122,33 @@ object CFunctionBindingGenerator:
       .declaredMethod(name.valueOrAbort)
       .head
 
-    val argNumbers = methodSymbol.paramSymss.map(_.size).sum
-    val names = List.fill(argNumbers)("a")
-
-    def lambda(
-        methodHandle: Expr[MethodHandle],
-        inputTransitions: Expr[IArray[InputTransition]],
-        outputTransition: Expr[OutputTransition],
-        scope: Expr[Scope]
-    )(using Quotes): Expr[AnyRef] =
-      import quotes.reflect.*
-
-      val argsTypes = List.fill(argNumbers)(TypeRepr.of[Object])
-
-      val methodType =
-        MethodType(names)(_ => argsTypes, _ => TypeRepr.of[Object])
-      Lambda(
-        Symbol.spliceOwner,
-        methodType,
-        (sym, inputs) =>
-          def inputExprs(using q: Quotes) = (alloc: Expr[Allocator]) =>
-            inputs
-              .map(i => i.asExpr)
-              .zipWithIndex
-              .map((exp, i) =>
-                '{ $inputTransitions(${ Expr(i) })($alloc, $exp) }
-              )
-          '{
-            $scope { alloc ?=>
-              $outputTransition(
-                ${
-                  MethodHandleTools.invokeArguments(
-                    methodHandle,
-                    inputExprs('alloc)
-                  )
-                }
-              )
-            }
-          }.asTerm.changeOwner(sym)
-      ).asExprOf[AnyRef]
-
-    def lambdaVariadic(
-        methodHandleGen: Expr[Seq[Variadic] => MethodHandle],
-        inputTransitions: Expr[IArray[InputTransition]],
-        outputTransition: Expr[OutputTransition],
-        variadicTransition: Expr[
-          VariadicInputTransition
-        ],
-        scope: Expr[Scope]
-    )(using Quotes): Expr[AnyRef] =
-      import quotes.reflect.*
-
-      val argTypes = List.fill(argNumbers - 1)(TypeRepr.of[Object]) :+ TypeRepr
-        .of[Seq[Variadic]]
-
-      val methodType =
-        MethodType(names)(_ => argTypes, _ => TypeRepr.of[Object])
-
-      Lambda(
-        Symbol.spliceOwner,
-        methodType,
-        (sym, inputs) =>
-          def inputExprs(using q: Quotes) = (alloc: Expr[Allocator]) =>
-            Expr.ofList(
-              inputs.init
-                .map(i => i.asExpr)
-                .zipWithIndex
-                .map((exp, i) =>
-                  '{ $inputTransitions(${ Expr(i) })($alloc, $exp) }
-                )
-            )
-
-          '{
-            $scope { alloc ?=>
-              $outputTransition(
-                ${
-                  invokeVariadicArguments(
-                    methodHandleGen,
-                    inputExprs('alloc),
-                    inputs.last.asExprOf[Seq[Variadic]],
-                    variadicTransition,
-                    '{ alloc }
-                  )
-                }
-              )
-            }
-          }.asTerm.changeOwner(sym)
-      ).asExprOf[AnyRef]
-
     '{
       new CFunctionBindingGenerator:
         def generate(
             methodHandler: MethodHandler,
-            inputTransitions: IArray[InputTransition],
-            outputTransition: OutputTransition,
+            functionInformation: CFunctionRuntimeInformation,
+            variadicTransition: VariadicTransition,
             scope: Scope
         ): AnyRef =
           ${
-            lambda(
-              '{ methodHandler.nonVariadic },
-              'inputTransitions,
-              'outputTransition,
-              'scope
-            )
-          }
+            def lambdaGen(allocatingReturn: Boolean, variadic: Boolean) =
+              lambda(
+                methodSymbol.paramSymss.map(_.size).sum,
+                'scope,
+                '{ functionInformation.inputTransitions },
+                '{ functionInformation.returnTransition },
+                allocatingReturn,
+                variadic
+              )(invokation('variadicTransition, 'methodHandler))
 
-        def generateVariadic(
-            methodHandler: MethodHandler,
-            inputTransitions: IArray[InputTransition],
-            variadicTransitions: VariadicInputTransition,
-            outputTransition: OutputTransition,
-            scope: Scope
-        ): AnyRef = ${
-          lambdaVariadic(
-            '{ methodHandler.variadic },
-            'inputTransitions,
-            'outputTransition,
-            'variadicTransitions,
-            'scope
-          )
-        }
+            '{
+              if functionInformation.isVariadic && functionInformation.returnAllocates
+              then ${ lambdaGen(allocatingReturn = true, variadic = true) }
+              else if functionInformation.isVariadic then
+                ${ lambdaGen(allocatingReturn = false, variadic = true) }
+              else if functionInformation.returnAllocates then
+                ${ lambdaGen(allocatingReturn = true, variadic = false) }
+              else ${ lambdaGen(allocatingReturn = false, variadic = false) }
+            }
+          }
     }
