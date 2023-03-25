@@ -3,59 +3,44 @@ package fr.hammons.slinc
 import org.openjdk.jmh.annotations.{Scope as _, *}
 import java.util.concurrent.TimeUnit
 import scala.util.Random
+import fr.hammons.slinc.types.*
 import scala.annotation.nowarn
-import fr.hammons.slinc.modules.LibModule
-import org.openjdk.jmh.infra.Blackhole
 
-case class div_t(quot: Int, rem: Int)
+case class div_t(quot: CInt, rem: CInt)
 
+@nowarn("msg=unused import")
 trait BindingsBenchmarkShape(val s: Slinc):
   import scala.language.unsafeNulls
-
-  trait Cstd3 derives Lib:
-    def abs(i: Int): Int
-
-  import s.given LibModule
-
-  @Benchmark
-  def abs2 =
-    Lib.instance[Cstd3].abs(-4)
-
-  lazy val cstd3 = Lib.instance[Cstd3]
-
-  @Benchmark
-  def abs3 =
-    cstd3.abs(-4)
-
-  import s.{given, *}
-
-  object Cstd derives Library:
-    def abs(i: Int): Int = Library.binding
-    def div(numer: Int, denom: Int): div_t = Library.binding
-    def labs(l: CLong): CLong = Library.binding
-    // todo: needs SizeT
-    def qsort[A](
-        array: Ptr[A],
-        num: Long,
+  trait Cstd derives Lib:
+    def abs(i: CInt): CInt
+    def div(numer: CInt, denom: CInt): div_t
+    def labs(l: CLong): CLong
+    def qsort(
+        array: Ptr[Nothing],
+        num: SizeT,
         size: SizeT,
-        fn: Ptr[(Ptr[A], Ptr[A]) => A]
-    ): Unit = Library.binding
+        fn: Ptr[(Ptr[Nothing], Ptr[Nothing]) => Int]
+    ): Unit
 
-  object Cstd2 derives Library:
-    def labs(l: Long): Long = Library.binding
+  trait Cstd2 derives Lib:
+    def labs(l: Long): Long
+
+  import s.given
+
+  val cstd = Lib.instance[Cstd]
+  val cstd2 = Lib.instance[Cstd2]
 
   given Struct[div_t] = Struct.derived
-
-  val lib = summon[Library[Cstd.type]]
-  val absHandle = lib.handles(0)
 
   val base = Seq.fill(10000)(Random.nextInt)
   val baseArr = base.toArray
 
-  val upcall: Ptr[(Ptr[Int], Ptr[Int]) => Int] = Scope.global {
+  import s.{given, *}
+
+  val upcall: Ptr[(Ptr[Nothing], Ptr[Nothing]) => Int] = Scope.global {
     Ptr.upcall((a, b) =>
-      val aVal = !a
-      val bVal = !b
+      val aVal = !a.castTo[Int]
+      val bVal = !b.castTo[Int]
       if aVal < bVal then -1
       else if aVal == bVal then 0
       else 1
@@ -65,49 +50,36 @@ trait BindingsBenchmarkShape(val s: Slinc):
   val path = Random.nextBoolean()
 
   @Benchmark
-  def ifmark(blackhole: Blackhole) =
-    if path then blackhole.consume(1 + 2)
-    else blackhole.consume(2 + 3)
-
-  @Benchmark
-  def noifmark(blackhole: Blackhole) =
-    blackhole.consume(1 + 2)
-
-  @Benchmark
   def abs =
-    Cstd.abs(6)
+    cstd.abs(6)
 
   @Benchmark
   def labs =
-    Cstd.labs(-15.as[CLong])
+    cstd.labs(CLong(-15))
 
   @Benchmark
   def labs2 =
-    Cstd2.labs(-15)
+    cstd2.labs(-15)
 
   @Benchmark
   def div =
-    Cstd.div(5, 2)
+    cstd.div(5, 2)
 
   @Benchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   def qsort =
-    Scope.confined {
-      val sortingArr = Ptr.copy(baseArr)
-      Cstd.qsort(
-        sortingArr,
-        10000,
-        4.as[SizeT],
-        Ptr.upcall((a, b) =>
-          val aVal = !a
-          val bVal = !b
-          if aVal < bVal then -1
-          else if aVal == bVal then 0
-          else 1
+    for size <- SizeT.maybe(10000)
+    do
+      Scope.confined {
+        val sortingArr = Ptr.copy(baseArr).castTo[Nothing]
+        cstd.qsort(
+          sortingArr,
+          size,
+          IntDescriptor.size.toSizeT,
+          upcall
         )
-      )
-      sortingArr.asArray(10000)
-    }
+        sortingArr.castTo[Int].asArray(10000)
+      }
 
   @Benchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
