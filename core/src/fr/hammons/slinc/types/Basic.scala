@@ -5,3 +5,4 @@ type CShort = Short
 type CInt = Int
 type CFloat = Float
 type CDouble = Double
+type CLongLong = Long
