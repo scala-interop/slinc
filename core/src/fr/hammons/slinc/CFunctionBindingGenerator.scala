@@ -88,7 +88,9 @@ object CFunctionBindingGenerator:
       (sym, inputs) =>
         def inputExprs(alloc: Expr[Allocator])(using q: Quotes) =
           val prefix = if allocatingReturn then List(alloc.asTerm) else Nil
-          val toTransform = if varArg then inputs.init else inputs
+          val toTransform =
+            if varArg && inputs.nonEmpty then inputs.init
+            else inputs
           LambdaInputs.choose(
             prefix
               .concat(toTransform)
@@ -96,7 +98,7 @@ object CFunctionBindingGenerator:
               .zipWithIndex
               .map: (exp, i) =>
                 '{ $inputTransitions(${ Expr(i) })($alloc, $exp) },
-            varArg
+            varArg && inputs.nonEmpty
           )(inputs.last.asExprOf[Seq[Variadic]])
 
         '{

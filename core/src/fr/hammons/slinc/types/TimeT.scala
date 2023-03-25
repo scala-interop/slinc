@@ -5,12 +5,6 @@ import fr.hammons.slinc.LongDescriptor
 
 opaque type TimeT = Any
 
-given Alias[TimeT] with
-  val name: String = "TimeT"
-  val aliases = { case (OS.Windows | OS.Linux | OS.Darwin, Arch.X64) =>
-    LongDescriptor
-  }
-
 object TimeT:
   def maybe(value: Byte | Short | Int | Long): Option[TimeT] =
     val upcast = value match
@@ -22,3 +16,9 @@ object TimeT:
     if IntegralAlias.range[TimeT].contains(upcast) then
       Some(IntegralAlias.transform[TimeT](upcast))
     else None
+
+  given Alias[TimeT] with
+    val name: String = "TimeT"
+    val aliases = { case (OS.Windows | OS.Linux | OS.Darwin, Arch.X64) =>
+      LongDescriptor
+    }

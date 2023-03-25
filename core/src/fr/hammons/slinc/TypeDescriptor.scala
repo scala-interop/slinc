@@ -146,14 +146,22 @@ trait StructDescriptor(
     val transform: Tuple => Product
 ) extends RealTypeDescriptor
 
-trait AliasDescriptor[A](val real: RealTypeDescriptor) extends TypeDescriptor:
+case class AliasDescriptor[A](val real: RealTypeDescriptor)
+    extends TypeDescriptor:
   type Inner = A
+  type RealInner = real.Inner
 
-  given bkwd: Conversion[Inner, real.Inner] with
+  given bkwd: Conversion[Inner, RealInner] with
     def apply(x: Inner): real.Inner = x.asInstanceOf[real.Inner]
 
-  given fwd: Conversion[real.Inner, Inner] with
+  given fwd: Conversion[RealInner, Inner] with
     def apply(x: real.Inner): Inner = x.asInstanceOf[Inner]
+
+  val reader: (ReadWriteModule, DescriptorModule) ?=> Reader[Inner] =
+    (rwm, _) ?=> (mem, bytes) => rwm.readAlias(mem, bytes, real)
+
+  val writer: (ReadWriteModule, DescriptorModule) ?=> Writer[Inner] =
+    (rwm, _) ?=> (mem, bytes, a) => rwm.writeAlias(mem, bytes, real, a)
 
   override def size(using dm: DescriptorModule): Bytes = dm.sizeOf(real)
   override def alignment(using dm: DescriptorModule): Bytes =
