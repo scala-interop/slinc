@@ -5,12 +5,6 @@ import fr.hammons.slinc.LongDescriptor
 
 opaque type SizeT = AnyVal
 
-given Alias[SizeT] with
-  val name = "SizeT"
-  val aliases = { case (OS.Linux | OS.Darwin | OS.Windows, Arch.X64) =>
-    LongDescriptor
-  }
-
 object SizeT:
   def apply(value: Short | Byte): SizeT = value match
     case s: Short => IntegralAlias.transform[SizeT](s)
@@ -24,3 +18,9 @@ object SizeT:
     if value < 65536 || IntegralAlias.range[SizeT].contains(value) then
       Some(IntegralAlias.transform[SizeT](value))
     else None
+
+  given Alias[SizeT] with
+    val name = "SizeT"
+    val aliases = { case (OS.Linux | OS.Darwin | OS.Windows, Arch.X64) =>
+      LongDescriptor
+    }

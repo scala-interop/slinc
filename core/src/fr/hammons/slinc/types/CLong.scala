@@ -14,9 +14,8 @@ object CLong:
       case i: Int   => IntegralAlias.transform[CLong](i)
 
   def maybe(maybeFits: Long): Option[CLong] =
-    if (maybeFits <= Int.MaxValue && maybeFits >= Int.MinValue) || IntegralAlias
-        .range[CLong]
-        .contains(maybeFits)
+    if (maybeFits <= Int.MaxValue && maybeFits >= Int.MinValue) || (IntegralAlias
+        .min[CLong] <= maybeFits && maybeFits <= IntegralAlias.max[CLong])
     then Some(IntegralAlias.transform[CLong](maybeFits))
     else None
 

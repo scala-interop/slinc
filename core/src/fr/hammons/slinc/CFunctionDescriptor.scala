@@ -33,8 +33,8 @@ object CFunctionDescriptor:
             s"C Function analog ${methodSymbol.fullName} has unsupported type ${t.show}"
           )
 
-    val isVariadic = argumentTypes.last match
-      case typ if typ =:= TypeRepr.of[Seq[Variadic]] =>
+    val isVariadic = argumentTypes.lastOption match
+      case Some(typ) if typ =:= TypeRepr.of[Seq[Variadic]] =>
         true
       case _ => false
 

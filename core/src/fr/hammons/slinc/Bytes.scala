@@ -1,6 +1,7 @@
 package fr.hammons.slinc
 
 import scala.quoted.{ToExpr, Quotes}
+import types.SizeT
 
 opaque type Bytes = Long
 
@@ -15,6 +16,7 @@ object Bytes:
     inline def -(b: Bytes): Bytes = a - b
     inline def toLong: Long = a
     inline def toBits: Long = a * 8
+    def sizeT = SizeT.maybe(a).get
 
   given Numeric[Bytes] = Numeric.LongIsIntegral
   given ToExpr[Bytes] with
