@@ -1,3 +1,3 @@
 package fr.hammons.slinc
 
-class LibSpec19 extends LibSpec(Slinc19.default)
+class LibModuleSpec19 extends LibModuleSpec(Slinc19.default)

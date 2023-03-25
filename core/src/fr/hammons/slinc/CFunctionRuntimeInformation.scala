@@ -3,6 +3,7 @@ package fr.hammons.slinc
 import fr.hammons.slinc.modules.TransitionModule
 import fr.hammons.slinc.CFunctionRuntimeInformation.InputTransition
 import fr.hammons.slinc.CFunctionRuntimeInformation.ReturnTransition
+import fr.hammons.slinc.types.{os, arch}
 
 final case class CFunctionRuntimeInformation(
     name: String,
@@ -43,7 +44,7 @@ object CFunctionRuntimeInformation:
             transitionModule.methodReturn[Object](descriptor, returnValue.nn)
 
     new CFunctionRuntimeInformation(
-      functionDescriptor.name,
+      functionDescriptor.name(os, arch),
       functionDescriptor.inputDescriptors,
       IArray.from(allocationTransition ++ inputTransitions),
       functionDescriptor.returnDescriptor,

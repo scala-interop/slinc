@@ -2,39 +2,24 @@ package fr.hammons.slinc
 
 import munit.ScalaCheckSuite
 import org.scalacheck.Prop.*
-import java.{util as ju}
 import scala.annotation.nowarn
-import fr.hammons.slinc.types.CLong
+import fr.hammons.slinc.types.{CInt, CLong, TimeT, CChar}
+import fr.hammons.slinc.types.{OS, Arch}
+import fr.hammons.slinc.annotations.*
 
-@nowarn("msg=unused import")
-trait LibSpec(val slinc: Slinc) extends ScalaCheckSuite {
-  import modules.LibModule
+class LibSpec extends munit.FunSuite:
+  test("Unit parameters don't compile"):
+      val compileResult = compileErrors("""
+    trait L derives Lib:
+      def myFun(o: Unit): Unit
+    """)
 
-  import slinc.{CLong as _, given, *}
+      val errorMessage = """error: No Descriptor for Unit"""
+      assert(compileResult.nonEmpty)
+      assertNoDiff(compileResult.split("\n").nn(0).nn, errorMessage)
 
-  trait GoodLib derives Lib:
-    def abs(a: Int): Int
-
-  trait BadFunctionName derives Lib:
-    def babs(a: Int): Int
-
-  import slinc.given LibModule
-  property("good lib works") {
-    val goodLib = Lib.instance[GoodLib]
-    forAll { (i: Int) =>
-      assertEquals(goodLib.abs(i), i.abs)
-    }
-
-  }
-
-  test("bad function name lib fails") {
-    intercept[ju.NoSuchElementException] {
-      Lib.instance[BadFunctionName]
-    }
-  }
-
-  test("generic binding support".ignore) {
-    val error = compileErrors("""trait GoodLib2 derives Lib:
+  test("generic binding support".ignore):
+      val error = compileErrors("""trait GoodLib2 derives Lib:
                        def qsort[A](
                           array: Ptr[A],
                           num: Int,
@@ -42,60 +27,67 @@ trait LibSpec(val slinc: Slinc) extends ScalaCheckSuite {
                           fn: Ptr[(Ptr[A], Ptr[A]) => Int]
                        ): Unit""")
 
-    assertNoDiff(error, "")
-  }
+      assertNoDiff(error, "")
 
-  test("variadic support") {
-    val error = compileErrors("""
+  test("variadic support"):
+      val error = compileErrors("""
     trait VariadicLib derives Lib:
       def sprintf(ret: Ptr[Byte], string: Ptr[Byte], args: Seq[Variadic]): Unit
     """)
 
-    trait VariadicLib derives Lib:
-      def sprintf(ret: Ptr[Byte], string: Ptr[Byte], args: Seq[Variadic]): Unit
+      assertNoDiff(error, "")
 
-    val variadicLib = Lib.instance[VariadicLib]
-
-    assertNoDiff(error, "")
-
-    Scope.confined {
-      val format = Ptr.copy("%i hello %s %i")
-      val buffer = Ptr.blankArray[Byte](256)
-
-      assertEquals(format.copyIntoString(200), "%i hello %s %i")
-      variadicLib.sprintf(buffer, format, Seq(1, Ptr.copy("hello"), 2))
-      assertEquals(buffer.copyIntoString(256), "1 hello hello 2")
-    }
-  }
-
-  test("allocating returns") {
-    import slinc.given
-    case class div_t(quot: Int, rem: Int) derives Struct
-
-    trait AllocatingLib derives Lib:
-      def div(i: Int, r: Int): div_t
-
-    val allocatingLib = Lib.instance[AllocatingLib]
-
-    assertEquals(allocatingLib.div(5, 2), div_t(2, 1))
-  }
-
-  test("platform dependent types") {
-    val maybeError = compileErrors("""
+  test("platform dependent types"):
+      val maybeError = compileErrors("""
     trait PlatformLib derives Lib:
       def labs(long: CLong): CLong
     """)
 
-    trait PlatformLib derives Lib:
-      def labs(long: CLong): CLong
+      assertNoDiff(maybeError, "")
 
-    assertNoDiff(maybeError, "")
+  test("function descriptors should be sane"):
+      trait TestLib derives Lib:
+        def time(t: Ptr[TimeT]): TimeT
+        def abs(c: CInt): Unit
+        def sprintf(string: Ptr[CChar], args: Seq[Variadic]): Ptr[CChar]
 
-    val platformLib = Lib.instance[PlatformLib]
+      assertEquals(
+        summon[Lib[TestLib]].description,
+        List(
+          new CFunctionDescriptor(
+            Map.empty.withDefaultValue("time"),
+            Seq(DescriptorOf[Ptr[TimeT]]),
+            false,
+            Some(DescriptorOf[TimeT])
+          ),
+          new CFunctionDescriptor(
+            Map.empty.withDefaultValue("abs"),
+            Seq(DescriptorOf[CInt]),
+            false,
+            None
+          ),
+          new CFunctionDescriptor(
+            Map.empty.withDefaultValue("sprintf"),
+            Seq(DescriptorOf[Ptr[CChar]]),
+            true,
+            Some(DescriptorOf[Ptr[CChar]])
+          )
+        )
+      )
 
-    val input = CLong(-3)
-    val expectedOutput = CLong(3)
+  test("name overrides should be recorded"):
+      trait L derives Lib:
+        @NameOverride("_time64", (OS.Windows, Arch.X64))
+        def time(t: Int): Int
 
-    assertEquals(platformLib.labs(input), expectedOutput)
-  }
-}
+      assertEquals(
+        summon[Lib[L]].description,
+        List(
+          new CFunctionDescriptor(
+            Map((OS.Windows, Arch.X64) -> "_time64").withDefaultValue("time"),
+            Seq(DescriptorOf[Int]),
+            false,
+            Some(DescriptorOf[Int])
+          )
+        )
+      )

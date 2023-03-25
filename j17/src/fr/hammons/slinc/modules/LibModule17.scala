@@ -21,7 +21,8 @@ given libraryModule17: LibModule with
       .zip(generators)
       .map:
         case (cfd, generator) =>
-          val addr = defaultLookup(cfd.name).get
+          val functionInformation = CFunctionRuntimeInformation(cfd)
+          val addr = defaultLookup(functionInformation.name).get
           val mh: MethodHandler = MethodHandler((v: Seq[Variadic]) =>
             getDowncall(cfd, v).bindTo(addr).nn
           )
@@ -29,7 +30,7 @@ given libraryModule17: LibModule with
           val fn =
             generator.generate(
               mh,
-              CFunctionRuntimeInformation(cfd),
+              functionInformation,
               (allocator, varArgs) =>
                 varArgs.map: varArg =>
                   varArg.use[DescriptorOf]: descriptorOf ?=>
