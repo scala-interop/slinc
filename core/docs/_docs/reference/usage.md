@@ -4,14 +4,14 @@ title: Usage
 
 ## Introduction to Library Definitions
 
-All bindings by Slinc take place in library objects, groups of like methods that reflect C functions. When defining a library object, name is not particularly important. One merely defines an object that derives `Library`. Method bindings are done via a method binding with a name matching the C function in question, and parameters with types that match the C function in question.
+All bindings by Slinc take place in library traits, groups of like methods that reflect C functions. When defining a library trait, name is not particularly important. One merely defines an object that derives `Lib`. Method bindings are done via a method binding with a name matching the C function in question, and parameters with types that match the C function in question.
 
 ```scala
-object StdLib derives Library:
-  def abs(i: Int): Int = Library.binding
+trait StdLib derives Lib:
+  def abs(i: CInt): CInt
 ```
 
-The above defines a binding to the C standard library's `abs` method. Since the C definition of `abs` is defined like `int abs(int i)`, the scala version of the method is defined with a single input that has the type `Int` and the return type `Int`. The method is defined with `Library.binding` which is a macro that connects the inputs and outputs to the C world.
+The above defines a binding to the C standard library's `abs` method. Since the C definition of `abs` is defined like `int abs(int i)`, the scala version of the method is defined with a single input that has the type `CInt` and the return type `CInt`.
 
 ## Types
 
@@ -45,52 +45,13 @@ Using the built in JVM primitives for a binding is quick and easy if you know th
 |TimeT|time_t|
 
 
-Since these types are only guaranteed to be defined at runtime, interacting with them can be difficult. There are three ways at present to interact with these types:
-
-* Assured Conversion
-* Potential Conversion
-* Platform focus 
-
-### Assured Conversion 
-
-Assured conversion is done via the `.as` extension method on a compatible type, or to a compatible type. This method is generally available when there's some baseline guarantee about the kind and width of the type in question. For example, `CLong` is at minimum a 32-bit wide integer type, so `Int.as[CLong]` exists. It is also (for now) at maximum a 64-bit wide integer type, so `CLong.as[Long]` exists.
-
-### Potential Conversion
-
-Potential conversion is generally more available than the assured conversions. Potential conversion is done via the `maybeAs` extension method that will return an `Option` result indicating whether the conversion is valid on the current host.
-
-As an example, `Long.maybeAs[CLong]` will return `Some(l: CLong)` on X64 Linux, but `None` on X64 Windows. 
-
-### Platform Focus 
-
-The `platformFocus` method takes a platform instance and a section of code where the host dependent types have automatic conversions to and from their definitions on the host platform. As an example:
-
-```scala
-def labs(l: CLong): CLong = Library.binding 
-
-platformFocus(x64.Linux){
-  //this line works here
-  labs(-13l) == -13l //true
-}
-
-//this line doesn't work here, cause outside of the above zone
-// CLong isn't equivalent to Long
-labs(-13l) == -13l
-```
-
-The `platformFocus` method returns `Option[A]` where `A` is the return type of the platform focus zone. The method returns `None` if the platform selected for the zone doesn't match the host. This allows you to chain together platform specific code via `.orElse`.
-
-The C types are meant to be analogues to the primitive types defined for C. In the table above, a number have equivalents to JVM types right now, but that may change in future versions of Slinc. If your wish is to write platform independent bindings to C libraries, then you should use the C types and forgo the standard JVM primitives. Usage of the standard JVM primitives will make your bindings brittle and platform specific at some point.
+Since these types are only guaranteed to be defined at runtime, interacting with them can be difficult.
 
 ## Pointers
 
 Pointers are represented in Slinc with the `Ptr` type. For example, `Ptr[Int]` is a pointer to native memory that should be readable as a JVM Int.
 
-The pointer class' operations are powered by three type classes:
-
-* `LayoutOf` - this type class provides layout information about the type in question, if it exists.
-* `Send` - this type class shows how to copy data of type `A` from the JVM into native memory.
-* `Receive` - this type class shows how to copy data of type `A` from native memory into the JVM heap.
+The pointer class' operations are powered by the `DescriptorOf` typeclass.
 
 The list of operations available on a `Ptr[A]`:
 
@@ -110,4 +71,4 @@ The analog for C structs in Slinc are case classes that derive the `Struct` type
 case class div_t(quot: Int, rem: Int) derives Struct
 ```
 
-These struct analogs can be composed with any type that has a Send and/or Receive defined for it.
+These struct analogs can be composed with any type that has a `DescriptorOf` defined for it.

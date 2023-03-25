@@ -6,6 +6,7 @@ subsection:
     subsection: 
       - page: reference/usage.md
       - page: reference/jdk-support.md
+      - page: reference/library-modules.md
   - title: Contributing
     directory: docs/contributing
     page: contributing/contributing.md
