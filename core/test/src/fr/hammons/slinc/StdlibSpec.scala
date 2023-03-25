@@ -10,7 +10,8 @@ import fr.hammons.slinc.types.{CLong, SizeT, TimeT}
 import fr.hammons.slinc.types.CChar
 import fr.hammons.slinc.types.CDouble
 import fr.hammons.slinc.types.IntegralAlias
-import types.{OS, os}
+import types.{OS, Arch}
+import fr.hammons.slinc.annotations.NameOverride
 
 //todo: remove when https://github.com/lampepfl/dotty/issues/16876 is fixed
 trait StdlibSpec(val slinc: Slinc) extends ScalaCheckSuite:
@@ -33,20 +34,19 @@ trait StdlibSpec(val slinc: Slinc) extends ScalaCheckSuite:
     def sprintf(ret: Ptr[CChar], string: Ptr[CChar], args: Seq[Variadic]): Unit
     def atof(str: Ptr[CChar]): CDouble
     def strtod(str: Ptr[CChar], endptr: Ptr[Ptr[CChar]]): CDouble
+    @NameOverride("_time64", OS.Windows -> Arch.X64)
+    def time(timer: Ptr[TimeT]): TimeT
 
   given Struct[div_t] = Struct.derived
 
   val cstd = Lib.instance[Cstd]
 
-  property("abs gives back absolute integers") {
-    forAll { (i: Int) =>
-      assertEquals(cstd.abs(i), i.abs)
-    }
-  }
+  property("abs gives back absolute integers"):
+      forAll: (i: Int) =>
+        assertEquals(cstd.abs(i), i.abs)
 
-  test("abs") {
-    assertEquals(cstd.abs(-4), 4)
-  }
+  test("abs"):
+      assertEquals(cstd.abs(-4), 4)
 
   val clongChoose =
     Gen
@@ -54,43 +54,35 @@ trait StdlibSpec(val slinc: Slinc) extends ScalaCheckSuite:
       .map(CLong.maybe)
       .map(_.get)
 
-  property("labs gives back absolute CLongs") {
-    forAll(clongChoose) { (c: CLong) =>
-      assertEquals(
-        IntegralAlias.toLong(cstd.labs(c)),
-        IntegralAlias.toLong(c).abs
-      )
-    }
+  property("labs gives back absolute CLongs"):
+      forAll(clongChoose): (c: CLong) =>
+        assertEquals(
+          IntegralAlias.toLong(cstd.labs(c)),
+          IntegralAlias.toLong(c).abs
+        )
 
-  }
+  property("div calculates quotient and remainder"):
+      val validIntRange =
+        Gen.oneOf(Gen.choose(Int.MinValue + 1, -1), Gen.choose(1, Int.MaxValue))
+      forAll(validIntRange, validIntRange): (a: Int, b: Int) =>
+        val result = cstd.div(a, b)
 
-  property("div calculates quotient and remainder") {
-    val validIntRange =
-      Gen.oneOf(Gen.choose(Int.MinValue + 1, -1), Gen.choose(1, Int.MaxValue))
-    forAll(validIntRange, validIntRange) { (a: Int, b: Int) =>
-      val result = cstd.div(a, b)
+        assertEquals(result.quot, a / b)
+        assertEquals(result.rem, a % b)
 
-      assertEquals(result.quot, a / b)
-      assertEquals(result.rem, a % b)
-    }
-  }
+  test("div"):
+      assertEquals(cstd.div(5, 2), div_t(2, 1))
 
-  test("div") {
-    assertEquals(cstd.div(5, 2), div_t(2, 1))
-  }
-
-  test("ldiv") {
-    assertEquals(cstd.ldiv(CLong(5), CLong(2)), ldiv_t(CLong(2), CLong(1)))
-  }
+  test("ldiv"):
+      assertEquals(cstd.ldiv(CLong(5), CLong(2)), ldiv_t(CLong(2), CLong(1)))
 
   /*
   test("lldiv") {
     assertEquals(Cstd.lldiv(5L, 2L), lldiv_t(2L, 1L))
   }
    */
-  test("rand") {
-    assertNotEquals(cstd.rand(), cstd.rand())
-  }
+  test("rand"):
+      assertNotEquals(cstd.rand(), cstd.rand())
 
   // todo: this should generate arrays of max length of SizeT
   property("qsort should sort"):
@@ -146,96 +138,72 @@ trait StdlibSpec(val slinc: Slinc) extends ScalaCheckSuite:
         )
   // end qsort test
 
-  property("sprintf should format") {
-    forAll(Arbitrary.arbitrary[Int], Gen.asciiPrintableStr) { (i, s) =>
-      Scope.confined {
-        val format = Ptr.copy("%i %s")
+  property("sprintf should format"):
+      forAll(Arbitrary.arbitrary[Int], Gen.asciiPrintableStr): (i, s) =>
+        Scope.confined:
+          val format = Ptr.copy("%i %s")
+          val buffer = Ptr.blankArray[Byte](256)
+
+          // ascii chars only
+          assertEquals(format.copyIntoString(200), "%i %s")
+          cstd.sprintf(buffer, format, Seq(i, Ptr.copy(s)))
+          assertEquals(buffer.copyIntoString(256), s"$i $s")
+
+  test("sprintf"):
+      Scope.confined:
+        val format = Ptr.copy("%i hello: %s %i")
         val buffer = Ptr.blankArray[Byte](256)
 
-        // ascii chars only
-        assertEquals(format.copyIntoString(200), "%i %s")
-        cstd.sprintf(buffer, format, Seq(i, Ptr.copy(s)))
-        assertEquals(buffer.copyIntoString(256), s"$i $s")
-      }
-    }
-  }
-
-  test("sprintf") {
-    Scope.confined {
-      val format = Ptr.copy("%i hello: %s %i")
-      val buffer = Ptr.blankArray[Byte](256)
-
-      assertEquals(format.copyIntoString(200), "%i hello: %s %i")
-      cstd.sprintf(buffer, format, Seq(1, Ptr.copy("hello"), 2))
-      assertEquals(buffer.copyIntoString(256), "1 hello: hello 2")
-    }
-  }
+        assertEquals(format.copyIntoString(200), "%i hello: %s %i")
+        cstd.sprintf(buffer, format, Seq(1, Ptr.copy("hello"), 2))
+        assertEquals(buffer.copyIntoString(256), "1 hello: hello 2")
 
   test("time"):
       val current = System.currentTimeMillis() / 1000
-      val time = if os == OS.Windows then
-        trait Time derives Lib:
-          def _time64(timer: Ptr[TimeT]): TimeT
-
-        val time = Lib.instance[Time]
-        time._time64(Null[TimeT])
-      else
-        trait Time derives Lib:
-          def time(timer: Ptr[TimeT]): TimeT
-
-        val time = Lib.instance[Time]
-        time.time(Null[TimeT])
+      val result = cstd.time(Null[TimeT])
       assert(
-        (IntegralAlias.toLong(time) - current).abs < 5
+        (IntegralAlias.toLong(result) - current).abs < 5
       )
 
   // end test time
 
-  property("atof convert strings to floats") {
-    forAll { (d: Double) =>
-      Scope.confined {
-        val pStr = Ptr.copy(f"$d%f")
-        assertEqualsDouble(cstd.atof(pStr), d, 0.1)
-      }
-    }
-  }
+  property("atof convert strings to floats"):
+      forAll: (d: Double) =>
+        Scope.confined:
+          val pStr = Ptr.copy(f"$d%f")
+          assertEqualsDouble(cstd.atof(pStr), d, 0.1)
 
-  property("strtod convert doubles from string") {
-    forAll { (d: Double) =>
-      Scope.confined {
-        val input = f"$d%f $d%f"
+  property("strtod convert doubles from string"):
+      forAll: (d: Double) =>
+        Scope.confined:
+          val input = f"$d%f $d%f"
+          val maxSize = input.length()
+          val pStr0 = Ptr.copy(input)
+
+          val ans1 = Ptr.blank[Ptr[Byte]]
+          val a1 = cstd.strtod(pStr0, ans1)
+          assertEqualsDouble(a1, d, 0.1)
+          val pStr1 = !ans1
+          val r1 = pStr1.copyIntoString(maxSize)
+          assertEquals(r1, f" $d%f")
+
+          val ans2 = Ptr.blank[Ptr[Byte]]
+          val a2 = cstd.strtod(pStr1, ans2)
+          assertEqualsDouble(a2, d, 0.1)
+          assertEquals(!(!ans2), 0.toByte)
+
+  test("strtod convert bad string"):
+      Scope.confined:
+        val input = "notPossible"
         val maxSize = input.length()
         val pStr0 = Ptr.copy(input)
 
         val ans1 = Ptr.blank[Ptr[Byte]]
-        val a1 = cstd.strtod(pStr0, ans1)
-        assertEqualsDouble(a1, d, 0.1)
+        val a = cstd.strtod(pStr0, ans1)
+        assertEqualsDouble(a, 0.0d, 0.1)
         val pStr1 = !ans1
         val r1 = pStr1.copyIntoString(maxSize)
-        assertEquals(r1, f" $d%f")
-
-        val ans2 = Ptr.blank[Ptr[Byte]]
-        val a2 = cstd.strtod(pStr1, ans2)
-        assertEqualsDouble(a2, d, 0.1)
-        assertEquals(!(!ans2), 0.toByte)
-      }
-    }
-  }
-
-  test("strtod convert bad string") {
-    Scope.confined {
-      val input = "notPossible"
-      val maxSize = input.length()
-      val pStr0 = Ptr.copy(input)
-
-      val ans1 = Ptr.blank[Ptr[Byte]]
-      val a = cstd.strtod(pStr0, ans1)
-      assertEqualsDouble(a, 0.0d, 0.1)
-      val pStr1 = !ans1
-      val r1 = pStr1.copyIntoString(maxSize)
-      assertEquals(r1, input)
-    }
-  }
+        assertEquals(r1, input)
 
 object StdlibSpec:
   case class lldiv_t(quot: Long, rem: Long)

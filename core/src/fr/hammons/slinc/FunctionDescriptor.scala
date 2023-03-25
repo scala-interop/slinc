@@ -11,7 +11,7 @@ final case class FunctionDescriptor(
     outputDescriptor: Option[TypeDescriptor]
 ):
   def toCFunctionDescriptor() = CFunctionDescriptor(
-    "",
+    Map.empty.withDefaultValue(""),
     inputDescriptors,
     variadicDescriptors.isEmpty,
     outputDescriptor

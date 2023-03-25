@@ -2,9 +2,11 @@ package fr.hammons.slinc
 
 import scala.annotation.nowarn
 import scala.quoted.*
+import types.{OS, Arch}
+import fr.hammons.slinc.annotations.NameOverride
 
 final case class CFunctionDescriptor(
-    name: String,
+    name: Map[(OS, Arch), String],
     inputDescriptors: Seq[TypeDescriptor],
     isVariadic: Boolean,
     returnDescriptor: Option[TypeDescriptor]
@@ -47,9 +49,16 @@ object CFunctionDescriptor:
       val returnDescriptor = TypeDescriptor.fromTypeRepr(returnType)
       '{ Some($returnDescriptor) }
 
+    val nameOverrides = '{
+      NameOverride[L](${ Expr(methodSymbol.name) })
+        .flatMap: nameOverride =>
+          nameOverride.platforms.map(tup => tup -> nameOverride.name)
+        .toMap
+    }
+
     '{
       new CFunctionDescriptor(
-        ${ Expr(methodSymbol.name) },
+        $nameOverrides.withDefaultValue(${ Expr(methodSymbol.name) }),
         $inputDescriptors,
         ${ Expr(isVariadic) },
         $returnDescriptor

@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 import fr.hammons.slinc.LibBacking
 
+import fr.hammons.slinc.CFunctionRuntimeInformation
 given libModule19: LibModule with
   override val runtimeVersion: Int = 19
 
@@ -17,7 +18,8 @@ given libModule19: LibModule with
       .zip(generators)
       .map:
         case (cfd, generator) =>
-          val addr = defaultLookup(cfd.name).get
+          val runtimeInformation = CFunctionRuntimeInformation(cfd)
+          val addr = defaultLookup(runtimeInformation.name).get
           val mh: MethodHandler = MethodHandler((v: Seq[Variadic]) =>
             getDowncall(cfd, v).bindTo(addr).nn
           )
@@ -25,7 +27,7 @@ given libModule19: LibModule with
           val fn =
             generator.generate(
               mh,
-              CFunctionRuntimeInformation(cfd),
+              runtimeInformation,
               (allocator, varArgs) =>
                 varArgs.map: varArg =>
                   varArg.use[DescriptorOf]: descriptorOf ?=>

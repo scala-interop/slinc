@@ -8,6 +8,7 @@ import fr.hammons.slinc.CFunctionRuntimeInformation.{
 }
 import fr.hammons.slinc.CFunctionBindingGenerator.VariadicTransition
 
+import fr.hammons.slinc.CFunctionRuntimeInformation
 trait CFunctionBindingGenerator:
   def generate(
       methodHandler: MethodHandler,
