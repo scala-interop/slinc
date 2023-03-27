@@ -6,6 +6,7 @@ import java.lang.foreign.{FunctionDescriptor as JFunctionDescriptor}
 import scala.jdk.OptionConverters.*
 import java.lang.foreign.MemorySegment
 import fr.hammons.slinc.*
+import java.lang.foreign.MemoryLayout
 
 object LinkageModule19 extends LinkageModule:
   import descriptorModule19.*
@@ -21,28 +22,34 @@ object LinkageModule19 extends LinkageModule:
       descriptor: CFunctionDescriptor,
       varargs: Seq[Variadic]
   ): MethodHandle =
-    val fdGen = descriptor.returnDescriptor match
-      case None =>
-        JFunctionDescriptor
-          .ofVoid(
-            _*
-          )
-      case Some(value) =>
-        JFunctionDescriptor
-          .of(
-            toMemoryLayout(value),
-            _*
-          )
+    val fdGen = (
+        argDescriptors: Seq[MemoryLayout],
+        varArgDescriptors: Seq[MemoryLayout]
+    ) =>
+      descriptor.returnDescriptor match
+        case None =>
+          JFunctionDescriptor
+            .ofVoid(
+              argDescriptors*
+            )
+            .nn
+            .asVariadic(varArgDescriptors*)
+        case Some(value) =>
+          JFunctionDescriptor
+            .of(
+              toMemoryLayout(value),
+              argDescriptors*
+            )
+            .nn
+            .asVariadic(varArgDescriptors*)
 
     val fd = fdGen(
-      descriptor.inputDescriptors.view
+      descriptor.inputDescriptors
+        .map(toMemoryLayout),
+      varargs.view
+        .map(_.use[DescriptorOf](dc ?=> _ => dc.descriptor))
         .map(toMemoryLayout)
-        .concat(
-          varargs.view
-            .map(_.use[DescriptorOf](dc ?=> _ => dc.descriptor))
-            .map(toMemoryLayout)
-        )
-        .toSeq
+        .toList
     )
 
     linker.downcallHandle(fd).nn

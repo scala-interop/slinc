@@ -54,14 +54,10 @@ given readWriteModule17: ReadWriteModule with
         mem.writeIntArray(value, offset)
     )
 
-  override def read[A](memory: Mem, offset: Bytes)(using DescriptorOf[A]): A =
-    val desc = DescriptorOf[A]
-    readerCache.getOrElseUpdate(desc, desc.reader)(memory, offset)
-
-  override def readAlias(
+  override def read(
       memory: Mem,
       offset: Bytes,
-      typeDescriptor: RealTypeDescriptor
+      typeDescriptor: TypeDescriptor
   ): typeDescriptor.Inner = readerCache
     .getOrElseUpdate(typeDescriptor, typeDescriptor.reader)(memory, offset)
 
@@ -88,20 +84,14 @@ given readWriteModule17: ReadWriteModule with
       size
     )
 
-  override def write[A](memory: Mem, offset: Bytes, value: A)(using
-      DescriptorOf[A]
-  ): Unit =
-    val desc = DescriptorOf[A]
-    writerCache.getOrElseUpdate(desc, desc.writer)(memory, offset, value)
-
-  override def writeAlias(
+  override def write(
       memory: Mem,
       offset: Bytes,
-      realTypeDescriptor: RealTypeDescriptor,
-      value: realTypeDescriptor.Inner
+      typeDescriptor: TypeDescriptor,
+      value: typeDescriptor.Inner
   ): Unit = writerCache.getOrElseUpdate(
-    realTypeDescriptor,
-    realTypeDescriptor.writer
+    typeDescriptor,
+    typeDescriptor.writer
   )(memory, offset, value)
 
   override def writeArray[A](memory: Mem, offset: Bytes, value: Array[A])(using

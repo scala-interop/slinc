@@ -28,24 +28,20 @@ trait ReadWriteModule:
   val memReader: Reader[Mem]
   val memWriter: Writer[Mem]
 
-  def write[A](memory: Mem, offset: Bytes, value: A)(using
-      DescriptorOf[A]
-  ): Unit
-  def writeAlias(
+  def write(
       memory: Mem,
       offset: Bytes,
-      realTypeDescriptor: RealTypeDescriptor,
-      value: realTypeDescriptor.Inner
+      typeDescriptor: TypeDescriptor,
+      value: typeDescriptor.Inner
   ): Unit
   def writeArray[A](memory: Mem, offset: Bytes, value: Array[A])(using
       DescriptorOf[A]
   ): Unit
-  def read[A](memory: Mem, offset: Bytes)(using DescriptorOf[A]): A
 
-  def readAlias(
+  def read(
       memory: Mem,
       offset: Bytes,
-      typeDescriptor: RealTypeDescriptor
+      typeDescriptor: TypeDescriptor
   ): typeDescriptor.Inner
   def readArray[A](memory: Mem, offset: Bytes, size: Int)(using
       DescriptorOf[A],

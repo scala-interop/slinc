@@ -20,8 +20,8 @@ object CLong:
     else None
 
   given Alias[CLong] with
-    val name = "CLong"
-    val aliases = {
-      case (OS.Linux | OS.Darwin, Arch.X64) => LongDescriptor
-      case (OS.Windows, Arch.X64)           => IntDescriptor
+    lazy val name = "CLong"
+    lazy val aliases = {
+      case (OS.Linux | OS.Darwin, Arch.X64 | Arch.AArch64) => LongDescriptor
+      case (OS.Windows, Arch.X64)                          => IntDescriptor
     }

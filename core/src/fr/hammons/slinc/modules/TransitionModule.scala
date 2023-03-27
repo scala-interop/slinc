@@ -2,6 +2,8 @@ package fr.hammons.slinc.modules
 
 import fr.hammons.slinc.*
 
+type ArgumentTransition[A] = A => Any
+type ReturnTransition[A] = Object => A
 trait TransitionModule:
   /** Transitions a method argument to the appropriate format
     *
@@ -38,31 +40,9 @@ trait TransitionModule:
     */
   def methodReturn[A](td: TypeDescriptor, value: Object): A
 
+  def addressReturn(value: Object): Mem
+
   def memReturn(value: Object): Mem
-
-  /** Registers a method argument transition
-    *
-    * @param td
-    *   The type descriptor of the type to transition
-    * @param fn
-    *   The method that transitions the argument into the right format
-    */
-  def registerMethodArgumentTransition[A](
-      td: TypeDescriptor,
-      fn: Allocator ?=> A => Any
-  ): Unit
-
-  /** Registers a method return transition
-    *
-    * @param td
-    *   The type descriptor of the return transition
-    * @param fn
-    *   The method that transitions the return into the right format
-    */
-  def registerMethodReturnTransition[A](
-      td: TypeDescriptor,
-      fn: Object => A
-  ): Unit
 
   def functionArgument[A](td: TypeDescriptor, value: Object): A =
     methodReturn[A](td, value)

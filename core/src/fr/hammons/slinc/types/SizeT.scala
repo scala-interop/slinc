@@ -20,7 +20,8 @@ object SizeT:
     else None
 
   given Alias[SizeT] with
-    val name = "SizeT"
-    val aliases = { case (OS.Linux | OS.Darwin | OS.Windows, Arch.X64) =>
-      LongDescriptor
+    lazy val name = "SizeT"
+    lazy val aliases = {
+      case (OS.Linux | OS.Darwin | OS.Windows, Arch.X64 | Arch.AArch64) =>
+        LongDescriptor
     }

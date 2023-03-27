@@ -18,7 +18,8 @@ object TimeT:
     else None
 
   given Alias[TimeT] with
-    val name: String = "TimeT"
-    val aliases = { case (OS.Windows | OS.Linux | OS.Darwin, Arch.X64) =>
-      LongDescriptor
+    lazy val name: String = "TimeT"
+    lazy val aliases = {
+      case (OS.Windows | OS.Linux | OS.Darwin, Arch.X64 | Arch.AArch64) =>
+        LongDescriptor
     }
