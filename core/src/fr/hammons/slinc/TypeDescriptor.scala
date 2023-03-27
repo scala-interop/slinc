@@ -11,6 +11,8 @@ import fr.hammons.slinc.modules.{
 import scala.annotation.nowarn
 import scala.reflect.ClassTag
 import scala.quoted.*
+import fr.hammons.slinc.modules.TransitionModule
+import fr.hammons.slinc.modules.{ArgumentTransition, ReturnTransition}
 
 /** Describes types used by C interop
   */
@@ -23,6 +25,15 @@ sealed trait TypeDescriptor:
 
   val reader: (ReadWriteModule, DescriptorModule) ?=> Reader[Inner]
   val writer: (ReadWriteModule, DescriptorModule) ?=> Writer[Inner]
+  val argumentTransition: (
+      TransitionModule,
+      ReadWriteModule,
+      Allocator
+  ) ?=> ArgumentTransition[Inner]
+  val returnTransition: (
+      TransitionModule,
+      ReadWriteModule
+  ) ?=> ReturnTransition[Inner]
 
   val arrayReader
       : (ReadWriteModule, DescriptorModule, ClassTag[Inner]) ?=> ArrayReader[
@@ -69,51 +80,56 @@ object TypeDescriptor:
 
     '{ $descOf.descriptor }
 
-sealed trait RealTypeDescriptor extends TypeDescriptor
+sealed trait BasicDescriptor extends TypeDescriptor:
+  @nowarn("msg=unused implicit parameter")
+  override val argumentTransition = identity
 
-case object ByteDescriptor extends RealTypeDescriptor:
+  @nowarn("msg=unused implicit parameter")
+  override val returnTransition = _.asInstanceOf[Inner]
+
+case object ByteDescriptor extends BasicDescriptor:
   type Inner = Byte
   @nowarn("msg=unused implicit parameter")
   override val reader = readWriteModule.byteReader
   @nowarn("msg=unused implicit parameter")
   override val writer = readWriteModule.byteWriter
 
-case object ShortDescriptor extends RealTypeDescriptor:
+case object ShortDescriptor extends BasicDescriptor:
   type Inner = Short
   @nowarn("msg=unused implicit parameter")
   val reader = readWriteModule.shortReader
   @nowarn("msg=unused implicit parameter")
   val writer = readWriteModule.shortWriter
 
-case object IntDescriptor extends RealTypeDescriptor:
+case object IntDescriptor extends BasicDescriptor:
   type Inner = Int
   @nowarn("msg=unused implicit parameter")
   val reader = readWriteModule.intReader
   @nowarn("msg=unused implicit parameter")
   val writer = readWriteModule.intWriter
 
-case object LongDescriptor extends RealTypeDescriptor:
+case object LongDescriptor extends BasicDescriptor:
   type Inner = Long
   @nowarn("msg=unused implicit parameter")
   val reader = readWriteModule.longReader
   @nowarn("msg=unused implicit parameter")
   val writer = readWriteModule.longWriter
 
-case object FloatDescriptor extends RealTypeDescriptor:
+case object FloatDescriptor extends BasicDescriptor:
   type Inner = Float
   @nowarn("msg=unused implicit parameter")
   val reader = readWriteModule.floatReader
   @nowarn("msg=unused implicit parameter")
   val writer = readWriteModule.floatWriter
 
-case object DoubleDescriptor extends RealTypeDescriptor:
+case object DoubleDescriptor extends BasicDescriptor:
   type Inner = Double
   @nowarn("msg=unused implicit parameter")
   val reader = readWriteModule.doubleReader
   @nowarn("msg=unused implicit parameter")
   val writer = readWriteModule.doubleWriter
 
-case object PtrDescriptor extends RealTypeDescriptor:
+case object PtrDescriptor extends TypeDescriptor:
   type Inner = Ptr[?]
   @nowarn("msg=unused implicit parameter")
   override val reader = (mem, offset) =>
@@ -121,6 +137,13 @@ case object PtrDescriptor extends RealTypeDescriptor:
   @nowarn("msg=unused implicit parameter")
   override val writer = (mem, offset, a) =>
     readWriteModule.memWriter(mem, offset, a.mem)
+
+  @nowarn("msg=unused implicit parameter")
+  override val argumentTransition = _.mem.asAddress
+
+  @nowarn("msg=unused implicit parameter")
+  override val returnTransition = o =>
+    Ptr[Any](summon[TransitionModule].addressReturn(o), Bytes(0))
 
 /** A descriptor of a member of a Struct
   *
@@ -144,10 +167,9 @@ trait StructDescriptor(
     val members: List[StructMemberDescriptor],
     val clazz: Class[?],
     val transform: Tuple => Product
-) extends RealTypeDescriptor
+) extends TypeDescriptor
 
-case class AliasDescriptor[A](val real: RealTypeDescriptor)
-    extends TypeDescriptor:
+case class AliasDescriptor[A](val real: TypeDescriptor) extends TypeDescriptor:
   type Inner = A
   type RealInner = real.Inner
 
@@ -158,11 +180,17 @@ case class AliasDescriptor[A](val real: RealTypeDescriptor)
     def apply(x: real.Inner): Inner = x.asInstanceOf[Inner]
 
   val reader: (ReadWriteModule, DescriptorModule) ?=> Reader[Inner] =
-    (rwm, _) ?=> (mem, bytes) => rwm.readAlias(mem, bytes, real)
+    (rwm, _) ?=> (mem, bytes) => rwm.read(mem, bytes, real)
 
   val writer: (ReadWriteModule, DescriptorModule) ?=> Writer[Inner] =
-    (rwm, _) ?=> (mem, bytes, a) => rwm.writeAlias(mem, bytes, real, a)
+    (rwm, _) ?=> (mem, bytes, a) => rwm.write(mem, bytes, real, a)
 
+  @nowarn("msg=unused implicit parameter")
+  override val argumentTransition =
+    summon[TransitionModule].methodArgument(real, _, summon[Allocator])
+
+  @nowarn("msg=unused implicit parameter")
+  override val returnTransition = summon[TransitionModule].methodReturn(real, _)
   override def size(using dm: DescriptorModule): Bytes = dm.sizeOf(real)
   override def alignment(using dm: DescriptorModule): Bytes =
     dm.alignmentOf(real)

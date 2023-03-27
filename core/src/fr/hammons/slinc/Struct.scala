@@ -1,18 +1,14 @@
 package fr.hammons.slinc
 
 import scala.deriving.Mirror
-import scala.compiletime.{
-  uninitialized,
-  erasedValue,
-  summonInline,
-  constValueTuple
-}
+import scala.compiletime.{erasedValue, summonInline, constValueTuple}
 import scala.reflect.ClassTag
 import modules.DescriptorModule
 import fr.hammons.slinc.modules.TransitionModule
 import fr.hammons.slinc.modules.ReadWriteModule
 import fr.hammons.slinc.modules.Reader
 import fr.hammons.slinc.modules.Writer
+import scala.annotation.nowarn
 
 trait Struct[A <: Product] extends DescriptorOf[A]
 
@@ -58,8 +54,11 @@ object Struct:
   )(using rwm: ReadWriteModule): Unit =
     inline value match
       case tuple: (h *: t) =>
-        rwm.write(mem, offsets(index), tuple.head)(using
-          summonInline[DescriptorOf[h]]
+        rwm.write(
+          mem,
+          offsets(index),
+          summonInline[DescriptorOf[h]].descriptor,
+          tuple.head
         )
         writeGenHelper(offsets, index + 1, tuple.tail, mem)
       case EmptyTuple => ()
@@ -83,8 +82,10 @@ object Struct:
   )(using rwm: ReadWriteModule): A =
     inline erasedValue[A] match
       case _: (h *: t) =>
-        inline rwm.read[h](mem, offsets(index))(using
-          summonInline[DescriptorOf[h]]
+        inline rwm.read(
+          mem,
+          offsets(index),
+          summonInline[DescriptorOf[h]].descriptor
         ) *: readGenHelper[t](offsets, index + 1, mem) match
           case r: A => r
       case _: EmptyTuple =>
@@ -94,9 +95,9 @@ object Struct:
   inline def derived[A <: Product](using
       m: Mirror.ProductOf[A],
       ct: ClassTag[A]
-  )(using ReadWriteModule, TransitionModule) = new Struct[A]:
+  ) = new Struct[A]:
     type Inner = A
-    lazy val descriptor: StructDescriptor { type Inner = A } =
+    val descriptor: StructDescriptor { type Inner = A } =
       new StructDescriptor(
         memberDescriptors[A].view
           .zip(memberNames[A])
@@ -109,17 +110,13 @@ object Struct:
         val reader = readGen[A]
         val writer = writeGen[A]
 
-    summon[TransitionModule].registerMethodArgumentTransition[A](
-      this.descriptor,
-      Allocator ?=> in(_)
-    )
-    summon[TransitionModule]
-      .registerMethodReturnTransition[A](this.descriptor, out)
-    final def in(a: A)(using alloc: Allocator): Object =
-      val mem = alloc.allocate(this.descriptor, 1)
-      summon[ReadWriteModule].write(mem, Bytes(0), a)(using this)
-      summon[TransitionModule].methodArgument(mem).asInstanceOf[Object]
+        @nowarn("msg=unused implicit parameter")
+        override val returnTransition = returnValue =>
+          val mem = summon[TransitionModule].memReturn(returnValue)
+          summon[ReadWriteModule].read(mem, Bytes(0), this)
 
-    final def out(a: Object): A =
-      val mem = summon[TransitionModule].memReturn(a)
-      summon[ReadWriteModule].read[A](mem, Bytes(0))(using this)
+        @nowarn("msg=unused implicit parameter")
+        override val argumentTransition = argument =>
+          val mem = summon[Allocator].allocate(this, 1)
+          summon[ReadWriteModule].write(mem, Bytes(0), this, argument)
+          summon[TransitionModule].methodArgument(mem).asInstanceOf[Object]

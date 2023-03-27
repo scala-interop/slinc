@@ -8,7 +8,8 @@ import scala.compiletime.summonFrom
 
 class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
   inline def `unary_!`(using rwm: ReadWriteModule): A = summonFrom {
-    case descO: DescriptorOf[A] => rwm.read(mem, offset)
+    case descO: DescriptorOf[A] =>
+      rwm.read(mem, offset, descO.descriptor)
     case f: Fn[A, ?, ?] =>
       rwm.readFn(
         mem,
@@ -24,8 +25,8 @@ class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
       r.readArray(mem.resize(DescriptorOf[A].size * size), offset, size)
     )
 
-  def `unary_!_=`(value: A)(using rwM: ReadWriteModule)(using DescriptorOf[A]) =
-    rwM.write(mem, offset, value)
+  def `unary_!_=`(value: A)(using rwM: ReadWriteModule, desc: DescriptorOf[A]) =
+    rwM.write(mem, offset, desc.descriptor, value)
   def apply(bytes: Bytes): Ptr[A] = Ptr[A](mem, offset + bytes)
   def apply(index: Int)(using DescriptorOf[A], DescriptorModule): Ptr[A] =
     Ptr[A](mem, offset + (DescriptorOf[A].size * index))
@@ -61,9 +62,14 @@ object Ptr:
 
   def copy[A](using alloc: Allocator)(
       a: A
-  )(using rwm: ReadWriteModule, descriptor: DescriptorOf[A]) =
+  )(using
+      rwm: ReadWriteModule,
+      descriptor: DescriptorOf[A] {
+        val descriptor: TypeDescriptor { type Inner = A }
+      }
+  ) =
     val mem = alloc.allocate(DescriptorOf[A], 1)
-    rwm.write(mem, Bytes(0), a)
+    rwm.write(mem, Bytes(0), descriptor.descriptor, a)
     Ptr[A](mem, Bytes(0))
 
   def copy(
