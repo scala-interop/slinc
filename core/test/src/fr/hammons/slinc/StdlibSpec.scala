@@ -12,18 +12,20 @@ import fr.hammons.slinc.types.CDouble
 import fr.hammons.slinc.types.IntegralAlias
 import types.{OS, Arch}
 import fr.hammons.slinc.annotations.NameOverride
+import fr.hammons.slinc.types.CLongLong
 
 //todo: remove when https://github.com/lampepfl/dotty/issues/16876 is fixed
 trait StdlibSpec(val slinc: Slinc) extends ScalaCheckSuite:
-  import slinc.{Null, given}
-
   case class div_t(quot: CInt, rem: CInt) derives Struct
   case class ldiv_t(quot: CLong, rem: CLong) derives Struct
+  case class lldiv_t(quot: CLongLong, rem: CLongLong) derives Struct
+
   trait Cstd derives Lib:
     def abs(a: CInt): CInt
     def labs(l: CLong): CLong
     def div(a: CInt, b: CInt): div_t
     def ldiv(a: CLong, b: CLong): ldiv_t
+    def lldiv(a: CLongLong, b: CLongLong): lldiv_t
     def rand(): CInt
     def qsort(
         array: Ptr[Nothing],
@@ -34,10 +36,11 @@ trait StdlibSpec(val slinc: Slinc) extends ScalaCheckSuite:
     def sprintf(ret: Ptr[CChar], string: Ptr[CChar], args: Seq[Variadic]): Unit
     def atof(str: Ptr[CChar]): CDouble
     def strtod(str: Ptr[CChar], endptr: Ptr[Ptr[CChar]]): CDouble
-    @NameOverride("_time64", OS.Windows -> Arch.X64)
+    @NameOverride("_time64", (OS.Windows, Arch.X64))
     def time(timer: Ptr[TimeT]): TimeT
 
-  given Struct[div_t] = Struct.derived
+  import slinc.{Null, given}
+
 
   val cstd = Lib.instance[Cstd]
 
@@ -73,14 +76,26 @@ trait StdlibSpec(val slinc: Slinc) extends ScalaCheckSuite:
   test("div"):
       assertEquals(cstd.div(5, 2), div_t(2, 1))
 
+  // property("ldiv calculates quotient and remainder"):
+  //   forAll(clongChoose, clongChoose): (a: CLong, b: CLong) => 
+  //     val result = cstd.ldiv(a,b)
+
+  //     assertEquals(IntegralAlias.toLong(result.quot), IntegralAlias.toLong(a) / IntegralAlias.toLong(b))
+  //     assertEquals(IntegralAlias.toLong(result.rem), IntegralAlias.toLong(a) % IntegralAlias.toLong(b))
+
   test("ldiv"):
       assertEquals(cstd.ldiv(CLong(5), CLong(2)), ldiv_t(CLong(2), CLong(1)))
 
-  /*
+  // property("lldiv calculates quotient and remainder"):
+  //   forAll: (a: CLongLong, b: CLongLong) => 
+  //     val result = cstd.lldiv(a,b)
+
+  //     assertEquals(result.quot, a / b)
+  //     assertEquals(result.rem, a % b)
+
   test("lldiv") {
-    assertEquals(Cstd.lldiv(5L, 2L), lldiv_t(2L, 1L))
+    assertEquals(cstd.lldiv(5L, 2L), lldiv_t(2L, 1L))
   }
-   */
   test("rand"):
       assertNotEquals(cstd.rand(), cstd.rand())
 
@@ -204,6 +219,3 @@ trait StdlibSpec(val slinc: Slinc) extends ScalaCheckSuite:
         val pStr1 = !ans1
         val r1 = pStr1.copyIntoString(maxSize)
         assertEquals(r1, input)
-
-object StdlibSpec:
-  case class lldiv_t(quot: Long, rem: Long)
