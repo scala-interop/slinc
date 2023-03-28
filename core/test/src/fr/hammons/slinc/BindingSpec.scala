@@ -4,7 +4,6 @@ import munit.ScalaCheckSuite
 import scala.concurrent.duration.*
 import scala.annotation.nowarn
 
-//todo: get rid of this once https://github.com/lampepfl/dotty/issues/16876 is fixed
 trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
   import slinc.{given, *}
   override def munitTimeout: Duration = 5.minutes

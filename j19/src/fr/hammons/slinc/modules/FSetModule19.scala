@@ -3,16 +3,16 @@ package fr.hammons.slinc.modules
 import fr.hammons.slinc.*
 import java.util.concurrent.atomic.AtomicReference
 
-import fr.hammons.slinc.LibBacking
+import fr.hammons.slinc.FSetBacking
 
 import fr.hammons.slinc.CFunctionRuntimeInformation
-given libModule19: LibModule with
+given fsetModule19: FSetModule with
   override val runtimeVersion: Int = 19
 
-  override def getLibrary(
+  override def getBacking(
       desc: List[CFunctionDescriptor],
       generators: List[CFunctionBindingGenerator]
-  ): LibBacking[?] =
+  ): FSetBacking[?] =
     import LinkageModule19.*
     val fns = desc
       .zip(generators)
@@ -41,4 +41,4 @@ given libModule19: LibModule with
             )
 
           AtomicReference(fn)
-    LibBacking(IArray.from(fns)).asInstanceOf[LibBacking[?]]
+    FSetBacking(IArray.from(fns)).asInstanceOf[FSetBacking[?]]

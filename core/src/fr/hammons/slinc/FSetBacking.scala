@@ -4,7 +4,7 @@ import scala.quoted.*
 import java.util.concurrent.atomic.AtomicReference
 import scala.annotation.nowarn
 
-class LibBacking[A](arr: IArray[AtomicReference[AnyRef]]) extends Selectable:
+class FSetBacking[A](arr: IArray[AtomicReference[AnyRef]]) extends Selectable:
   @nowarn("msg=unused explicit parameter")
   transparent inline def applyDynamic(
       inline name: String,
@@ -12,10 +12,10 @@ class LibBacking[A](arr: IArray[AtomicReference[AnyRef]]) extends Selectable:
   )(
       inline args: Any*
   ) = ${
-    LibBacking.applyDynamicImpl[A]('name, 'args, 'arr)
+    FSetBacking.applyDynamicImpl[A]('name, 'args, 'arr)
   }
 
-object LibBacking:
+object FSetBacking:
   @nowarn("msg=unused implicit parameter")
   @nowarn("msg=unused local definition")
   @nowarn("msg=unused import")
@@ -48,12 +48,13 @@ object LibBacking:
 
     val inputs = args match
       case Varargs(inputs) => inputs
-    val code = Apply(
-      Select(fnTerm, fnType.classSymbol.get.declaredMethod("apply").head),
-      inputs.map(_.asTerm).toList
-    )
+    val code =
+      ValDef.let(Symbol.spliceOwner, inputs.map(_.asTerm).toList): refs =>
+        Apply(
+          Select(fnTerm, fnType.classSymbol.get.declaredMethod("apply").head),
+          refs
+        )
 
     rt.asType match
       case '[r] =>
-        val r = code.asExpr
-        '{ $r.asInstanceOf[r] }
+        code.asExprOf[r]

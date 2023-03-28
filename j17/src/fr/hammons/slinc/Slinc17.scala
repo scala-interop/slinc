@@ -5,7 +5,7 @@ import fr.hammons.slinc.modules.{
   DescriptorModule,
   TransitionModule,
   ReadWriteModule,
-  LibModule
+  FSetModule
 }
 import fr.hammons.slinc.modules.given
 
@@ -13,7 +13,7 @@ class Slinc17(_jitManager: JitManager, linker: CLinker)(using
     val dm: DescriptorModule,
     val tm: TransitionModule,
     val rwm: ReadWriteModule,
-    val lm: LibModule
+    val lm: FSetModule
 ) extends Slinc:
   protected def jitManager = _jitManager
   protected def scopePlatformSpecific = Scope17(linker)

@@ -13,7 +13,7 @@ trait Slinc:
   given dm: DescriptorModule
   given tm: TransitionModule
   given rwm: ReadWriteModule
-  given lm: LibModule
+  given lm: FSetModule
 
   val typesI = types.TypesI.platformTypes
   protected val scopeI = ScopeI(scopePlatformSpecific)
