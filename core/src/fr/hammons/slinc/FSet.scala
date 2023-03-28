@@ -7,7 +7,7 @@ import scala.annotation.nowarn
 
 trait FSet[L]:
   val description: List[CFunctionDescriptor]
-  val generation: List[CFunctionBindingGenerator]
+  val generation: List[FunctionBindingGenerator]
   private var lib: AtomicStampedReference[FSetBacking[L]] =
     AtomicStampedReference(null, 0)
   private val ver = Array(0)
@@ -44,7 +44,7 @@ object FSet:
     val generators = Expr.ofList(
       names.map: methodNameExpr =>
         '{
-          CFunctionBindingGenerator[L](
+          FunctionBindingGenerator[L](
             $methodNameExpr
           )
         }

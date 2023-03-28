@@ -18,7 +18,7 @@ trait FSetRuntimeSpec(val slinc: Slinc) extends munit.FunSuite:
         def div(i: Int, r: Int): div_t
 
       assert(
-        CFunctionRuntimeInformation(
+        FunctionContext(
           summon[FSet[L]].description.head
         ).returnAllocates
       )

@@ -2,11 +2,11 @@ package fr.hammons.slinc.modules
 
 import fr.hammons.slinc.FSetBacking
 import java.util.concurrent.atomic.AtomicReference
-import fr.hammons.slinc.CFunctionBindingGenerator
+import fr.hammons.slinc.FunctionBindingGenerator
 import fr.hammons.slinc.CFunctionDescriptor
 import fr.hammons.slinc.MethodHandler
 import fr.hammons.slinc.Variadic
-import fr.hammons.slinc.CFunctionRuntimeInformation
+import fr.hammons.slinc.FunctionContext
 import fr.hammons.slinc.DescriptorOf
 
 given fsetModule17: FSetModule with
@@ -15,13 +15,13 @@ given fsetModule17: FSetModule with
 
   override def getBacking(
       desc: List[CFunctionDescriptor],
-      generators: List[CFunctionBindingGenerator]
+      generators: List[FunctionBindingGenerator]
   ): FSetBacking[?] =
     val fns = desc
       .zip(generators)
       .map:
         case (cfd, generator) =>
-          val functionInformation = CFunctionRuntimeInformation(cfd)
+          val functionInformation = FunctionContext(cfd)
           val addr = defaultLookup(functionInformation.name).get
           val mh: MethodHandler = MethodHandler((v: Seq[Variadic]) =>
             getDowncall(cfd, v).bindTo(addr).nn

@@ -5,20 +5,20 @@ import java.util.concurrent.atomic.AtomicReference
 
 import fr.hammons.slinc.FSetBacking
 
-import fr.hammons.slinc.CFunctionRuntimeInformation
+import fr.hammons.slinc.FunctionContext
 given fsetModule19: FSetModule with
   override val runtimeVersion: Int = 19
 
   override def getBacking(
       desc: List[CFunctionDescriptor],
-      generators: List[CFunctionBindingGenerator]
+      generators: List[FunctionBindingGenerator]
   ): FSetBacking[?] =
     import LinkageModule19.*
     val fns = desc
       .zip(generators)
       .map:
         case (cfd, generator) =>
-          val runtimeInformation = CFunctionRuntimeInformation(cfd)
+          val runtimeInformation = FunctionContext(cfd)
           val addr = defaultLookup(runtimeInformation.name).get
           val mh: MethodHandler = MethodHandler((v: Seq[Variadic]) =>
             getDowncall(cfd, v).bindTo(addr).nn
