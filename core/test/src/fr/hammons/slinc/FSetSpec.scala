@@ -1,16 +1,13 @@
 package fr.hammons.slinc
 
-import munit.ScalaCheckSuite
-import org.scalacheck.Prop.*
-import scala.annotation.nowarn
-import fr.hammons.slinc.types.{CInt, CLong, TimeT, CChar}
+import fr.hammons.slinc.types.{CInt, TimeT, CChar}
 import fr.hammons.slinc.types.{OS, Arch}
 import fr.hammons.slinc.annotations.*
 
-class LibSpec extends munit.FunSuite:
+class FSetSpec extends munit.FunSuite:
   test("Unit parameters don't compile"):
       val compileResult = compileErrors("""
-    trait L derives Lib:
+    trait L derives FSet:
       def myFun(o: Unit): Unit
     """)
 
@@ -19,7 +16,7 @@ class LibSpec extends munit.FunSuite:
       assertNoDiff(compileResult.split("\n").nn(0).nn, errorMessage)
 
   test("generic binding support".ignore):
-      val error = compileErrors("""trait GoodLib2 derives Lib:
+      val error = compileErrors("""trait GoodLib2 derives FSet:
                        def qsort[A](
                           array: Ptr[A],
                           num: Int,
@@ -31,7 +28,7 @@ class LibSpec extends munit.FunSuite:
 
   test("variadic support"):
       val error = compileErrors("""
-    trait VariadicLib derives Lib:
+    trait VariadicLib derives FSet:
       def sprintf(ret: Ptr[Byte], string: Ptr[Byte], args: Seq[Variadic]): Unit
     """)
 
@@ -39,20 +36,21 @@ class LibSpec extends munit.FunSuite:
 
   test("platform dependent types"):
       val maybeError = compileErrors("""
-    trait PlatformLib derives Lib:
+    import fr.hammons.slinc.types.CLong
+    trait PlatformLib derives FSet:
       def labs(long: CLong): CLong
     """)
 
       assertNoDiff(maybeError, "")
 
   test("function descriptors should be sane"):
-      trait TestLib derives Lib:
+      trait TestLib derives FSet:
         def time(t: Ptr[TimeT]): TimeT
         def abs(c: CInt): Unit
         def sprintf(string: Ptr[CChar], args: Seq[Variadic]): Ptr[CChar]
 
       assertEquals(
-        summon[Lib[TestLib]].description,
+        summon[FSet[TestLib]].description,
         List(
           new CFunctionDescriptor(
             Map.empty.withDefaultValue("time"),
@@ -76,12 +74,12 @@ class LibSpec extends munit.FunSuite:
       )
 
   test("name overrides should be recorded"):
-      trait L derives Lib:
+      trait L derives FSet:
         @NameOverride("_time64", (OS.Windows, Arch.X64))
         def time(t: Int): Int
 
       assertEquals(
-        summon[Lib[L]].description,
+        summon[FSet[L]].description,
         List(
           new CFunctionDescriptor(
             Map((OS.Windows, Arch.X64) -> "_time64").withDefaultValue("time"),

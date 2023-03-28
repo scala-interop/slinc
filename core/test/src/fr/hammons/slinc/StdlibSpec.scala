@@ -14,13 +14,12 @@ import types.{OS, Arch}
 import fr.hammons.slinc.annotations.NameOverride
 import fr.hammons.slinc.types.CLongLong
 
-//todo: remove when https://github.com/lampepfl/dotty/issues/16876 is fixed
 trait StdlibSpec(val slinc: Slinc) extends ScalaCheckSuite:
   case class div_t(quot: CInt, rem: CInt) derives Struct
   case class ldiv_t(quot: CLong, rem: CLong) derives Struct
   case class lldiv_t(quot: CLongLong, rem: CLongLong) derives Struct
 
-  trait Cstd derives Lib:
+  trait Cstd derives FSet:
     def abs(a: CInt): CInt
     def labs(l: CLong): CLong
     def div(a: CInt, b: CInt): div_t
@@ -41,8 +40,7 @@ trait StdlibSpec(val slinc: Slinc) extends ScalaCheckSuite:
 
   import slinc.{Null, given}
 
-
-  val cstd = Lib.instance[Cstd]
+  val cstd = FSet.instance[Cstd]
 
   property("abs gives back absolute integers"):
       forAll: (i: Int) =>
@@ -77,7 +75,7 @@ trait StdlibSpec(val slinc: Slinc) extends ScalaCheckSuite:
       assertEquals(cstd.div(5, 2), div_t(2, 1))
 
   // property("ldiv calculates quotient and remainder"):
-  //   forAll(clongChoose, clongChoose): (a: CLong, b: CLong) => 
+  //   forAll(clongChoose, clongChoose): (a: CLong, b: CLong) =>
   //     val result = cstd.ldiv(a,b)
 
   //     assertEquals(IntegralAlias.toLong(result.quot), IntegralAlias.toLong(a) / IntegralAlias.toLong(b))
@@ -87,7 +85,7 @@ trait StdlibSpec(val slinc: Slinc) extends ScalaCheckSuite:
       assertEquals(cstd.ldiv(CLong(5), CLong(2)), ldiv_t(CLong(2), CLong(1)))
 
   // property("lldiv calculates quotient and remainder"):
-  //   forAll: (a: CLongLong, b: CLongLong) => 
+  //   forAll: (a: CLongLong, b: CLongLong) =>
   //     val result = cstd.lldiv(a,b)
 
   //     assertEquals(result.quot, a / b)

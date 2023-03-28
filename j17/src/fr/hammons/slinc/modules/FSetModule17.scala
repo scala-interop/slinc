@@ -1,27 +1,27 @@
 package fr.hammons.slinc.modules
 
-import fr.hammons.slinc.LibBacking
+import fr.hammons.slinc.FSetBacking
 import java.util.concurrent.atomic.AtomicReference
-import fr.hammons.slinc.CFunctionBindingGenerator
+import fr.hammons.slinc.FunctionBindingGenerator
 import fr.hammons.slinc.CFunctionDescriptor
 import fr.hammons.slinc.MethodHandler
 import fr.hammons.slinc.Variadic
-import fr.hammons.slinc.CFunctionRuntimeInformation
+import fr.hammons.slinc.FunctionContext
 import fr.hammons.slinc.DescriptorOf
 
-given libraryModule17: LibModule with
+given fsetModule17: FSetModule with
   val runtimeVersion = 17
   import LinkageModule17.*
 
-  override def getLibrary(
+  override def getBacking(
       desc: List[CFunctionDescriptor],
-      generators: List[CFunctionBindingGenerator]
-  ): LibBacking[?] =
+      generators: List[FunctionBindingGenerator]
+  ): FSetBacking[?] =
     val fns = desc
       .zip(generators)
       .map:
         case (cfd, generator) =>
-          val functionInformation = CFunctionRuntimeInformation(cfd)
+          val functionInformation = FunctionContext(cfd)
           val addr = defaultLookup(functionInformation.name).get
           val mh: MethodHandler = MethodHandler((v: Seq[Variadic]) =>
             getDowncall(cfd, v).bindTo(addr).nn
@@ -45,6 +45,6 @@ given libraryModule17: LibModule with
 
           AtomicReference(fn)
 
-    LibBacking(IArray.from(fns)).asInstanceOf[LibBacking[?]]
+    FSetBacking(IArray.from(fns)).asInstanceOf[FSetBacking[?]]
 
-  end getLibrary
+  end getBacking

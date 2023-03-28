@@ -1,30 +1,30 @@
 package fr.hammons.slinc
 
 import scala.quoted.*
-import fr.hammons.slinc.modules.LibModule
+import fr.hammons.slinc.modules.FSetModule
 import java.util.concurrent.atomic.AtomicStampedReference
 import scala.annotation.nowarn
 
-trait Lib[L]:
+trait FSet[L]:
   val description: List[CFunctionDescriptor]
-  val generation: List[CFunctionBindingGenerator]
-  private var lib: AtomicStampedReference[LibBacking[L]] =
+  val generation: List[FunctionBindingGenerator]
+  private var lib: AtomicStampedReference[FSetBacking[L]] =
     AtomicStampedReference(null, 0)
   private val ver = Array(0)
 
-  def get(using lm: LibModule): LibBacking[L] =
+  def get(using lm: FSetModule): FSetBacking[L] =
     var l = lib.get(ver)
     if ver(0) != lm.runtimeVersion || l == null then
       val old = l
-      l = lm.getLibrary(description, generation).asInstanceOf[LibBacking[L]]
+      l = lm.getBacking(description, generation).asInstanceOf[FSetBacking[L]]
       lib.compareAndSet(old, l, ver(0), lm.runtimeVersion)
-    l.asInstanceOf[LibBacking[L]]
+    l.asInstanceOf[FSetBacking[L]]
 
-object Lib:
-  transparent inline def instance[A](using l: Lib[A], lm: LibModule) =
+object FSet:
+  transparent inline def instance[A](using l: FSet[A], lm: FSetModule) =
     ${ summonImpl[A]('l, 'lm) }
 
-  inline def derived[L]: Lib[L] = ${ derivedImpl[L]() }
+  inline def derived[L]: FSet[L] = ${ derivedImpl[L]() }
 
   @nowarn
   private def derivedImpl[L]()(using q: Quotes, t: Type[L]) =
@@ -44,22 +44,22 @@ object Lib:
     val generators = Expr.ofList(
       names.map: methodNameExpr =>
         '{
-          CFunctionBindingGenerator[L](
+          FunctionBindingGenerator[L](
             $methodNameExpr
           )
         }
     )
 
     '{
-      new Lib[L]:
+      new FSet[L]:
         val description = $descriptors
         val generation = $generators
     }
 
   @nowarn
   private def summonImpl[A](
-      library: Expr[Lib[A]],
-      libraryModule: Expr[LibModule]
+      library: Expr[FSet[A]],
+      libraryModule: Expr[FSetModule]
   )(using Quotes, Type[A]): Expr[Any] =
     import quotes.reflect.*
     val methodRepr = TypeRepr
@@ -74,7 +74,7 @@ object Lib:
 
     val refined = names
       .zip(methodRepr)
-      .foldLeft(TypeRepr.of[LibBacking[A]]):
+      .foldLeft(TypeRepr.of[FSetBacking[A]]):
         case (backing, (name, repr)) =>
           Refinement(backing, name, repr)
 

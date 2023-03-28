@@ -11,7 +11,7 @@ case class div_t(quot: CInt, rem: CInt)
 @nowarn("msg=unused import")
 trait BindingsBenchmarkShape(val s: Slinc):
   import scala.language.unsafeNulls
-  trait Cstd derives Lib:
+  trait Cstd derives FSet:
     def abs(i: CInt): CInt
     def div(numer: CInt, denom: CInt): div_t
     def labs(l: CLong): CLong
@@ -22,13 +22,13 @@ trait BindingsBenchmarkShape(val s: Slinc):
         fn: Ptr[(Ptr[Nothing], Ptr[Nothing]) => Int]
     ): Unit
 
-  trait Cstd2 derives Lib:
+  trait Cstd2 derives FSet:
     def labs(l: Long): Long
 
   import s.given
 
-  val cstd = Lib.instance[Cstd]
-  val cstd2 = Lib.instance[Cstd2]
+  val cstd = FSet.instance[Cstd]
+  val cstd2 = FSet.instance[Cstd2]
 
   given Struct[div_t] = Struct.derived
 
@@ -53,9 +53,10 @@ trait BindingsBenchmarkShape(val s: Slinc):
   def abs =
     cstd.abs(6)
 
+  val clong = CLong(-15)
   @Benchmark
   def labs =
-    cstd.labs(CLong(-15))
+    cstd.labs(clong)
 
   @Benchmark
   def labs2 =

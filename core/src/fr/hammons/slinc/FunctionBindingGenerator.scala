@@ -2,22 +2,19 @@ package fr.hammons.slinc
 
 import scala.quoted.*
 import scala.annotation.nowarn
-import fr.hammons.slinc.CFunctionRuntimeInformation.{
-  InputTransition,
-  ReturnTransition
-}
-import fr.hammons.slinc.CFunctionBindingGenerator.VariadicTransition
+import fr.hammons.slinc.FunctionContext.{InputTransition, ReturnTransition}
+import fr.hammons.slinc.FunctionBindingGenerator.VariadicTransition
 
-import fr.hammons.slinc.CFunctionRuntimeInformation
-trait CFunctionBindingGenerator:
+import fr.hammons.slinc.FunctionContext
+trait FunctionBindingGenerator:
   def generate(
       methodHandler: MethodHandler,
-      transitionSet: CFunctionRuntimeInformation,
+      transitionSet: FunctionContext,
       variadicTransition: VariadicTransition,
       scope: Scope
   ): AnyRef
 
-object CFunctionBindingGenerator:
+object FunctionBindingGenerator:
   type VariadicTransition = (Allocator, Seq[Variadic]) => Seq[Any]
 
   private enum LambdaInputs:
@@ -53,7 +50,7 @@ object CFunctionBindingGenerator:
 
   inline def apply[L](
       name: String
-  ): CFunctionBindingGenerator = ${
+  ): FunctionBindingGenerator = ${
     applyImpl[L]('name)
   }
 
@@ -115,7 +112,7 @@ object CFunctionBindingGenerator:
   private def applyImpl[L](name: Expr[String])(using
       Quotes,
       Type[L]
-  ): Expr[CFunctionBindingGenerator] =
+  ): Expr[FunctionBindingGenerator] =
     import quotes.reflect.*
 
     val methodSymbol = TypeRepr
@@ -126,10 +123,10 @@ object CFunctionBindingGenerator:
       .head
 
     '{
-      new CFunctionBindingGenerator:
+      new FunctionBindingGenerator:
         def generate(
             methodHandler: MethodHandler,
-            functionInformation: CFunctionRuntimeInformation,
+            functionInformation: FunctionContext,
             variadicTransition: VariadicTransition,
             scope: Scope
         ): AnyRef =

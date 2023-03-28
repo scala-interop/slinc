@@ -7,7 +7,7 @@ class Slinc19(_jitManager: JitManager, linker: Linker)(using
     val dm: DescriptorModule,
     val tm: TransitionModule,
     val rwm: ReadWriteModule,
-    val lm: LibModule
+    val lm: FSetModule
 ) extends Slinc:
   protected def jitManager: JitManager = _jitManager
 

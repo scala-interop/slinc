@@ -1,11 +1,11 @@
 package fr.hammons.slinc
 
 import fr.hammons.slinc.modules.TransitionModule
-import fr.hammons.slinc.CFunctionRuntimeInformation.InputTransition
-import fr.hammons.slinc.CFunctionRuntimeInformation.ReturnTransition
+import fr.hammons.slinc.FunctionContext.InputTransition
+import fr.hammons.slinc.FunctionContext.ReturnTransition
 import fr.hammons.slinc.types.{os, arch}
 
-final case class CFunctionRuntimeInformation(
+final case class FunctionContext(
     name: String,
     inputDescriptors: Seq[TypeDescriptor],
     inputTransitions: IArray[InputTransition],
@@ -15,7 +15,7 @@ final case class CFunctionRuntimeInformation(
     returnAllocates: Boolean
 )
 
-object CFunctionRuntimeInformation:
+object FunctionContext:
   def apply(functionDescriptor: CFunctionDescriptor)(using
       transitionModule: TransitionModule
   ) =
@@ -43,7 +43,7 @@ object CFunctionRuntimeInformation:
           returnValue =>
             transitionModule.methodReturn[Object](descriptor, returnValue.nn)
 
-    new CFunctionRuntimeInformation(
+    new FunctionContext(
       functionDescriptor.name(os, arch),
       functionDescriptor.inputDescriptors,
       IArray.from(allocationTransition ++ inputTransitions),
