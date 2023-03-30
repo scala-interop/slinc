@@ -6,6 +6,7 @@ import fr.hammons.slinc.*
 trait LinkageModule:
   type CSymbol
   def defaultLookup(name: String): Option[CSymbol]
+  def loaderLookup(name: String): Option[CSymbol]
   def getDowncall(
       descriptor: CFunctionDescriptor,
       varArgs: Seq[Variadic]

@@ -11,10 +11,14 @@ object LinkageModule17 extends LinkageModule:
   override type CSymbol = Addressable
   private val linker = CLinker.getInstance().nn
   private val lookup = CLinker.systemLookup().nn
+  private val lookupLoader = SymbolLookup.loaderLookup().nn
   private val ts = Scope17(linker)
 
   override def defaultLookup(name: String): Option[CSymbol] =
     lookup.lookup(name).nn.toScala
+
+  override def loaderLookup(name: String): Option[CSymbol] =
+    lookupLoader.lookup(name).nn.toScala
 
   override def getDowncall(
       descriptor: CFunctionDescriptor,
