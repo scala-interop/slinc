@@ -8,15 +8,31 @@ import fr.hammons.slinc.MethodHandler
 import fr.hammons.slinc.Variadic
 import fr.hammons.slinc.FunctionContext
 import fr.hammons.slinc.DescriptorOf
+import fr.hammons.slinc.fset.Dependency
 
 given fsetModule17: FSetModule with
   val runtimeVersion = 17
   import LinkageModule17.*
 
+  val loadedLibraries: AtomicReference[Set[Dependency]] =
+    AtomicReference.apply(Set.empty)
+
   override def getBacking(
+      dependencies: List[Dependency],
       desc: List[CFunctionDescriptor],
       generators: List[FunctionBindingGenerator]
   ): FSetBacking[?] =
+
+    val loaded = loadedLibraries.get().nn
+    val newLoaded = dependencies.foldLeft(loaded):
+      case (loaded, dep @ Dependency.Resource(path)) if !loaded.contains(dep) =>
+        System.load(path)
+        loaded + dep
+      case (loaded, _) =>
+        loaded
+
+    loadedLibraries.compareAndExchange(loaded, newLoaded)
+
     val fns = desc
       .zip(generators)
       .map:

@@ -4,8 +4,11 @@ import scala.quoted.*
 import fr.hammons.slinc.modules.FSetModule
 import java.util.concurrent.atomic.AtomicStampedReference
 import scala.annotation.nowarn
+import fr.hammons.slinc.fset.Dependency
+import fr.hammons.slinc.annotations.NeedsResource
 
 trait FSet[L]:
+  val dependencies: List[Dependency]
   val description: List[CFunctionDescriptor]
   val generation: List[FunctionBindingGenerator]
   private var lib: AtomicStampedReference[FSetBacking[L]] =
@@ -16,7 +19,9 @@ trait FSet[L]:
     var l = lib.get(ver)
     if ver(0) != lm.runtimeVersion || l == null then
       val old = l
-      l = lm.getBacking(description, generation).asInstanceOf[FSetBacking[L]]
+      l = lm
+        .getBacking(dependencies, description, generation)
+        .asInstanceOf[FSetBacking[L]]
       lib.compareAndSet(old, l, ver(0), lm.runtimeVersion)
     l.asInstanceOf[FSetBacking[L]]
 
@@ -52,6 +57,8 @@ object FSet:
 
     '{
       new FSet[L]:
+        val dependencies =
+          NeedsResource[L].map(nr => Dependency.Resource(nr.resourcePath))
         val description = $descriptors
         val generation = $generators
     }

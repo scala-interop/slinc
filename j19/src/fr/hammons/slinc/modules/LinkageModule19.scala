@@ -7,16 +7,21 @@ import scala.jdk.OptionConverters.*
 import java.lang.foreign.MemorySegment
 import fr.hammons.slinc.*
 import java.lang.foreign.MemoryLayout
+import java.lang.foreign.SymbolLookup
 
 object LinkageModule19 extends LinkageModule:
   import descriptorModule19.*
   override type CSymbol = MemorySegment
   private val linker = Linker.nativeLinker().nn
   private val lookup = linker.defaultLookup().nn
+  private val loaderLookup = SymbolLookup.loaderLookup().nn
   private val ts = Scope19(linker)
 
   override def defaultLookup(name: String): Option[CSymbol] =
     lookup.lookup(name).nn.toScala
+
+  override def loaderLookup(name: String): Option[CSymbol] =
+    loaderLookup.lookup(name).nn.toScala
 
   override def getDowncall(
       descriptor: CFunctionDescriptor,
