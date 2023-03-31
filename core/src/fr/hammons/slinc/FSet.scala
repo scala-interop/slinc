@@ -58,7 +58,7 @@ object FSet:
     '{
       new FSet[L]:
         val dependencies =
-          NeedsResource[L].map(nr => Dependency.Resource(nr.resourcePath))
+          NeedsResource[L].map(_.toDependency)
         val description = $descriptors
         val generation = $generators
     }

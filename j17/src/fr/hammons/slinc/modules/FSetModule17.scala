@@ -14,31 +14,22 @@ given fsetModule17: FSetModule with
   val runtimeVersion = 17
   import LinkageModule17.*
 
-  val loadedLibraries: AtomicReference[Set[Dependency]] =
-    AtomicReference.apply(Set.empty)
-
   override def getBacking(
       dependencies: List[Dependency],
       desc: List[CFunctionDescriptor],
       generators: List[FunctionBindingGenerator]
   ): FSetBacking[?] =
 
-    val loaded = loadedLibraries.get().nn
-    val newLoaded = dependencies.foldLeft(loaded):
-      case (loaded, dep @ Dependency.Resource(path)) if !loaded.contains(dep) =>
-        System.load(path)
-        loaded + dep
-      case (loaded, _) =>
-        loaded
-
-    loadedLibraries.compareAndExchange(loaded, newLoaded)
+    dependencies.foreach(LinkageTools.loadDependency)
 
     val fns = desc
       .zip(generators)
       .map:
         case (cfd, generator) =>
           val functionInformation = FunctionContext(cfd)
-          val addr = defaultLookup(functionInformation.name).get
+          val addr = defaultLookup(functionInformation.name)
+            .orElse(loaderLookup(functionInformation.name))
+            .get
           val mh: MethodHandler = MethodHandler((v: Seq[Variadic]) =>
             getDowncall(cfd, v).bindTo(addr).nn
           )

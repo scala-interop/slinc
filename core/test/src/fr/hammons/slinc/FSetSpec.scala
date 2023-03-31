@@ -4,6 +4,7 @@ import fr.hammons.slinc.types.{CInt, TimeT, CChar}
 import fr.hammons.slinc.types.{OS, Arch}
 import fr.hammons.slinc.annotations.*
 import fr.hammons.slinc.fset.Dependency
+import java.nio.file.Paths
 
 class FSetSpec extends munit.FunSuite:
   test("Unit parameters don't compile"):
@@ -91,12 +92,22 @@ class FSetSpec extends munit.FunSuite:
         )
       )
 
-  test("resources should be recorded for loading"):
+  test("library resources should be recorded for loading"):
       @NeedsResource("test")
       trait L derives FSet:
         def abs(i: CInt): CInt
 
       assertEquals(
         summon[FSet[L]].dependencies,
-        List(Dependency.Resource("test"))
+        List(Dependency.LibraryResource(Paths.get("test").nn))
+      )
+
+  test("c resources should be recorded for loading"):
+      @NeedsResource("test.c")
+      trait L derives FSet:
+        def abs(i: CInt): CInt
+
+      assertEquals(
+        summon[FSet[L]].dependencies,
+        List(Dependency.CResource(Paths.get("test.c").nn))
       )
