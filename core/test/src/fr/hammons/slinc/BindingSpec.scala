@@ -3,17 +3,20 @@ package fr.hammons.slinc
 import munit.ScalaCheckSuite
 import scala.concurrent.duration.*
 import scala.annotation.nowarn
+import annotations.Needs
 
 trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
   import slinc.{given, *}
   override def munitTimeout: Duration = 5.minutes
   @LibraryName("@test")
   object Test derives Library:
+    @nowarn("msg=unused explicit parameter")
     def identity_int(i: CInt): CInt = Library.binding
 
     case class I31Struct(field: Ptr[CChar]) derives Struct
 
     // issue 31 test binding
+    @nowarn("msg=unused explicit parameter")
     def i31test(struct: I31Struct): Ptr[CChar] = Library.binding
 
     case class I36Struct(i: CInt, c: Ptr[CChar]) derives Struct
@@ -24,6 +27,7 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
     // issue 36 test bindings
     def i36_get_my_struct(): Ptr[I36Struct] = Library.binding
     def i36_get_mystruct_by_value(): I36Struct = Library.binding
+    @nowarn("msg=unused explicit parameter")
     def i36_copy_my_struct(ptr: Ptr[I36Struct]): Unit = Library.binding
     def i36_nested(): Ptr[I36Outer] = Library.binding
 
@@ -63,3 +67,18 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
 
     assertEquals((!(!ptr2).inner).i, 43)
   }
+
+  // ZLIB test
+  test("zlib works"):
+      @Needs("z")
+      trait ZLib derives FSet:
+        def zlibVersion(): Ptr[CChar]
+      val zlib = FSet.instance[ZLib]
+
+      val version = zlib.zlibVersion().copyIntoString(256)
+
+      assertEquals(
+        version.count(_ == '.'),
+        2,
+        s"$version contains more than 2 periods."
+      )

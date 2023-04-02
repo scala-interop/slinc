@@ -59,6 +59,9 @@ object LinkageTools:
   def load(path: Path): Unit =
     System.load(path.toAbsolutePath().toString())
 
+  def loadLibrary(name: String): Unit =
+    System.loadLibrary(name)
+
   def loadDependency(dependency: Dependency): Unit = synchronized {
     val currentDeps = dependenciesLoaded.get.nn
     if !currentDeps.contains(dependency) then
@@ -70,6 +73,8 @@ object LinkageTools:
           val cachedFile = sendResourceToCache(path)
           val compilationPath = compileCachedCCode(cachedFile)
           load(compilationPath)
+        case Dependency.PathLibrary(name) =>
+          loadLibrary(name)
 
       dependenciesLoaded.compareAndExchange(
         currentDeps,

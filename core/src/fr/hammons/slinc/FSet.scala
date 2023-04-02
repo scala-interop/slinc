@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicStampedReference
 import scala.annotation.nowarn
 import fr.hammons.slinc.fset.Dependency
 import fr.hammons.slinc.annotations.NeedsResource
+import fr.hammons.slinc.annotations.Needs
 
 trait FSet[L]:
   val dependencies: List[Dependency]
@@ -58,7 +59,7 @@ object FSet:
     '{
       new FSet[L]:
         val dependencies =
-          NeedsResource[L].map(_.toDependency)
+          (NeedsResource[L] ++ Needs[L]).map(_.toDependency)
         val description = $descriptors
         val generation = $generators
     }

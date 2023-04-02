@@ -1,4 +1,4 @@
-![workflow status](https://github.com/markehammons/slinc/actions/workflows/ci.yml/badge.svg)![Maven Central](https://img.shields.io/maven-central/v/fr.hammons/slinc-core_3)
+![workflow status](https://github.com/markehammons/slinc/actions/workflows/ci.yml/badge.svg)![Maven Central](https://img.shields.io/maven-central/v/fr.hammons/slinc-core_3)[![codecov](https://codecov.io/gh/markehammons/slinc/branch/master/graph/badge.svg?token=MSTGFQYNXI)](https://codecov.io/gh/markehammons/slinc)
 
 ```
 S     Lin     C
@@ -51,3 +51,7 @@ val myLib = Lib.instance[MyLib]
 This library relies on the user importing the runtime from `fr.hammons.slinc.runtime`.
 
 To learn more about the library, refer to the documentation website for Slinc [here](https://slinc.hammons.fr/docs/index.html)
+
+## Coverage 
+
+![CodeCvg](https://codecov.io/gh/markehammons/slinc/branch/master/graphs/tree.svg?token=MSTGFQYNXI)
