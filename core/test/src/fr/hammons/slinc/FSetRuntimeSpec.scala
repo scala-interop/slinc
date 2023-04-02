@@ -1,6 +1,8 @@
 package fr.hammons.slinc
 
 import java.{util as ju}
+import fr.hammons.slinc.annotations.NeedsResource
+import fr.hammons.slinc.types.CInt
 
 trait FSetRuntimeSpec(val slinc: Slinc) extends munit.FunSuite:
   import slinc.given
@@ -21,4 +23,14 @@ trait FSetRuntimeSpec(val slinc: Slinc) extends munit.FunSuite:
         FunctionContext(
           summon[FSet[L]].description.head
         ).returnAllocates
+      )
+
+  test("C resource loading works"):
+      @NeedsResource("test.c")
+      trait L derives FSet:
+        def identity_int(i: CInt): CInt
+
+      assertEquals(
+        FSet.instance[L].identity_int(5),
+        5
       )

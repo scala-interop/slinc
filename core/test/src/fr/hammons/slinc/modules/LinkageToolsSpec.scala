@@ -6,29 +6,36 @@ import java.io.FileInputStream
 
 class LinkageToolsSpec extends munit.FunSuite:
   test("send resource to cache"):
-      val resultLocation = LinkageTools.sendResourceToCache("test.c")
-      val resultPath = Paths.get(resultLocation)
+      val testC = Paths.get("test.c").nn
+      val resultLocation =
+        LinkageTools.sendResourceToCache(testC)
 
-      assert(Files.exists(resultPath))
-      Files.delete(resultPath)
+      assert(Files.exists(resultLocation.cachePath))
+      Files.delete(resultLocation.cachePath)
 
-      LinkageTools.sendResourceToCache("test.c")
-      assert(Files.exists(resultPath))
+      LinkageTools.sendResourceToCache(testC)
+      assert(Files.exists(resultLocation.cachePath))
 
-      Files.writeString(resultPath, "lala")
+      Files.writeString(resultLocation.cachePath, "lala")
 
-      assertEquals(Files.readString(resultPath), "lala")
+      assertEquals(Files.readString(resultLocation.cachePath), "lala")
 
-      LinkageTools.sendResourceToCache("test.c")
+      val cacheResult = LinkageTools.sendResourceToCache(testC)
 
-      assertNotEquals(Files.readString(resultPath), "lala")
+      assertNotEquals(Files.readString(resultLocation.cachePath), "lala")
+      assert(cacheResult.updated)
 
   test("hashing works"):
       val hash1 =
         LinkageTools.hash(getClass().getResourceAsStream(s"/native/test.c").nn)
 
       val hash2 = LinkageTools.hash(
-        FileInputStream(LinkageTools.sendResourceToCache("test.c"))
+        FileInputStream(
+          LinkageTools
+            .sendResourceToCache(Paths.get("test.c").nn)
+            .cachePath
+            .toString()
+        )
       )
 
       assertEquals(hash1, hash2)
