@@ -121,3 +121,15 @@ class FSetSpec extends munit.FunSuite:
         summon[FSet[L]].dependencies,
         List(Dependency.PathLibrary("posix"))
       )
+
+  test("file dependencies should be recorded for loading"):
+      @NeedsFile("core/test/resources/native/test.c")
+      trait L derives FSet:
+        def abs(i: CInt): CInt
+
+      assertEquals(
+        summon[FSet[L]].dependencies,
+        List(
+          Dependency.FilePath(Paths.get("core/test/resources/native/test.c").nn)
+        )
+      )

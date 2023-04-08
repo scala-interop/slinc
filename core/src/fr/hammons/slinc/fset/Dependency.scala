@@ -6,3 +6,4 @@ enum Dependency:
   case LibraryResource(path: Path)
   case CResource(path: Path)
   case PathLibrary(name: String)
+  case FilePath(path: Path)

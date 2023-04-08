@@ -75,6 +75,8 @@ object LinkageTools:
           load(compilationPath)
         case Dependency.PathLibrary(name) =>
           loadLibrary(name)
+        case Dependency.FilePath(path) =>
+          load(path)
 
       dependenciesLoaded.compareAndExchange(
         currentDeps,

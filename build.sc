@@ -44,6 +44,32 @@ trait BaseModule extends ScoverageModule with ScalafmtModule {
       ivy"org.scalameta::munit-scalacheck:$munitVersion"
     )
 
+
+    def compileLibs = T {
+
+      val suffix = System.getProperty("os.name") match {
+        case "windows" => ".dll"
+        case _ => ".so"
+      }
+
+      os.proc(
+        "clang",
+        "-shared",
+        "-fvisibility=default",
+        "-Os",
+        "-o",
+        s"libs/test$suffix",
+        "libs/test-code.c"
+      ).spawn()
+
+      os.pwd / "libs" / s"test$suffix"
+    }
+
+    override def compile = T{
+      compileLibs()
+      super.compile()
+    }
+
   }
 }
 object core
