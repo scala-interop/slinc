@@ -2,6 +2,7 @@ package fr.hammons.slinc.modules
 
 import java.nio.file.Paths
 import fr.hammons.slinc.types.{OS, os}
+import fr.hammons.slinc.types.{Arch, arch}
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
@@ -15,10 +16,14 @@ import scala.sys.process.*
 object LinkageTools:
   private val dependenciesLoaded = AtomicReference(Set.empty[Dependency])
 
-  private val libSuffix = os match
+  private lazy val libSuffix = os match
     case OS.Linux | OS.Darwin => ".so"
     case OS.Windows           => ".dll"
     case OS.Unknown => throw Error("Lib suffix is unknown on this platform")
+
+  private lazy val potentialArchMarks = arch match
+    case Arch.X64         => Set("x64", "x86_64", "amd64")
+    case Arch.Unknown | _ => Set.empty
 
   private val resourcesLocation = "/native"
 
@@ -35,7 +40,7 @@ object LinkageTools:
         .nn
     case OS.Unknown => throw Error("Cache location is unknown on this platform")
 
-  def sendResourceToCache(location: Path): CacheFile =
+  def sendResourceToCache(location: String): CacheFile =
     if !Files.exists(cacheLocation) then Files.createDirectories(cacheLocation)
     val cacheFile = cacheLocation.resolve(location)
     val resourceHash = hash(
@@ -66,17 +71,45 @@ object LinkageTools:
     val currentDeps = dependenciesLoaded.get.nn
     if !currentDeps.contains(dependency) then
       dependency match
-        case Dependency.LibraryResource(path) =>
+        case Dependency.LibraryResource(path, true) =>
           val cachedFile = sendResourceToCache(path)
           load(cachedFile.cachePath)
+
+        case Dependency.LibraryResource(path, false) =>
+          val resolvedPath = potentialArchMarks.view
+            .map(archMark => s"${path}_$archMark$libSuffix")
+            .find(path =>
+              getClass().getResource(s"$resourcesLocation/$path") != null
+            )
+            .getOrElse(
+              throw Error(
+                s"No library resource found for $arch $os with path like $path"
+              )
+            )
+
+          val cachedFile = sendResourceToCache(resolvedPath)
+          load(cachedFile.cachePath)
+
         case Dependency.CResource(path) =>
           val cachedFile = sendResourceToCache(path)
           val compilationPath = compileCachedCCode(cachedFile)
           load(compilationPath)
         case Dependency.PathLibrary(name) =>
           loadLibrary(name)
-        case Dependency.FilePath(path) =>
+        case Dependency.FilePath(path, true) =>
           load(path)
+
+        case Dependency.FilePath(path, false) =>
+          val resolvedPath = potentialArchMarks.view
+            .map(archMark => Paths.get(s"${path}_$archMark$libSuffix").nn)
+            .find(Files.exists(_))
+            .getOrElse(
+              throw Error(
+                s"No library file found for $arch $os with path like $path"
+              )
+            )
+
+          load(resolvedPath)
 
       dependenciesLoaded.compareAndExchange(
         currentDeps,
@@ -100,7 +133,7 @@ object LinkageTools:
       )
       if cmd.! != 0 then
         throw Error(
-          s"failed to compile resource ${cachedFile.origin.toAbsolutePath()}"
+          s"failed to compile resource ${cachedFile.origin}"
         )
 
     libLocation

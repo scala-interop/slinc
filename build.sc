@@ -7,11 +7,10 @@ import $ivy.`com.lihaoyi::mill-contrib-buildinfo:`
 import mill.contrib.buildinfo.BuildInfo
 import com.github.lolgab.mill.mima._
 
-
 import $ivy.`com.lihaoyi::mill-contrib-scoverage:`
 import mill.contrib.scoverage.{ScoverageModule, ScoverageReport}
 
-object scoverage extends BaseModule with ScoverageReport 
+object scoverage extends BaseModule with ScoverageReport
 
 trait BaseModule extends ScoverageModule with ScalafmtModule {
   def scalaVersion = "3.3.0-RC3"
@@ -36,21 +35,20 @@ trait BaseModule extends ScoverageModule with ScalafmtModule {
     "-source:future",
     "-Ykind-projector",
     "-Vprofile"
-    )
+  )
 
-  trait BaseTest extends ScoverageTests with TestModule.Munit  {
+  trait BaseTest extends ScoverageTests with TestModule.Munit {
     def ivyDeps = Agg(
       ivy"org.scalameta::munit:$munitVersion",
       ivy"org.scalameta::munit-scalacheck:$munitVersion"
     )
 
+    val suffix = System.getProperty("os.name") match {
+      case "windows" => ".dll"
+      case _         => ".so"
+    }
 
     def compileLibs = T {
-
-      val suffix = System.getProperty("os.name") match {
-        case "windows" => ".dll"
-        case _ => ".so"
-      }
 
       os.proc(
         "clang",
@@ -58,16 +56,39 @@ trait BaseModule extends ScoverageModule with ScalafmtModule {
         "-fvisibility=default",
         "-Os",
         "-o",
-        s"libs/test$suffix",
+        s"libs/test_x64$suffix",
         "libs/test-code.c"
       ).spawn()
 
       os.pwd / "libs" / s"test$suffix"
     }
 
-    override def compile = T{
+    override def compile = T {
       compileLibs()
+      generateResources()
       super.compile()
+    }
+
+    def generateResources = T {
+      val nativeResources =
+        resources().view.map(_.path / "native").filter(os.exists)
+      val cFiles = nativeResources.flatMap(f => os.walk(f).filter(_.ext == "c")).toSet
+
+      cFiles.map { file =>
+        val destination =
+          file / os.up / s"${file.last.stripSuffix(".c")}_x64$suffix"
+        T.log.info(s"Compiling ${destination.toString} from ${file.toString}")
+        os.proc(
+          "clang",
+          "-shared",
+          "-fvisibility=default",
+          "-Os",
+          "-o",
+          destination.toString,
+          file.toString
+        ).spawn()
+        PathRef(destination)
+      }
     }
 
   }
@@ -82,12 +103,13 @@ object core
 
   override def scalaDocOptions = T {
     super.scalaDocOptions() ++ Seq(
-      // "-project-logo", 
+      // "-project-logo",
       // (millSourcePath / "docs" / "_assets" / "images" / "logo.svg").toString,
-      "-project", "slinc"
+      "-project",
+      "slinc"
     )
   }
-  
+
   def pomSettings = pomTemplate("slinc-core")
 
   def specializationArity = 4
@@ -181,7 +203,7 @@ object `runtime` extends BaseModule with PublishableModule {
   object test extends Tests with TestModule.Munit {
     def ivyDeps = Agg(ivy"org.scalameta::munit:$munitVersion")
 
-    def jvm = T.input{ System.getProperty("java.version")}
+    def jvm = T.input { System.getProperty("java.version") }
     def moduleDeps = super.moduleDeps ++ Seq(core.test)
     def forkArgs = super.forkArgs() ++ Seq(
       "--enable-preview",

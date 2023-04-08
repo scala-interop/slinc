@@ -10,8 +10,12 @@ final case class NeedsResource(val resourcePath: String)
     extends StaticAnnotation,
       DependencyAnnotation:
   def toDependency: Dependency = resourcePath match
-    case path @ s"${_}.c" => Dependency.CResource(Paths.get(path).nn)
-    case path             => Dependency.LibraryResource(Paths.get(path).nn)
+    case path @ s"${_}.c" => Dependency.CResource(path)
+    case path =>
+      Dependency.LibraryResource(
+        path,
+        path.endsWith(".so") || path.endsWith(".dll")
+      )
 
 object NeedsResource:
   inline def apply[L]: List[NeedsResource] = ${
