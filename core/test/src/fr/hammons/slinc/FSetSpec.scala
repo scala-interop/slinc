@@ -94,12 +94,18 @@ class FSetSpec extends munit.FunSuite:
 
   test("library resources should be recorded for loading"):
       @NeedsResource("test")
+      @NeedsResource("test.so")
+      @NeedsResource("test.dll")
       trait L derives FSet:
         def abs(i: CInt): CInt
 
       assertEquals(
-        summon[FSet[L]].dependencies,
-        List(Dependency.LibraryResource(Paths.get("test").nn))
+        summon[FSet[L]].dependencies.toSet,
+        Set(
+          Dependency.LibraryResource("test", false),
+          Dependency.LibraryResource("test.so", true),
+          Dependency.LibraryResource("test.dll", true)
+        )
       )
 
   test("c resources should be recorded for loading"):
@@ -109,7 +115,7 @@ class FSetSpec extends munit.FunSuite:
 
       assertEquals(
         summon[FSet[L]].dependencies,
-        List(Dependency.CResource(Paths.get("test.c").nn))
+        List(Dependency.CResource("test.c"))
       )
 
   test("library dependencies should be recorded for loading"):
@@ -124,12 +130,17 @@ class FSetSpec extends munit.FunSuite:
 
   test("file dependencies should be recorded for loading"):
       @NeedsFile("core/test/resources/native/test.c")
+      @NeedsFile("test.so")
+      @NeedsFile("test.dll")
       trait L derives FSet:
         def abs(i: CInt): CInt
 
       assertEquals(
-        summon[FSet[L]].dependencies,
-        List(
-          Dependency.FilePath(Paths.get("core/test/resources/native/test.c").nn)
+        summon[FSet[L]].dependencies.toSet,
+        Set(
+          Dependency
+            .FilePath(Paths.get("core/test/resources/native/test.c").nn, false),
+          Dependency.FilePath(Paths.get("test.so").nn, true),
+          Dependency.FilePath(Paths.get("test.dll").nn, true)
         )
       )

@@ -1,12 +1,11 @@
 package fr.hammons.slinc.modules
 
 import java.nio.file.Files
-import java.nio.file.Paths
 import java.io.FileInputStream
 
 class LinkageToolsSpec extends munit.FunSuite:
   test("send resource to cache"):
-      val testC = Paths.get("test.c").nn
+      val testC = "test.c"
       val resultLocation =
         LinkageTools.sendResourceToCache(testC)
 
@@ -32,7 +31,7 @@ class LinkageToolsSpec extends munit.FunSuite:
       val hash2 = LinkageTools.hash(
         FileInputStream(
           LinkageTools
-            .sendResourceToCache(Paths.get("test.c").nn)
+            .sendResourceToCache("test.c")
             .cachePath
             .toString()
         )

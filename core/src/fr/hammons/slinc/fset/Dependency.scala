@@ -3,7 +3,7 @@ package fr.hammons.slinc.fset
 import java.nio.file.Path
 
 enum Dependency:
-  case LibraryResource(path: Path)
-  case CResource(path: Path)
+  case LibraryResource(path: String, specific: Boolean)
+  case CResource(path: String)
   case PathLibrary(name: String)
-  case FilePath(path: Path)
+  case FilePath(path: Path, specific: Boolean)

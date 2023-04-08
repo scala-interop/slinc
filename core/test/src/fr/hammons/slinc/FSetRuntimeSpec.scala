@@ -39,7 +39,37 @@ trait FSetRuntimeSpec(val slinc: Slinc) extends munit.FunSuite:
         5
       )
 
-  test("Relative file loading works"):
+  test("Lib resource absolute loading works"):
+      if os == OS.Windows then
+        @NeedsResource("test_x64.dll")
+        trait L derives FSet:
+          def identity_int(i: CInt): CInt
+
+        assertEquals(
+          FSet.instance[L].identity_int(2),
+          2
+        )
+      else
+        @NeedsResource("test_x64.so")
+        trait L derives FSet:
+          def identity_int(i: CInt): CInt
+
+        assertEquals(
+          FSet.instance[L].identity_int(2),
+          2
+        )
+
+  test("Lib resource platform independent loading works"):
+      @NeedsResource("test")
+      trait L derives FSet:
+        def identity_int(i: CInt): CInt
+
+      assertEquals(
+        FSet.instance[L].identity_int(2),
+        2
+      )
+
+  test("Overridden relative file loading works"):
       if os == OS.Windows then
         @NeedsFile("libs/test.dll")
         trait L derives FSet:
@@ -58,6 +88,16 @@ trait FSetRuntimeSpec(val slinc: Slinc) extends munit.FunSuite:
           FSet.instance[L].test_fn(2),
           2
         )
+
+  test("Platform independent file loading works"):
+      @NeedsFile("libs/test")
+      trait L derives FSet:
+        def test_fn(i: CInt): CInt
+
+      assertEquals(
+        FSet.instance[L].test_fn(2),
+        2
+      )
 
   test("Absolute file loading works"):
       if os == OS.Linux then

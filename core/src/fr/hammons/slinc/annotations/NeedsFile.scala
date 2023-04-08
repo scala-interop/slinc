@@ -10,7 +10,11 @@ final case class NeedsFile(val path: String)
       DependencyAnnotation:
   def toDependency: Dependency =
     val filePath = Paths.get(path).nn
-    Dependency.FilePath(filePath)
+    val fileName = filePath.getFileName().toString()
+    Dependency.FilePath(
+      filePath,
+      fileName.endsWith(".so") || fileName.endsWith(".dll")
+    )
 
 object NeedsFile:
   inline def apply[F]: List[NeedsFile] = ${
