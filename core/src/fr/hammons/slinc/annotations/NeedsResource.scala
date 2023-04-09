@@ -4,7 +4,6 @@ import scala.annotation.StaticAnnotation
 
 import quoted.*
 import fr.hammons.slinc.fset.Dependency
-import java.nio.file.Paths
 
 final case class NeedsResource(val resourcePath: String)
     extends StaticAnnotation,

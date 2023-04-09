@@ -3,38 +3,27 @@ package fr.hammons.slinc
 import scala.util.chaining.*
 import scala.compiletime.uninitialized
 import fr.hammons.slinc.modules.*
+import types.SizeT
 
 trait Slinc:
   protected def jitManager: JitManager
 
   protected def scopePlatformSpecific: ScopeI.PlatformSpecific
-  protected def libraryIPlatformSpecific: LibraryI.PlatformSpecific
 
   given dm: DescriptorModule
   given tm: TransitionModule
   given rwm: ReadWriteModule
   given lm: FSetModule
 
-  val typesI = types.TypesI.platformTypes
   protected val scopeI = ScopeI(scopePlatformSpecific)
-  protected val libraryI = LibraryI(libraryIPlatformSpecific)
 
-  export typesI.{*, given}
-  export libraryI.*
-  export Convertible.as
-  export PotentiallyConvertible.maybeAs
   export scopeI.given
   export container.ContextProof.given
-
-  object x64:
-    val Linux: types.x64.Linux.type = types.x64.Linux
-    val Mac: types.x64.Mac.type = types.x64.Mac
-    val Windows: types.x64.Windows.type = types.x64.Windows
 
   export types.os
 
   def sizeOf[A](using l: DescriptorOf[A]) =
-    DescriptorOf[A].size.toLong.maybeAs[SizeT]
+    SizeT.maybe(DescriptorOf[A].size.toLong).get
 
   def Null[A] = scopePlatformSpecific.nullPtr[A]
 

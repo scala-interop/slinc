@@ -17,7 +17,6 @@ class Slinc17(_jitManager: JitManager, linker: CLinker)(using
 ) extends Slinc:
   protected def jitManager = _jitManager
   protected def scopePlatformSpecific = Scope17(linker)
-  protected def libraryIPlatformSpecific = Library17(linker)
 
 @SlincImpl(17)
 object Slinc17:

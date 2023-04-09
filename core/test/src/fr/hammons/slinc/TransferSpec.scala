@@ -4,6 +4,7 @@ import munit.ScalaCheckSuite
 import org.scalacheck.Prop.*
 import org.scalacheck.Gen
 import org.scalacheck.Arbitrary
+import types.*
 
 trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
   import slinc.{*, given}
@@ -50,8 +51,8 @@ trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
     Scope.global {
       val mem = Ptr.blank[X]
 
-      !mem = X(2.as[SizeT], 3)
-      assertEquals(!mem, X(2.as[SizeT], 3))
+      !mem = X(SizeT(2.toShort), 3)
+      assertEquals(!mem, X(SizeT(2.toShort), 3))
     }
   }
 
