@@ -9,6 +9,7 @@ import fr.hammons.slinc.annotations.NeedsResource
 import fr.hammons.slinc.annotations.Needs
 import fr.hammons.slinc.annotations.NeedsFile
 
+import fr.hammons.slinc.fset.FSetBacking
 trait FSet[L]:
   val dependencies: List[Dependency]
   val description: List[CFunctionDescriptor]

@@ -2,7 +2,6 @@ package fr.hammons.slinc
 
 import scala.quoted.*
 import java.lang.invoke.MethodHandle
-import scala.compiletime.asMatchable
 import fr.hammons.slinc.modules.TransitionModule
 import scala.annotation.nowarn
 
@@ -88,75 +87,6 @@ object MethodHandleTools:
         )
       )
 
-      // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
-  @nowarn("msg=unused implicit parameter")
-  def calculateMethodHandleImplementation[L](
-      platformExpr: Expr[LibraryI.PlatformSpecific],
-      addresses: Expr[IArray[Object]]
-  )(using
-      Quotes,
-      Type[L]
-  ): Expr[(IArray[MethodHandle], IArray[Seq[TypeDescriptor] => MethodHandle])] =
-    import quotes.reflect.*
-
-    val methodSymbols = MacroHelpers.getMethodSymbols(
-      TypeRepr
-        .of[L]
-        .classSymbol
-        .getOrElse(
-          report.errorAndAbort(
-            s"Can't calculate methodhandles from type ${Type.show[L]}"
-          )
-        )
-    )
-
-    val methodHandles = methodSymbols
-      .map(
-        FunctionDescriptor.fromDefDef
-      )
-      .zipWithIndex
-      .map { case (descriptor, addressIdx) =>
-        '{
-          $platformExpr
-            .getDowncall(
-              $addresses(${ Expr(addressIdx) }),
-              $descriptor
-            )
-            .nn
-        }
-      }
-
-    val varMethodHandleGens = methodSymbols
-      .map(
-        FunctionDescriptor.fromDefDef
-      )
-      .zipWithIndex
-      .map((descriptor, addressIdx) =>
-        '{ (varargsDesc: Seq[TypeDescriptor]) =>
-          $platformExpr
-            .getDowncall(
-              $addresses(${ Expr(addressIdx) }),
-              $descriptor
-                .addVarargs(varargsDesc*)
-            )
-            .nn
-        }
-      )
-
-    '{
-      (
-        IArray(${ Varargs(methodHandles) }*),
-        IArray(${ Varargs(varMethodHandleGens) }*)
-      )
-    }
-
-  inline def calculateMethodHandles[L](
-      platformSpecific: LibraryI.PlatformSpecific,
-      addresses: IArray[Object]
-  ): (IArray[MethodHandle], IArray[Seq[TypeDescriptor] => MethodHandle]) = ${
-    calculateMethodHandleImplementation[L]('platformSpecific, 'addresses)
-  }
-
   inline def wrappedMH[A](mem: Mem, methodHandle: MethodHandle) = ${
     wrappedMHImpl[A]('mem, 'methodHandle)
   }
@@ -164,11 +94,13 @@ object MethodHandleTools:
   // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
   @nowarn("msg=unused implicit parameter")
   @nowarn("msg=unused local definition")
+  @nowarn("msg=unused import")
   private def wrappedMHImpl[A](
       mem: Expr[Mem],
       methodHandleExpr: Expr[MethodHandle]
   )(using Quotes, Type[A]) =
     import quotes.reflect.*
+    import scala.compiletime.asMatchable
 
     val (inputTypes, retType) = TypeRepr.of[A].asMatchable match
       case AppliedType(_, args) =>

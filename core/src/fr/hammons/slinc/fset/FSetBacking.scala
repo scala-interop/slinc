@@ -1,4 +1,4 @@
-package fr.hammons.slinc
+package fr.hammons.slinc.fset
 
 import scala.quoted.*
 import java.util.concurrent.atomic.AtomicReference

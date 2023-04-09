@@ -5,7 +5,6 @@ import scala.annotation.nowarn
 import fr.hammons.slinc.FunctionContext.{InputTransition, ReturnTransition}
 import fr.hammons.slinc.FunctionBindingGenerator.VariadicTransition
 
-import fr.hammons.slinc.FunctionContext
 trait FunctionBindingGenerator:
   def generate(
       methodHandler: MethodHandler,

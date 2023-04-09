@@ -25,17 +25,6 @@ private[slinc] object MacroHelpers:
         report.errorAndAbort(s"Cannot find information about ${Type.show[L]}")
       )
 
-  def findOwningClass(using q: Quotes)(s: q.reflect.Symbol): q.reflect.Symbol =
-    if s.isClassDef then s
-    else findOwningClass(s.owner)
-
-  def findOwningMethod(using q: Quotes)(s: q.reflect.Symbol): q.reflect.Symbol =
-    if s.isDefDef then s
-    else findOwningMethod(s.owner)
-
-  def getMethodSymbols(using q: Quotes)(s: q.reflect.Symbol) =
-    s.declaredMethods.filter(_.name != "writeReplace")
-
   def getInputsAndOutputType(using
       q: Quotes
   )(methodSymbol: q.reflect.Symbol) =

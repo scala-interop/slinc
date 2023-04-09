@@ -3,7 +3,7 @@ package fr.hammons.slinc.modules
 import fr.hammons.slinc.*
 import java.util.concurrent.atomic.AtomicReference
 
-import fr.hammons.slinc.FSetBacking
+import fr.hammons.slinc.fset.FSetBacking
 
 import fr.hammons.slinc.FunctionContext
 import fr.hammons.slinc.fset.Dependency
