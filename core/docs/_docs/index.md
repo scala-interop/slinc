@@ -15,7 +15,7 @@ Slinc is published to Maven Central for Scala 3. It is built to take advantage o
 In your `build.sbt`:
 
 ```scala
-libraryDependencies += "fr.hammons" %% "slinc-runtime" % "0.2.0"
+libraryDependencies += "fr.hammons" %% "slinc-runtime" % "0.3.0"
 //if forking and on Java 17
 javaOptions ++= Seq("--add-modules=jdk.incubator.foreign", "--enable-native-access=ALL-UNNAMED")
 ```
@@ -32,13 +32,15 @@ Once you have your build system set up, you can create a new file and write the 
 
 ```scala
 import fr.hammons.slinc.runtime.given
+import fr.hammons.slinc.types.*
+import fr.hammons.slinc.*
 
 case class div_t(quot: CInt, rem: CInt) derives Struct 
 
-trait MyLib derives Lib:
+trait MyLib derives FSet:
   def div(numer: CInt, denom: CInt): div_t
 
-val myLib = Lib.instance[MyLib]
+val myLib = FSet.instance[MyLib]
 
 @main def calc = 
   val (quot, rem) = Tuple.fromProduct(myLib.div(5,2))
