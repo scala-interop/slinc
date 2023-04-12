@@ -61,7 +61,21 @@ The list of operations available on a `Ptr[A]`:
 * `!ptr = 5` - copy data into a pointer  (requires `Send[A]` be defined)
 * `Ptr.blank[A](n: Int)` - create a blank space in native memory that can store `n` consecutive instances of `A` (requires `LayoutOf[A]` be defined)
 * `Ptr.copy[A](a: A)` - create a copy of `a` in native memory (requires `Send[A]`)
-* `Ptr.asArray(size: Int)` - attempts to copy the data at the pointer into an Array of size `size` (requires `Receive[A]`). This is a very dangerous operation that can crash your program if you don't have all the data you need. 
+* `Ptr.asArray(size: Int)` - attempts to copy the data at the pointer into an Array of size `size` (requires `Receive[A]`). This is a very dangerous operation that can crash your prgram if you don't have all the data you need. 
+
+### String
+
+To interact with `String`, you'll need a `Ptr` of `CChar`, and a `Scope`.
+
+```scala
+trait aCLib derives FSet:
+  def eval_string(code : Ptr[CChar]):Unit
+
+Scope.confined {  
+  val t = Ptr.copy("So Stringy")
+  cLib.eval_string(t);
+}
+```
 
 ## Structs
 
