@@ -7,6 +7,8 @@ import fr.hammons.slinc.fset.FSetBacking
 
 import fr.hammons.slinc.FunctionContext
 import fr.hammons.slinc.fset.Dependency
+
+import java.util.NoSuchElementException
 given fsetModule19: FSetModule with
   override val runtimeVersion: Int = 19
 
@@ -26,7 +28,11 @@ given fsetModule19: FSetModule with
           val runtimeInformation = FunctionContext(cfd)
           val addr = defaultLookup(runtimeInformation.name)
             .orElse(loaderLookup(runtimeInformation.name))
-            .get
+            .getOrElse(
+              throw new NoSuchElementException(
+                s"unable to find native function: ${runtimeInformation.name}"
+              )
+            )
           val mh: MethodHandler = MethodHandler((v: Seq[Variadic]) =>
             getDowncall(cfd, v).bindTo(addr).nn
           )

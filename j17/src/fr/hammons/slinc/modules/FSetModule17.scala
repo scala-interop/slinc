@@ -9,6 +9,7 @@ import fr.hammons.slinc.Variadic
 import fr.hammons.slinc.FunctionContext
 import fr.hammons.slinc.DescriptorOf
 import fr.hammons.slinc.fset.Dependency
+import java.util.NoSuchElementException
 
 given fsetModule17: FSetModule with
   val runtimeVersion = 17
@@ -29,7 +30,11 @@ given fsetModule17: FSetModule with
           val functionInformation = FunctionContext(cfd)
           val addr = defaultLookup(functionInformation.name)
             .orElse(loaderLookup(functionInformation.name))
-            .get
+            .getOrElse(
+              throw new NoSuchElementException(
+                s"unable to find native function: ${functionInformation.name}"
+              )
+            )
           val mh: MethodHandler = MethodHandler((v: Seq[Variadic]) =>
             getDowncall(cfd, v).bindTo(addr).nn
           )
