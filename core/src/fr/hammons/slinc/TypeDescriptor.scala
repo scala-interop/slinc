@@ -59,7 +59,6 @@ sealed trait TypeDescriptor:
       while i < a.length do
         writer(mem, size * i + offset, a(i))
         i += 1
-
 object TypeDescriptor:
   @nowarn("msg=unused implicit parameter")
   @nowarn("msg=unused local definition")
@@ -196,3 +195,18 @@ case class AliasDescriptor[A](val real: TypeDescriptor) extends TypeDescriptor:
     dm.alignmentOf(real)
   override def toCarrierType(using dm: DescriptorModule): Class[?] =
     dm.toCarrierType(real)
+
+case object VaListDescriptor extends TypeDescriptor:
+  override val reader: (ReadWriteModule, DescriptorModule) ?=> Reader[Inner] =
+    ???
+
+  override val argumentTransition
+      : (TransitionModule, ReadWriteModule, Allocator) ?=> ArgumentTransition[
+        Inner
+      ] = ???
+
+  override val writer: (ReadWriteModule, DescriptorModule) ?=> Writer[Inner] =
+    ???
+
+  override val returnTransition
+      : (TransitionModule, ReadWriteModule) ?=> ReturnTransition[Inner] = ???
