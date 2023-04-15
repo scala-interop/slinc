@@ -4,6 +4,8 @@
 # define EXPORTED
 #endif
 
+#include <stdarg.h>
+
 EXPORTED int identity_int(int i) {
   return i;
 }
@@ -59,4 +61,12 @@ EXPORTED void i36_copy_my_struct(I36Struct * my_struct) {
 
 EXPORTED const I36Outer* i36_nested(void) {
   return &_i36Outer;
+}
+
+EXPORTED int i144_pass_va_list(va_list args) {
+  va_list my_args;
+  va_copy(args, my_args);
+  int i = va_arg(my_args, int);
+  va_end(my_args);
+  return i;
 }

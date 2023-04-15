@@ -9,14 +9,16 @@ import jdk.incubator.foreign.CLinker.{
   C_DOUBLE,
   C_FLOAT,
   C_LONG_LONG,
-  C_POINTER
+  C_POINTER,
+  C_VA_LIST
 }
 import jdk.incubator.foreign.{
   MemoryLayout,
   MemoryAddress,
   MemorySegment,
-  GroupLayout
-}
+  GroupLayout,
+  CLinker
+}, CLinker.VaList
 import scala.collection.concurrent.TrieMap
 
 given descriptorModule17: DescriptorModule with
@@ -32,6 +34,7 @@ given descriptorModule17: DescriptorModule with
     case DoubleDescriptor       => classOf[Double]
     case PtrDescriptor          => classOf[MemoryAddress]
     case _: StructDescriptor    => classOf[MemorySegment]
+    case VaListDescriptor       => classOf[VaList]
     case ad: AliasDescriptor[?] => toCarrierType(ad.real)
 
   def genLayoutList(
@@ -76,6 +79,7 @@ given descriptorModule17: DescriptorModule with
     case PtrDescriptor    => Bytes(toMemoryLayout(PtrDescriptor).byteSize())
     case sd: StructDescriptor =>
       Bytes(toGroupLayout(sd).byteSize())
+    case VaListDescriptor => Bytes(toMemoryLayout(VaListDescriptor).byteSize())
     case ad: AliasDescriptor[?] => sizeOf(ad.real)
 
   override def alignmentOf(td: TypeDescriptor): Bytes = td match
@@ -118,6 +122,7 @@ given descriptorModule17: DescriptorModule with
     case FloatDescriptor        => C_FLOAT.nn
     case DoubleDescriptor       => C_DOUBLE.nn
     case PtrDescriptor          => C_POINTER.nn
+    case VaListDescriptor       => C_VA_LIST.nn
     case sd: StructDescriptor   => toGroupLayout(sd)
     case ad: AliasDescriptor[?] => toMemoryLayout(ad.real)
 

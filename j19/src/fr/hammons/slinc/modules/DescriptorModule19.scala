@@ -7,6 +7,7 @@ import java.lang.foreign.MemoryLayout
 import java.lang.foreign.MemoryAddress
 import java.lang.foreign.MemorySegment
 import java.lang.foreign.GroupLayout
+import java.lang.foreign.VaList
 
 given descriptorModule19: DescriptorModule with
   private val sdt = TrieMap.empty[StructDescriptor, GroupLayout]
@@ -20,6 +21,7 @@ given descriptorModule19: DescriptorModule with
     case FloatDescriptor        => ValueLayout.JAVA_FLOAT.nn
     case DoubleDescriptor       => ValueLayout.JAVA_DOUBLE.nn
     case PtrDescriptor          => ValueLayout.ADDRESS.nn
+    case VaListDescriptor       => ValueLayout.ADDRESS.nn
     case sd: StructDescriptor   => toGroupLayout(sd)
     case ad: AliasDescriptor[?] => toMemoryLayout(ad.real)
 
@@ -79,6 +81,7 @@ given descriptorModule19: DescriptorModule with
     case LongDescriptor         => classOf[Long]
     case FloatDescriptor        => classOf[Float]
     case DoubleDescriptor       => classOf[Double]
+    case VaListDescriptor       => classOf[VaList]
     case PtrDescriptor          => classOf[MemoryAddress]
     case _: StructDescriptor    => classOf[MemorySegment]
     case ad: AliasDescriptor[?] => toCarrierType(ad.real)
@@ -118,6 +121,7 @@ given descriptorModule19: DescriptorModule with
     case FloatDescriptor        => Bytes(4)
     case DoubleDescriptor       => Bytes(8)
     case PtrDescriptor          => Bytes(ValueLayout.ADDRESS.nn.byteSize())
+    case VaListDescriptor       => Bytes(ValueLayout.ADDRESS.nn.byteSize())
     case sd: StructDescriptor   => Bytes(toGroupLayout(sd).byteSize())
     case ad: AliasDescriptor[?] => sizeOf(ad.real)
 
@@ -131,6 +135,7 @@ given descriptorModule19: DescriptorModule with
       case FloatDescriptor  => Bytes(4)
       case DoubleDescriptor => Bytes(8)
       case PtrDescriptor    => Bytes(ValueLayout.ADDRESS.nn.byteAlignment())
+      case VaListDescriptor => Bytes(ValueLayout.ADDRESS.nn.byteSize())
       case sd: StructDescriptor =>
         sd.members.view.map(_.descriptor).map(alignmentOf).max
       case ad: AliasDescriptor[?] =>
