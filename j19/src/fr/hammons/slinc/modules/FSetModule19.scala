@@ -50,7 +50,7 @@ given fsetModule19: FSetModule with
                         data,
                         allocator
                       ),
-              tempScope()
+              tempScope
             )
 
           AtomicReference(fn)

@@ -53,6 +53,9 @@ object DescriptorOf:
   given [A]: DescriptorOf[Ptr[A]] =
     ptrDescriptor.asInstanceOf[DescriptorOf[Ptr[A]]]
 
+  given DescriptorOf[VarArgs] with
+    val descriptor: TypeDescriptor { type Inner = VarArgs } = VaListDescriptor
+
   // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
   @nowarn("msg=unused implicit parameter")
   def getDescriptorFor[A](using Quotes, Type[A]) =

@@ -5,7 +5,7 @@ import fr.hammons.slinc.*
 import java.lang.invoke.MethodHandle
 import scala.reflect.ClassTag
 
-given readWriteModule19: ReadWriteModule with
+private[slinc] given readWriteModule19: ReadWriteModule with
   val writerCache = DependentTrieMap[Writer]
 
   val arrayWriterCache = DependentTrieMap[[I] =>> Writer[Array[I]]]

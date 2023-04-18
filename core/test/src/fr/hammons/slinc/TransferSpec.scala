@@ -145,3 +145,68 @@ trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
       }
     }
   }
+
+  test("varargs can be sent and retrieved"):
+      Scope.confined {
+        val vaList = VarArgsBuilder(
+          4.toByte,
+          5.toShort,
+          6,
+          7.toLong,
+          2f,
+          3d,
+          Null[Int],
+          A(1, 2),
+          CLong(4: Byte)
+        ).build
+
+        assertEquals(vaList.get[Byte], 4.toByte, "byte assert")
+        assertEquals(vaList.get[Short], 5.toShort, "short assert")
+        assertEquals(vaList.get[Int], 6, "int assert")
+        assertEquals(vaList.get[Long], 7L, "long assert")
+        assertEquals(vaList.get[Float], 2f, "float assert")
+        assertEquals(vaList.get[Double], 3d, "double assert")
+        assertEquals(
+          vaList.get[Ptr[Int]].mem.asAddress,
+          Null[Int].mem.asAddress,
+          "ptr assert"
+        )
+        assertEquals(vaList.get[A], A(1, 2), "struct assert")
+        assertEquals(vaList.get[CLong], CLong(4: Byte), "alias assert")
+      }
+
+  test("varargs can be skipped"):
+      Scope.confined {
+        val vaList = VarArgsBuilder(
+          4.toByte,
+          2f
+        ).build
+
+        vaList.skip[Byte]
+        assertEquals(vaList.get[Float], 2f)
+      }
+
+  test("varargs can be copied and reread"):
+      Scope.confined {
+        val vaList = VarArgsBuilder(
+          4: Byte,
+          2f
+        ).build
+
+        val vaList2 = vaList.copy()
+
+        assertEquals(vaList.get[Byte], 4: Byte)
+        assertEquals(vaList.get[Float], 2f)
+        assertEquals(vaList2.get[Byte], 4: Byte)
+        assertEquals(vaList2.get[Float], 2f)
+      }
+
+  test("varargs can be converted to and from pointers"):
+      Scope.confined {
+        val vaPtr = VarArgsBuilder(
+          4: Byte,
+          2f
+        ).build.ptr
+
+        assertEquals(vaPtr.toVarArg.get[Byte], 4: Byte)
+      }

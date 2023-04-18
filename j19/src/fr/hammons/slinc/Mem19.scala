@@ -4,6 +4,7 @@ import java.lang.foreign.MemorySegment
 import java.lang.foreign.MemorySession
 import java.lang.foreign.ValueLayout, ValueLayout.*
 import java.lang.foreign.Addressable
+import java.lang.foreign.VaList
 
 object Mem19:
   val javaShort = JAVA_SHORT.nn.withBitAlignment(8)
@@ -22,6 +23,10 @@ class Mem19(private[slinc] val mem: MemorySegment) extends Mem:
     mem.asSlice(offset.toLong).nn.copyFrom(MemorySegment.ofArray(v))
 
   def asAddress: Object = mem.address().nn
+
+  def asVarArgs: VarArgs = VarArgs19(
+    VaList.ofAddress(mem.address(), MemorySession.global()).nn
+  )
 
   def readDouble(offset: Bytes): Double = mem.get(javaDouble, offset.toLong)
 

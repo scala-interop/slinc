@@ -60,4 +60,4 @@ object LinkageModule19 extends LinkageModule:
     linker.downcallHandle(fd).nn
   end getDowncall
 
-  def tempScope(): Scope = ts.createTempScope
+  lazy val tempScope: Scope = ts.createTempScope

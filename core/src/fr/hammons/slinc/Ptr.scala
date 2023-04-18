@@ -45,6 +45,8 @@ object Ptr:
       while (i < maxSize && !resizedPtr(i) != 0) do i += 1
 
       String(resizedPtr.asArray(i).unsafeArray, "ASCII")
+
+  extension (p: Ptr[Nothing]) def toVarArg = p.mem.asVarArgs
   def blank[A](using DescriptorOf[A], Allocator): Ptr[A] =
     this.blankArray[A](1)
 
