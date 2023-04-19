@@ -197,6 +197,7 @@ case class AliasDescriptor[A](val real: TypeDescriptor) extends TypeDescriptor:
     dm.toCarrierType(real)
 
 case object VaListDescriptor extends TypeDescriptor:
+  type Inner = VarArgs
   override val reader: (ReadWriteModule, DescriptorModule) ?=> Reader[Inner] =
     ???
 

@@ -24,3 +24,4 @@ trait Allocator:
       .nn
     mh
   def base: Object
+  def makeVarArgs(vbuilder: VarArgsBuilder): VarArgs

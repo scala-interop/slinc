@@ -6,12 +6,17 @@ import jdk.incubator.foreign.ResourceScope
 import jdk.incubator.foreign.CLinker.{C_INT, C_POINTER}
 import jdk.incubator.foreign.Addressable
 import jdk.incubator.foreign.MemoryAddress
+import jdk.incubator.foreign.CLinker.VaList
 
 class Mem17(private[slinc] val mem: MemorySegment) extends Mem:
   override def readDouble(offset: Bytes): Double =
     MemoryAccess.getDoubleAtOffset(mem, offset.toLong)
 
   override def asAddress: Object = mem.address().nn
+
+  override def asVarArgs: VarArgs = VarArgs17(
+    VaList.ofAddress(mem.address().nn).nn
+  )
 
   override def readLong(offset: Bytes): Long =
     MemoryAccess.getLongAtOffset(mem, offset.toLong)

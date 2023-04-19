@@ -12,4 +12,4 @@ trait LinkageModule:
       varArgs: Seq[Variadic]
   ): MethodHandle
   // todo: stop-gap for method handles, to get rid of ASAP
-  def tempScope(): Scope
+  lazy val tempScope: Scope

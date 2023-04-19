@@ -4,10 +4,17 @@ import java.lang.foreign.SegmentAllocator
 import java.lang.foreign.MemorySession
 import java.lang.foreign.Linker
 import java.lang.foreign.{FunctionDescriptor as JFunctionDescriptor}
-import fr.hammons.slinc.modules.descriptorModule19
+import fr.hammons.slinc.modules.{descriptorModule19, transitionModule19}
+import java.lang.foreign.VaList
+import java.lang.foreign.ValueLayout
+import scala.jdk.FunctionConverters.*
+import java.lang.foreign.Addressable
+import java.lang.foreign.MemorySegment
+import fr.hammons.slinc.modules.LinkageModule19
+import scala.annotation.nowarn
 
 class Allocator19(
-    segmentAllocator: SegmentAllocator,
+    val segmentAllocator: SegmentAllocator,
     scope: MemorySession,
     linker: Linker
 ) extends Allocator:
@@ -41,3 +48,60 @@ class Allocator19(
   )
 
   override def base: Object = segmentAllocator
+
+  private def build(
+      builder: VaList.Builder,
+      typeDescriptor: TypeDescriptor,
+      value: Matchable
+  ): Unit =
+    (typeDescriptor, value) match
+      case (ByteDescriptor, v: Byte) =>
+        builder.addVarg(ValueLayout.JAVA_INT, v.toInt)
+      case (ShortDescriptor, v: Short) =>
+        builder.addVarg(ValueLayout.JAVA_INT, v.toInt)
+      case (IntDescriptor, v: Int) =>
+        builder.addVarg(ValueLayout.JAVA_INT, v)
+      case (LongDescriptor, v: Long) =>
+        builder.addVarg(ValueLayout.JAVA_LONG, v)
+      case (FloatDescriptor, v: Float) =>
+        builder.addVarg(ValueLayout.JAVA_DOUBLE, v.toFloat)
+      case (DoubleDescriptor, v: Double) =>
+        builder.addVarg(ValueLayout.JAVA_DOUBLE, v)
+      case (PtrDescriptor, v: Ptr[?]) =>
+        builder.addVarg(
+          ValueLayout.ADDRESS,
+          LinkageModule19.tempScope(alloc ?=>
+            transitionModule19
+              .methodArgument[Ptr[?]](PtrDescriptor, v, alloc)
+              .asInstanceOf[Addressable]
+          )
+        )
+      case (sd: StructDescriptor, v) =>
+        builder.addVarg(
+          descriptorModule19.toGroupLayout(sd),
+          LinkageModule19.tempScope(alloc ?=>
+            transitionModule19
+              .methodArgument(sd, v, alloc)
+              .asInstanceOf[MemorySegment]
+          )
+        )
+      case (AliasDescriptor(real), v) =>
+        build(builder, real, v)
+
+  @nowarn("msg=unused import")
+  override def makeVarArgs(vbuilder: VarArgsBuilder): VarArgs =
+    import scala.compiletime.asMatchable
+
+    val vaList =
+      VaList.make(
+        _b =>
+          val builder = _b.nn
+          vbuilder.vs.foreach: variadic =>
+            variadic.use[DescriptorOf](dO ?=>
+              v => build(builder, dO.descriptor, v.asMatchable)
+            )
+        ,
+        scope
+      )
+
+    new VarArgs19(vaList.nn)
