@@ -37,16 +37,25 @@ jobs:
         run: |
           ./mill core.compile
           ./mill core.test
-          ./mill core.scoverage.xmlReport
-          cp out/core/scoverage/xmlReport.dest/scoverage.xml reports/core-coverage.xml
-
         env: 
           JAVA_HOME: ${{ env.JAVA_HOME_17_X64}}
+
+      - run: |
+          ./mill core.scoverage.xmlReport
+          cp out/core/scoverage/xmlReport.dest/scoverage.xml reports/core-coverage.xml
+        env: 
+          JAVA_HOME: ${{ env.JAVA_HOME_17_X64}}
+
+
           
       - name: Java 17 Implementation test
         run: |
           ./mill j17.compile
           ./mill j17.test
+        env: 
+          JAVA_HOME: ${{ env.JAVA_HOME_17_X64}}
+
+      - run: |
           ./mill j17.scoverage.xmlReport
           cp out/j17/scoverage/xmlReport.dest/scoverage.xml reports/java17-coverage.xml 
 
@@ -57,12 +66,17 @@ jobs:
         run: |
           ./mill j19.compile
           ./mill j19.test 
+
+      - run: |
           ./mill j19.scoverage.xmlReport 
           cp out/j19/scoverage/xmlReport.dest/scoverage.xml reports/java19-coverage.xml
 
       - name: Runtime 17 implementation tests 
-        run: |
-          ./mill runtime.test 
+        run: ./mill runtime.test 
+        env: 
+          JAVA_HOME: ${{ env.JAVA_HOME_17_X64 }}
+
+      - run: |
           ./mill runtime.scoverage.xmlReport 
           cp out/runtime/scoverage/xmlReport.dest/scoverage.xml reports/java-17-runtime-coverage.xml
 
@@ -70,8 +84,8 @@ jobs:
           JAVA_HOME: ${{ env.JAVA_HOME_17_X64 }}
         
       - name: Runtime 19 implementation tests 
-        run: |
-          ./mill runtime.test
+        run: ./mill runtime.test
+      - run: |
           ./mill runtime.scoverage.xmlReport
           cp out/runtime/scoverage/xmlReport.dest/scoverage.xml reports/java-19-runtime-coverage.xml
 
