@@ -43,24 +43,35 @@ trait BaseModule extends ScoverageModule with ScalafmtModule {
       ivy"org.scalameta::munit-scalacheck:$munitVersion"
     )
 
-    val suffix = System.getProperty("os.name") match {
+    val suffix = System.getProperty("os.name").split(" ")(0).toLowerCase match {
       case "windows" => ".dll"
       case _         => ".so"
     }
 
     def compileLibs = T {
+      val destination = os.pwd / "libs" / s"test$suffix"
 
-      os.proc(
+      T.log.info(s"Compiling ${destination.toString} from libs/test-code.c")
+
+      val r = os.proc(
         "clang",
+        "-v",
         "-shared",
         "-fvisibility=default",
         "-Os",
         "-o",
         s"libs/test_x64$suffix",
         "libs/test-code.c"
-      ).spawn()
+      ).call()
 
-      os.pwd / "libs" / s"test$suffix"
+      if(r.exitCode != 0) {
+        T.log.error(r.out.trim())
+        throw new Exception("compilation failed!!")
+      } else {
+        T.log.info(r.out.trim())
+      }
+
+      PathRef(destination)
     }
 
     override def compile = T {
@@ -78,15 +89,24 @@ trait BaseModule extends ScoverageModule with ScalafmtModule {
         val destination =
           file / os.up / s"${file.last.stripSuffix(".c")}_x64$suffix"
         T.log.info(s"Compiling ${destination.toString} from ${file.toString}")
-        os.proc(
+        val r = os.proc(
           "clang",
+          "-v",
           "-shared",
           "-fvisibility=default",
           "-Os",
           "-o",
           destination.toString,
           file.toString
-        ).spawn()
+        ).call()
+
+        if (r.exitCode != 0) {
+          T.log.error(r.out.trim())
+          throw new Exception("compilation failed")
+        } else {
+          T.log.info(r.out.trim())
+        }
+        
         PathRef(destination)
       }
     }

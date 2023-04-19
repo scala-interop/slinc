@@ -29,12 +29,15 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
     def i36_copy_my_struct(ptr: Ptr[I36Struct]): Unit
     def i36_nested(): Ptr[I36Outer]
 
-  val test = FSet.instance[TestLib]
   test("int_identity") {
+    val test = FSet.instance[TestLib]
+
     assertEquals(test.identity_int(5), 5)
   }
 
   test("issue 31 fix") {
+    val test = FSet.instance[TestLib]
+
     Scope.confined {
       val struct = I31Struct(
         Ptr.copy("hello world!")
@@ -44,6 +47,8 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
   }
 
   test("issue 36 fix") {
+    val test = FSet.instance[TestLib]
+
     val ptr = test.i36_get_my_struct()
 
     assertEquals((!ptr).i, 42)
@@ -69,6 +74,8 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
 
   // ZLIB test
   test("zlib works"):
+      val test = FSet.instance[TestLib]
+
       @Needs("z")
       trait ZLib derives FSet:
         def zlibVersion(): Ptr[CChar]
