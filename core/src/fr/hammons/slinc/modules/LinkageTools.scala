@@ -41,25 +41,29 @@ object LinkageTools:
     case OS.Unknown => throw Error("Cache location is unknown on this platform")
 
   def sendResourceToCache(location: String): CacheFile =
-    if !Files.exists(cacheLocation) then Files.createDirectories(cacheLocation)
-    val cacheFile = cacheLocation.resolve(location)
-    val resourceHash = hash(
-      getClass()
-        .getResourceAsStream(s"$resourcesLocation/$location")
-        .nn
-    )
+    val resourceStream =
+      getClass().getResourceAsStream(s"$resourcesLocation/$location")
+    if resourceStream == null then
+      throw Error(s"Could not find a resource like $location!!")
+    else
+      if !Files.exists(cacheLocation) then
+        Files.createDirectories(cacheLocation)
+      val cacheFile = cacheLocation.resolve(location)
+      val resourceHash = hash(
+        resourceStream
+      )
 
-    if !Files.exists(cacheFile) || hash(
-        FileInputStream(cacheFile.toString())
-      ) != resourceHash
-    then
-      Files.deleteIfExists(cacheFile)
-      val stream = getClass().getResourceAsStream(s"/native/$location")
-      if stream != null then Files.copy(stream, cacheFile)
-      else throw Error(s"Could not find resource /native/$location")
+      if !Files.exists(cacheFile) || hash(
+          FileInputStream(cacheFile.toString())
+        ) != resourceHash
+      then
+        Files.deleteIfExists(cacheFile)
+        val stream = getClass().getResourceAsStream(s"/native/$location")
+        if stream != null then Files.copy(stream, cacheFile)
+        else throw Error(s"Could not find resource /native/$location")
 
-      CacheFile(location, cacheFile.nn, true)
-    else CacheFile(location, cacheFile.nn, false)
+        CacheFile(location, cacheFile.nn, true)
+      else CacheFile(location, cacheFile.nn, false)
 
   def load(path: Path): Unit =
     System.load(path.toAbsolutePath().toString())
@@ -124,6 +128,7 @@ object LinkageTools:
     if !Files.exists(libLocation) || cachedFile.updated then
       val cmd = Seq(
         "clang",
+        "-v",
         "-shared",
         "-fvisibility=default",
         "-Os",
