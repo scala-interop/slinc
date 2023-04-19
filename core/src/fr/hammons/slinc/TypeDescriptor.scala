@@ -198,16 +198,19 @@ case class AliasDescriptor[A](val real: TypeDescriptor) extends TypeDescriptor:
 
 case object VaListDescriptor extends TypeDescriptor:
   type Inner = VarArgs
+  // todo: replace with a reader implementation
   override val reader: (ReadWriteModule, DescriptorModule) ?=> Reader[Inner] =
     ???
 
   override val argumentTransition
       : (TransitionModule, ReadWriteModule, Allocator) ?=> ArgumentTransition[
         Inner
-      ] = ???
+      ] = _.ptr.mem.asAddress
 
+  // todo: replace with a writer implementation
   override val writer: (ReadWriteModule, DescriptorModule) ?=> Writer[Inner] =
     ???
 
   override val returnTransition
-      : (TransitionModule, ReadWriteModule) ?=> ReturnTransition[Inner] = ???
+      : (TransitionModule, ReadWriteModule) ?=> ReturnTransition[Inner] = o =>
+    Ptr[Nothing](summon[TransitionModule].addressReturn(o), Bytes(0)).toVarArg

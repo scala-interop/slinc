@@ -148,6 +148,7 @@ trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
 
   test("varargs can be sent and retrieved"):
       Scope.confined {
+        val vaListForVaList = VarArgsBuilder(4).build
         val vaList = VarArgsBuilder(
           4.toByte,
           5.toShort,
@@ -157,7 +158,8 @@ trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
           3d,
           Null[Int],
           A(1, 2),
-          CLong(4: Byte)
+          CLong(4: Byte),
+          vaListForVaList
         ).build
 
         assertEquals(vaList.get[Byte], 4.toByte, "byte assert")
@@ -173,6 +175,7 @@ trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
         )
         assertEquals(vaList.get[A], A(1, 2), "struct assert")
         assertEquals(vaList.get[CLong], CLong(4: Byte), "alias assert")
+        assertEquals(vaList.get[VarArgs].get[CInt], 4)
       }
 
   test("varargs can be skipped"):
