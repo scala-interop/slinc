@@ -34,7 +34,7 @@ given descriptorModule17: DescriptorModule with
     case DoubleDescriptor       => classOf[Double]
     case PtrDescriptor          => classOf[MemoryAddress]
     case _: StructDescriptor    => classOf[MemorySegment]
-    case VaListDescriptor       => classOf[VaList]
+    case VaListDescriptor       => classOf[MemoryAddress]
     case ad: AliasDescriptor[?] => toCarrierType(ad.real)
 
   def genLayoutList(
@@ -122,7 +122,7 @@ given descriptorModule17: DescriptorModule with
     case FloatDescriptor        => C_FLOAT.nn
     case DoubleDescriptor       => C_DOUBLE.nn
     case PtrDescriptor          => C_POINTER.nn
-    case VaListDescriptor       => C_VA_LIST.nn
+    case VaListDescriptor       => C_POINTER.nn
     case sd: StructDescriptor   => toGroupLayout(sd)
     case ad: AliasDescriptor[?] => toMemoryLayout(ad.real)
 

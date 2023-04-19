@@ -31,7 +31,7 @@ class VarArgs17(args: VaList) extends VarArgs:
             .nn
         )
       case AliasDescriptor(real) => get(real)
-      case VaListDescriptor      => ???
+      case VaListDescriptor      => args.vargAsAddress(C_POINTER).nn
   def get[A](using d: DescriptorOf[A]): A =
     transitionModule17.methodReturn[A](d.descriptor, get(d.descriptor))
 

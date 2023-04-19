@@ -87,6 +87,8 @@ class Allocator19(
         )
       case (AliasDescriptor(real), v) =>
         build(builder, real, v)
+      case (VaListDescriptor, varArg: VarArgs19) =>
+        build(builder, PtrDescriptor, varArg.ptr)
 
   @nowarn("msg=unused import")
   override def makeVarArgs(vbuilder: VarArgsBuilder): VarArgs =

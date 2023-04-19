@@ -63,10 +63,25 @@ EXPORTED const I36Outer* i36_nested(void) {
   return &_i36Outer;
 }
 
-EXPORTED int i144_pass_va_list(va_list args) {
+EXPORTED int i30_pass_va_list(va_list args) {
   va_list my_args;
-  va_copy(args, my_args);
   int i = va_arg(my_args, int);
   va_end(my_args);
   return i;
+}
+
+EXPORTED void* i30_return_va_list(int count, ...) {
+  va_list my_args;
+  va_start(my_args, count);
+  return (void*) my_args;
+}
+
+typedef int (*Adder)(int count, va_list args);
+
+EXPORTED int i30_function_ptr_va_list(int count, Adder adder, ...) {
+  va_list my_args;
+  va_start(my_args, count);
+  int res = adder(count, my_args);
+  va_end(my_args);
+  return res;
 }

@@ -61,7 +61,7 @@ private class VarArgs19(vaList: VaList) extends VarArgs:
             .nn
         )
       case AliasDescriptor(real) => as(real)
-      case VaListDescriptor      => ???
+      case VaListDescriptor      => vaList.nextVarg(ValueLayout.ADDRESS).nn
 
   override def get[A](using d: DescriptorOf[A]): A =
     transitionModule19.methodReturn[A](d.descriptor, as(d.descriptor))
