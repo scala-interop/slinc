@@ -1,6 +1,10 @@
 package fr.hammons.slinc
 
+import scala.annotation.nowarn
+
+@nowarn("msg=unused import")
 trait Mem:
+  import scala.compiletime.asMatchable
   def offset(bytes: Bytes): Mem
   def resize(bytes: Bytes): Mem
   def asBase: Object

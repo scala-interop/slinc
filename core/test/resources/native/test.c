@@ -5,6 +5,7 @@
 #endif
 
 #include <stdarg.h>
+#include <stddef.h>
 
 EXPORTED int identity_int(int i) {
   return i;
@@ -97,4 +98,8 @@ EXPORTED int i30_function_ptr_va_list(int count, Adder adder, ...) {
   int res = adder(count, my_args);
   va_end(my_args);
   return res;
+}
+
+EXPORTED void* i157_null_eq() {
+  return NULL;
 }

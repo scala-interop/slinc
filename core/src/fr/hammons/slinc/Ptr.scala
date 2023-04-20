@@ -4,19 +4,29 @@ import scala.reflect.ClassTag
 import fr.hammons.slinc.modules.DescriptorModule
 import fr.hammons.slinc.modules.ReadWriteModule
 
-import scala.compiletime.summonFrom
+import scala.annotation.nowarn
 
 class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
-  inline def `unary_!`(using rwm: ReadWriteModule): A = summonFrom {
-    case descO: DescriptorOf[A] =>
-      rwm.read(mem, offset, descO.descriptor)
-    case f: Fn[A, ?, ?] =>
-      rwm.readFn(
-        mem,
-        FunctionDescriptor.fromFunction[A].toCFunctionDescriptor(),
-        mh => MethodHandleTools.wrappedMH[A](_, mh)
-      )
-  }
+  @nowarn("msg=unused import")
+  inline def `unary_!`(using rwm: ReadWriteModule): A =
+    import scala.compiletime.summonFrom
+
+    summonFrom:
+        case descO: DescriptorOf[A] =>
+          rwm.read(mem, offset, descO.descriptor)
+        case f: Fn[A, ?, ?] =>
+          rwm.readFn(
+            mem,
+            FunctionDescriptor.fromFunction[A].toCFunctionDescriptor(),
+            mh => MethodHandleTools.wrappedMH[A](_, mh)
+          )
+
+  @nowarn("msg=unused import")
+  override def equals(x: Any): Boolean =
+    import scala.compiletime.asMatchable
+    x.asMatchable match
+      case p: Ptr[?] =>
+        p.mem.asAddress == this.mem.asAddress && p.offset == this.offset
 
   def asArray(size: Int)(using DescriptorOf[A], DescriptorModule)(using
       r: ReadWriteModule
