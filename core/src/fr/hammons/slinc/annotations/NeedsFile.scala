@@ -13,7 +13,8 @@ final case class NeedsFile(val path: String)
     val fileName = filePath.getFileName().toString()
     Dependency.FilePath(
       filePath,
-      fileName.endsWith(".so") || fileName.endsWith(".dll")
+      fileName.endsWith(".so") || fileName.endsWith(".dylib") || fileName
+        .endsWith(".dll")
     )
 
 object NeedsFile:

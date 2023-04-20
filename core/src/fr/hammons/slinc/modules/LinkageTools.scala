@@ -15,6 +15,12 @@ import scala.sys.process.*
 
 object LinkageTools:
   private val dependenciesLoaded = AtomicReference(Set.empty[Dependency])
+  private lazy val libSuffixCandidates = os match
+    case OS.Linux => Seq(".so")
+    // prefer .dylib over .so on darwin
+    case OS.Darwin  => Seq(".dylib", ".so")
+    case OS.Windows => Seq(".dll")
+    case OS.Unknown => Seq.empty
 
   private lazy val libSuffix = os match
     case OS.Linux | OS.Darwin => ".so"
@@ -80,8 +86,9 @@ object LinkageTools:
           load(cachedFile.cachePath)
 
         case Dependency.LibraryResource(path, false) =>
-          val resolvedPath = potentialArchMarks.view
-            .map(archMark => s"${path}_$archMark$libSuffix")
+          val candidates =
+            resolveCandidates(path, libSuffixCandidates, potentialArchMarks)
+          val resolvedPath = candidates
             .find(path =>
               getClass().getResource(s"$resourcesLocation/$path") != null
             )
@@ -104,8 +111,13 @@ object LinkageTools:
           load(path)
 
         case Dependency.FilePath(path, false) =>
-          val resolvedPath = potentialArchMarks.view
-            .map(archMark => Paths.get(s"${path}_$archMark$libSuffix").nn)
+          val candidates = resolveCandidates(
+            path,
+            libSuffixCandidates,
+            potentialArchMarks
+          )
+          val resolvedPath = candidates
+            .map(Paths.get(_).nn)
             .find(Files.exists(_))
             .getOrElse(
               throw Error(
@@ -120,6 +132,16 @@ object LinkageTools:
         currentDeps + dependency
       )
   }
+
+  private def resolveCandidates(
+      location: String | Path,
+      suffixCandidates: Seq[String],
+      archMarks: Set[String]
+  ): Seq[String] =
+    suffixCandidates.flatMap { suffix =>
+      if archMarks.isEmpty then Seq(s"$location$suffix")
+      else archMarks.map(archMark => s"${location}_$archMark$suffix")
+    }
 
   def compileCachedCCode(cachedFile: CacheFile): Path =
     val libLocation = cachedFile.cachePath.toString() match
