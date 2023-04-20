@@ -1,10 +1,20 @@
 package fr.hammons.slinc
 
-import org.openjdk.jmh.annotations.{Scope as _, *}
+import org.openjdk.jmh.annotations.{Scope as JmhScope, *}
 import java.util.concurrent.TimeUnit
 import scala.util.Random
 import fr.hammons.slinc.types.*
 import scala.annotation.nowarn
+import org.openjdk.jmh.infra.Blackhole
+import scala.compiletime.uninitialized
+@State(JmhScope.Thread)
+class QSortState {
+  var values: Array[Int] = uninitialized
+  @Setup
+  def setup(): Unit =
+    values = Array.fill(10_000)(scala.util.Random.nextInt())
+
+}
 
 case class div_t(quot: CInt, rem: CInt)
 
@@ -31,9 +41,6 @@ trait BindingsBenchmarkShape(val s: Slinc):
   val cstd2 = FSet.instance[Cstd2]
 
   given Struct[div_t] = Struct.derived
-
-  val base = Seq.fill(10000)(Random.nextInt)
-  val baseArr = base.toArray
 
   import s.{given, *}
 
@@ -68,21 +75,23 @@ trait BindingsBenchmarkShape(val s: Slinc):
 
   @Benchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  def qsort =
-    for size <- SizeT.maybe(10000)
-    do
-      Scope.confined {
-        val sortingArr = Ptr.copy(baseArr).castTo[Nothing]
-        cstd.qsort(
-          sortingArr,
-          size,
-          IntDescriptor.size.toSizeT,
-          upcall
-        )
-        sortingArr.castTo[Int].asArray(10000)
-      }
+  def qsort(state: QSortState, bh: Blackhole): Unit =
+    bh.consume {
+      for size <- SizeT.maybe(10000)
+      do
+        Scope.confined {
+          val sortingArr = Ptr.copy(state.values).castTo[Nothing]
+          cstd.qsort(
+            sortingArr,
+            size,
+            IntDescriptor.size.toSizeT,
+            upcall
+          )
+          sortingArr.castTo[Int].asArray(10000)
+        }
+    }
 
   @Benchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  def scalasort =
-    baseArr.sorted
+  def scalasort(state: QSortState): Array[Int] =
+    state.values.sorted
