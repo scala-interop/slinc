@@ -12,13 +12,12 @@ import java.lang.foreign.MemorySegment
 
 private class VarArgs19(vaList: VaList) extends VarArgs:
 
-  override def ptr: Ptr[Nothing] = vaList
+  override def mem: Mem = vaList
     .address()
     .nn
     .pipe(MemorySegment.ofAddress(_, 1, vaList.session()))
     .nn
     .pipe(Mem19.apply(_))
-    .pipe(Ptr(_, Bytes(0)))
 
   private def skip(td: TypeDescriptor): Unit = td match
     case ByteDescriptor | ShortDescriptor | IntDescriptor =>

@@ -81,7 +81,7 @@ given descriptorModule19: DescriptorModule with
     case LongDescriptor         => classOf[Long]
     case FloatDescriptor        => classOf[Float]
     case DoubleDescriptor       => classOf[Double]
-    case VaListDescriptor       => classOf[VaList]
+    case VaListDescriptor       => classOf[MemoryAddress]
     case PtrDescriptor          => classOf[MemoryAddress]
     case _: StructDescriptor    => classOf[MemorySegment]
     case ad: AliasDescriptor[?] => toCarrierType(ad.real)

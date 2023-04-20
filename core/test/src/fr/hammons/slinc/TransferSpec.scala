@@ -9,11 +9,15 @@ import types.*
 trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
   import slinc.{*, given}
 
+  val numVarArgs = if slinc.version < 19 then 7 else 200
+
   case class A(a: Int, b: Int) derives Struct
   case class B(a: Int, b: A, c: Int) derives Struct
   case class C(a: Int, b: Byte, c: Short, d: Long, e: Float, f: Double)
       derives Struct
   case class D(a: Byte, b: Ptr[Int], c: Byte) derives Struct
+
+  case class E(list: VarArgs) derives Struct
 
   test("can read and write jvm ints") {
     Scope.global {
@@ -206,10 +210,37 @@ trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
 
   test("varargs can be converted to and from pointers"):
       Scope.confined {
-        val vaPtr = VarArgsBuilder(
-          4: Byte,
-          2f
-        ).build.ptr
+        val vaPtr = Ptr.copy(
+          VarArgsBuilder(
+            4: Byte,
+            2f
+          ).build
+        )
 
-        assertEquals(vaPtr.toVarArg.get[Byte], 4: Byte)
+        val vaList = !vaPtr
+
+        assertEquals(vaList.get[Byte], 4: Byte)
+        assertEquals(vaList.get[Float], 2f)
       }
+
+  property("varargs can be embedded in structs"):
+      forAll(Gen.listOfN(numVarArgs, Arbitrary.arbitrary[CInt])):
+          (ints: Seq[CInt]) =>
+            Scope.confined:
+              val va = VarArgsBuilder
+                .fromIterable(
+                  ints.map(a => a: Variadic)
+                )
+                .build
+
+              val x = va.copy()
+
+              val p = Ptr.copy(E(x))
+
+              val vaList = (!p).list
+
+              ints.foreach: value =>
+                assertEquals(va.get[CInt], value, "conversion test")
+
+              ints.foreach: value =>
+                assertEquals(vaList.get[CInt], value)

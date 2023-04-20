@@ -79,6 +79,8 @@ object TypeDescriptor:
 
     '{ $descOf.descriptor }
 
+  inline val unusedImplicit = "msg=unused implicit parameter"
+
 sealed trait BasicDescriptor extends TypeDescriptor:
   @nowarn("msg=unused implicit parameter")
   override val argumentTransition = identity
@@ -198,19 +200,23 @@ case class AliasDescriptor[A](val real: TypeDescriptor) extends TypeDescriptor:
 
 case object VaListDescriptor extends TypeDescriptor:
   type Inner = VarArgs
-  // todo: replace with a reader implementation
-  override val reader: (ReadWriteModule, DescriptorModule) ?=> Reader[Inner] =
-    ???
 
+  @nowarn(TypeDescriptor.unusedImplicit)
+  override val reader: (ReadWriteModule, DescriptorModule) ?=> Reader[Inner] =
+    (mem, offset) => summon[ReadWriteModule].memReader(mem, offset).asVarArgs
+
+  @nowarn(TypeDescriptor.unusedImplicit)
   override val argumentTransition
       : (TransitionModule, ReadWriteModule, Allocator) ?=> ArgumentTransition[
         Inner
-      ] = _.ptr.mem.asAddress
+      ] = _.mem.asAddress
 
-  // todo: replace with a writer implementation
+  @nowarn(TypeDescriptor.unusedImplicit)
   override val writer: (ReadWriteModule, DescriptorModule) ?=> Writer[Inner] =
-    ???
+    (mem, offset, value) =>
+      summon[ReadWriteModule].memWriter(mem, offset, value.mem)
 
+  @nowarn(TypeDescriptor.unusedImplicit)
   override val returnTransition
       : (TransitionModule, ReadWriteModule) ?=> ReturnTransition[Inner] = o =>
-    Ptr[Nothing](summon[TransitionModule].addressReturn(o), Bytes(0)).toVarArg
+    summon[TransitionModule].addressReturn(o).asVarArgs

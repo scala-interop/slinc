@@ -63,17 +63,30 @@ EXPORTED const I36Outer* i36_nested(void) {
   return &_i36Outer;
 }
 
-EXPORTED int i30_pass_va_list(va_list args) {
-  va_list my_args;
-  int i = va_arg(my_args, int);
-  va_end(my_args);
-  return i;
+EXPORTED int i30_pass_va_list(int count, va_list args) {
+  int i = 0;
+  int sum = 0;
+  while(i < count) {
+    sum += va_arg(args, int);
+    i++;
+  }
+  va_end(args);
+  return sum;
 }
 
-EXPORTED void* i30_return_va_list(int count, ...) {
-  va_list my_args;
-  va_start(my_args, count);
-  return (void*) my_args;
+EXPORTED long long i30_interspersed_ints_and_longs_va_list(int count, va_list args) {
+  int i = 0;
+  long long sum = 0;
+  while(i < count) {
+    if(i % 2 != 0) {
+      sum += va_arg(args, long);
+    } else {
+      sum += va_arg(args, int);
+    }
+    i += 1;
+  }
+  va_end(args);
+  return sum;
 }
 
 typedef int (*Adder)(int count, va_list args);

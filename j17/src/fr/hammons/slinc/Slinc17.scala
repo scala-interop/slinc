@@ -15,6 +15,7 @@ class Slinc17(_jitManager: JitManager, linker: CLinker)(using
     val rwm: ReadWriteModule,
     val lm: FSetModule
 ) extends Slinc:
+  val version: Int = 17
   protected def jitManager = _jitManager
   protected def scopePlatformSpecific = Scope17(linker)
 
