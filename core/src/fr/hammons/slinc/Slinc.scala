@@ -6,6 +6,7 @@ import fr.hammons.slinc.modules.*
 import types.SizeT
 
 trait Slinc:
+  val version: Int
   protected def jitManager: JitManager
 
   protected def scopePlatformSpecific: ScopeI.PlatformSpecific

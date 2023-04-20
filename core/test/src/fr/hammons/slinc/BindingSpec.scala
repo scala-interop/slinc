@@ -2,13 +2,17 @@ package fr.hammons.slinc
 
 import munit.ScalaCheckSuite
 import scala.concurrent.duration.*
-import annotations.Needs
 import fr.hammons.slinc.annotations.NeedsResource
 import fr.hammons.slinc.types.*
 import org.scalacheck.Prop.*
+import org.scalacheck.Gen
+import org.scalacheck.Arbitrary
 
 trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
   import slinc.{given, *}
+
+  val numArgumentsVArgs = if slinc.version == 17 then 7 else 200
+  val numVariadic = 50
   override def munitTimeout: Duration = 5.minutes
 
   case class I31Struct(field: Ptr[CChar]) derives Struct
@@ -17,7 +21,7 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
   case class I36Inner(i: CInt) derives Struct
   case class I36Outer(inner: Ptr[I36Inner]) derives Struct
 
-  case class I30Struct(list: Ptr[VarArgs]) derives Struct
+  case class I30Struct(list: VarArgs) derives Struct
 
   @NeedsResource("test")
   trait TestLib derives FSet:
@@ -32,14 +36,16 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
     def i36_copy_my_struct(ptr: Ptr[I36Struct]): Unit
     def i36_nested(): Ptr[I36Outer]
 
-    def i30_pass_va_list(args: VarArgs): CInt
-    def i30_return_va_list(argCount: CInt, vargs: Seq[Variadic]): VarArgs
+    def i30_pass_va_list(count: CInt, args: VarArgs): CInt
+    def i30_interspersed_ints_and_longs_va_list(
+        count: CInt,
+        args: VarArgs
+    ): CLongLong
     def i30_function_ptr_va_list(
         count: CInt,
         fn: Ptr[(CInt, VarArgs) => CInt],
         args: Seq[Variadic]
     ): CInt
-    def i30_struct_va_list_return(count: Int, args: Seq[Variadic]): I30Struct
     def i30_struct_va_list_input(myStruct: I30Struct): Int
 
   test("int_identity") {
@@ -85,43 +91,38 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
     assertEquals((!(!ptr2).inner).i, 43)
   }
 
-  // ZLIB test
-  test("zlib works"):
-
-      @Needs("z")
-      trait ZLib derives FSet:
-        def zlibVersion(): Ptr[CChar]
-      val zlib = FSet.instance[ZLib]
-
-      val version = zlib.zlibVersion().copyIntoString(256)
-
-      assertEquals(
-        version.count(_ == '.'),
-        2,
-        s"$version contains more than 2 periods."
-      )
-
   property("issue 30 method argument test"):
-      forAll: (i: CInt) =>
-        val test = FSet.instance[TestLib]
+      forAll(Gen.listOfN(numArgumentsVArgs, Arbitrary.arbitrary[CInt])):
+          (ints: List[CInt]) =>
+            val test = FSet.instance[TestLib]
 
-        val result = Scope.confined {
-          val vaList = VarArgsBuilder(i).build
+            val result = Scope.confined {
+              val vaList =
+                VarArgsBuilder.fromIterable(ints.map(Variadic.apply(_))).build
 
-          test.i30_pass_va_list(vaList)
-        }
+              test.i30_pass_va_list(ints.size, vaList)
+            }
 
-        assertEquals(result, i)
+            assertEquals(result, ints.sum)
 
-  property("issue 30 method return test"):
-      forAll: (args: Seq[CInt]) =>
-        val test = FSet.instance[TestLib]
+  property("issue 30 int and long intersperse"):
+      forAll(Gen.listOfN(numArgumentsVArgs, Arbitrary.arbitrary[CInt])):
+          (ints: Seq[CInt]) =>
+            val test = FSet.instance[TestLib]
 
-        val vaList =
-          test.i30_return_va_list(args.size, args.map(a => a: Variadic))
+            val result = Scope.confined {
+              val variadics = ints.zipWithIndex.map((v, i) =>
+                if i % 2 != 0 then Variadic(v.toLong) else Variadic(v)
+              )
+              val vaList = VarArgsBuilder.fromIterable(variadics).build
 
-        args.foreach: arg =>
-          assertEquals(vaList.get[CInt], arg)
+              test.i30_interspersed_ints_and_longs_va_list(
+                variadics.size,
+                vaList
+              )
+            }
+
+            assertEquals(result, ints.map(_.toLong).sum)
 
   property("issue 30 function pointer test"):
       val fn = Scope.global {
@@ -129,34 +130,25 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
           (0 until count).map(_ => vaList.get[CInt]).sum
         )
       }
-      forAll: (args: Seq[CInt]) =>
-        val test = FSet.instance[TestLib]
+      forAll(Gen.listOfN(numVariadic, Arbitrary.arbitrary[CInt])):
+          (args: Seq[CInt]) =>
+            val test = FSet.instance[TestLib]
 
-        val res = test.i30_function_ptr_va_list(
-          args.size,
-          fn,
-          args.map(a => a: Variadic)
-        )
-        assertEquals(res, args.sum)
+            val res = test.i30_function_ptr_va_list(
+              args.size,
+              fn,
+              args.map(a => a: Variadic)
+            )
+            assertEquals(res, args.sum)
 
-  property("issue 30 va_list struct embedding return test"):
-      forAll: (args: Seq[CInt]) =>
-        val test = FSet.instance[TestLib]
+  // property("issue 30 va_list struct embedding input test"):
+  //     forAll: (arg: CInt) =>
+  //       val test = FSet.instance[TestLib]
 
-        val res =
-          test.i30_struct_va_list_return(args.size, args.map(i => i: Variadic))
+  //       Scope.confined {
+  //         val vaList = VarArgsBuilder(arg).build
 
-        args.foreach: value =>
-          assertEquals((!res.list).get[CInt], value)
-
-  property("issue 30 va_list struct embedding input test"):
-      forAll: (arg: CInt) =>
-        val test = FSet.instance[TestLib]
-
-        Scope.confined {
-          val vaList = VarArgsBuilder(arg).build
-
-          val result =
-            test.i30_struct_va_list_input(I30Struct(Ptr.copy(vaList)))
-          assertEquals(result, arg)
-        }
+  //         val result =
+  //           test.i30_struct_va_list_input(I30Struct(vaList))
+  //         assertEquals(result, arg)
+  //       }

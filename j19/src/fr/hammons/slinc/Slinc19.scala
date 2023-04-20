@@ -9,6 +9,7 @@ class Slinc19(_jitManager: JitManager, linker: Linker)(using
     val rwm: ReadWriteModule,
     val lm: FSetModule
 ) extends Slinc:
+  val version: Int = 19
   protected def jitManager: JitManager = _jitManager
 
   protected def scopePlatformSpecific: ScopeI.PlatformSpecific =
