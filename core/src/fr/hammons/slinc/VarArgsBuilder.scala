@@ -8,3 +8,6 @@ class VarArgsBuilder(val vs: Seq[Variadic]):
 
 object VarArgsBuilder:
   def apply(vs: Variadic*): VarArgsBuilder = new VarArgsBuilder(vs)
+  def fromIterable[T[U] <: Iterable[U]](vs: T[Variadic]) = new VarArgsBuilder(
+    vs.toSeq
+  )

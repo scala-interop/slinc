@@ -15,6 +15,8 @@ trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
       derives Struct
   case class D(a: Byte, b: Ptr[Int], c: Byte) derives Struct
 
+  case class E(list: VarArgs) derives Struct
+
   test("can read and write jvm ints") {
     Scope.global {
       val mem = Ptr.blank[Int]
@@ -213,3 +215,18 @@ trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
 
         assertEquals(vaPtr.toVarArg.get[Byte], 4: Byte)
       }
+
+  property("varargs can be embedded in structs"):
+      forAll: (ints: Seq[CInt]) =>
+        Scope.confined {
+          val va = VarArgsBuilder
+            .fromIterable(
+              ints.map(a => a: Variadic)
+            )
+            .build
+
+          val p = Ptr.copy(E(va))
+
+          ints.foreach: value =>
+            assertEquals((!p).list.get[CInt], value)
+        }

@@ -17,6 +17,8 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
   case class I36Inner(i: CInt) derives Struct
   case class I36Outer(inner: Ptr[I36Inner]) derives Struct
 
+  case class I30Struct(list: Ptr[VarArgs]) derives Struct
+
   @NeedsResource("test")
   trait TestLib derives FSet:
     def identity_int(i: CInt): CInt
@@ -37,6 +39,8 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
         fn: Ptr[(CInt, VarArgs) => CInt],
         args: Seq[Variadic]
     ): CInt
+    def i30_struct_va_list_return(count: Int, args: Seq[Variadic]): I30Struct
+    def i30_struct_va_list_input(myStruct: I30Struct): Int
 
   test("int_identity") {
     val test = FSet.instance[TestLib]
@@ -134,3 +138,25 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
           args.map(a => a: Variadic)
         )
         assertEquals(res, args.sum)
+
+  property("issue 30 va_list struct embedding return test"):
+      forAll: (args: Seq[CInt]) =>
+        val test = FSet.instance[TestLib]
+
+        val res =
+          test.i30_struct_va_list_return(args.size, args.map(i => i: Variadic))
+
+        args.foreach: value =>
+          assertEquals((!res.list).get[CInt], value)
+
+  property("issue 30 va_list struct embedding input test"):
+      forAll: (arg: CInt) =>
+        val test = FSet.instance[TestLib]
+
+        Scope.confined {
+          val vaList = VarArgsBuilder(arg).build
+
+          val result =
+            test.i30_struct_va_list_input(I30Struct(Ptr.copy(vaList)))
+          assertEquals(result, arg)
+        }
