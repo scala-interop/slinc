@@ -88,7 +88,14 @@ class Allocator19(
       case (AliasDescriptor(real), v) =>
         build(builder, real, v)
       case (VaListDescriptor, varArg: VarArgs19) =>
-        build(builder, PtrDescriptor, varArg.ptr)
+        builder.addVarg(
+          ValueLayout.ADDRESS,
+          LinkageModule19.tempScope(alloc ?=>
+            transitionModule19
+              .methodArgument[VarArgs](VaListDescriptor, varArg, alloc)
+              .asInstanceOf[Addressable]
+          )
+        )
 
   @nowarn("msg=unused import")
   override def makeVarArgs(vbuilder: VarArgsBuilder): VarArgs =

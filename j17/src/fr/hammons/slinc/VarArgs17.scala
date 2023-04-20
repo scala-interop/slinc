@@ -51,12 +51,11 @@ class VarArgs17(args: VaList) extends VarArgs:
 
   def skip[A](using dO: DescriptorOf[A]): Unit = skip(dO.descriptor)
 
-  def ptr: Ptr[Nothing] = args
+  def mem: Mem = args
     .address()
     .nn
     .asSegment(1, args.scope())
     .nn
     .pipe(Mem17(_))
-    .pipe(Ptr(_, Bytes(0)))
 
   def copy(): VarArgs = args.copy().nn.pipe(VarArgs17(_))

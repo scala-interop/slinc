@@ -56,7 +56,7 @@ class Allocator17(
         builder.vargFromAddress(
           C_POINTER,
           transitionModule17
-            .methodArgument(PtrDescriptor, v.ptr, alloc)
+            .methodArgument(VaListDescriptor, v, alloc)
             .asInstanceOf[Addressable]
         )
       )

@@ -98,15 +98,3 @@ EXPORTED int i30_function_ptr_va_list(int count, Adder adder, ...) {
   va_end(my_args);
   return res;
 }
-
-typedef struct {
-  va_list* list;
-} i30_struct;
-
-EXPORTED int i30_struct_va_list_input(i30_struct my_struct) {
-  va_list my_list;
-  va_copy(my_list, *(my_struct.list));
-  int i = va_arg(my_list, int);
-  va_end(my_list);
-  return i;
-}

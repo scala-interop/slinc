@@ -203,24 +203,20 @@ case object VaListDescriptor extends TypeDescriptor:
 
   @nowarn(TypeDescriptor.unusedImplicit)
   override val reader: (ReadWriteModule, DescriptorModule) ?=> Reader[Inner] =
-    (mem, offset) =>
-      Ptr[Nothing](
-        summon[ReadWriteModule].memReader.apply(mem, offset),
-        Bytes(0)
-      ).toVarArg
+    (mem, offset) => summon[ReadWriteModule].memReader(mem, offset).asVarArgs
 
   @nowarn(TypeDescriptor.unusedImplicit)
   override val argumentTransition
       : (TransitionModule, ReadWriteModule, Allocator) ?=> ArgumentTransition[
         Inner
-      ] = _.ptr.mem.asAddress
+      ] = _.mem.asAddress
 
   @nowarn(TypeDescriptor.unusedImplicit)
   override val writer: (ReadWriteModule, DescriptorModule) ?=> Writer[Inner] =
     (mem, offset, value) =>
-      summon[ReadWriteModule].memWriter(mem, offset, value.ptr.mem)
+      summon[ReadWriteModule].memWriter(mem, offset, value.mem)
 
   @nowarn(TypeDescriptor.unusedImplicit)
   override val returnTransition
       : (TransitionModule, ReadWriteModule) ?=> ReturnTransition[Inner] = o =>
-    Ptr[Nothing](summon[TransitionModule].addressReturn(o), Bytes(0)).toVarArg
+    summon[TransitionModule].addressReturn(o).asVarArgs

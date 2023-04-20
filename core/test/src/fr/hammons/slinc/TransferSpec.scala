@@ -210,12 +210,14 @@ trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
 
   test("varargs can be converted to and from pointers"):
       Scope.confined {
-        val vaPtr = VarArgsBuilder(
-          4: Byte,
-          2f
-        ).build.ptr
+        val vaPtr = Ptr.copy(
+          VarArgsBuilder(
+            4: Byte,
+            2f
+          ).build
+        )
 
-        val vaList = vaPtr.toVarArg
+        val vaList = !vaPtr
 
         assertEquals(vaList.get[Byte], 4: Byte)
         assertEquals(vaList.get[Float], 2f)

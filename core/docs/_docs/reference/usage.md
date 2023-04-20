@@ -72,3 +72,37 @@ case class div_t(quot: Int, rem: Int) derives Struct
 ```
 
 These struct analogs can be composed with any type that has a `DescriptorOf` defined for it.
+
+## va_list
+
+The `va_list` type for C is supported via the `VarArgs` and `VarArgsBuilder` types. 
+
+A C function that takes a va_list parameter like below 
+
+```c
+int pass_va_list(int count, va_list args);
+```
+
+Can be bound to with code like the following:
+
+```scala
+import fr.hammons.slinc.*
+
+trait Test derives FSet:
+  def pass_va_list(count: CInt, args: VarArgs): CInt
+```
+
+In order to allocate and send VarArgs to this function, one uses the `VarArgsBuilder` type:
+
+```scala
+import fr.hammons.slinc.runtime.{*,given}
+val test = FSet.instance[Test]
+
+Scope.confined{
+  val varArgs = VarArgsBuilder(5,2f).build
+
+  test.pass_va_list(2, varArgs)
+}
+```
+
+More documentation on usage of `VarArgs` can be found [here](./va_list.md).
