@@ -5,8 +5,15 @@ import org.scalacheck.Prop.*
 import org.scalacheck.Gen
 import org.scalacheck.Arbitrary
 import types.*
+import scala.concurrent.Future
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.reflect.ClassTag
 
-trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
+trait TransferSpec[ThreadException <: Throwable](val slinc: Slinc)(using
+    ClassTag[ThreadException]
+) extends ScalaCheckSuite:
   import slinc.{*, given}
 
   val numVarArgs = if slinc.version < 19 then 7 else 200
@@ -254,3 +261,18 @@ trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
           assert(p1 == p2)
           assert(p1 != p1(2))
           assert(p1 == p1(0))
+
+  test("confined scope doesn't allow mem sharing"):
+      Scope.confined {
+        val ptr = Ptr.copy(5)
+        intercept[ThreadException](
+          Await.result(Future(!ptr), Duration.Inf)
+        )
+      }
+
+  test("shared scope does allow mem sharing"):
+      Scope.shared {
+        val ptr = Ptr.copy(5)
+        val res = Await.result(Future(!ptr), Duration.Inf)
+        assertEquals(res, 5)
+      }

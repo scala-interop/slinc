@@ -42,3 +42,12 @@ class Scope19(linker: Linker) extends ScopeI.PlatformSpecific:
       val res = fn
       rs.close()
       res
+
+  override def createSharedScope: SharedScope = new SharedScope:
+    def apply[A](fn: Allocator ?=> A): A =
+      val rs = MemorySession.openShared().nn
+      given Allocator =
+        Allocator19(SegmentAllocator.newNativeArena(rs).nn, rs, linker)
+      val res = fn
+      rs.close()
+      res

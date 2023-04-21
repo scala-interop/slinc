@@ -30,6 +30,15 @@ class Scope17(linker: CLinker) extends ScopeI.PlatformSpecific:
       rs.close()
       res
 
+  def createSharedScope: SharedScope = new SharedScope:
+    def apply[A](fn: Allocator ?=> A): A =
+      val rs = ResourceScope.newSharedScope().nn
+      given Allocator =
+        Allocator17(SegmentAllocator.arenaAllocator(rs).nn, rs, linker)
+      val res = fn
+      rs.close()
+      res
+
   def createTempScope: TempScope = new TempScope:
     def apply[A](fn: Allocator ?=> A): A =
       val allocator = TempAllocator17.allocator.get().nn
