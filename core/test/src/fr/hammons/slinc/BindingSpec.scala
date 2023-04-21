@@ -46,6 +46,7 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
         fn: Ptr[(CInt, VarArgs) => CInt],
         args: Seq[Variadic]
     ): CInt
+    def i157_null_eq(): Ptr[Unit]
 
   test("int_identity") {
     val test = FSet.instance[TestLib]
@@ -139,3 +140,7 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
               args.map(a => a: Variadic)
             )
             assertEquals(res, args.sum)
+
+  test("Null is null"):
+      val test = FSet.instance[TestLib]
+      assertEquals(Null[Unit], test.i157_null_eq())

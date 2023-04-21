@@ -244,3 +244,13 @@ trait TransferSpec(val slinc: Slinc) extends ScalaCheckSuite:
 
               ints.foreach: value =>
                 assertEquals(vaList.get[CInt], value)
+
+  property("pointers are equal as long as they point to the same memory"):
+      forAll: (i: CInt) =>
+        Scope.confined:
+          val p1 = Ptr.copy(i)
+          val p2 = p1.castTo[Float]
+
+          assert(p1 == p2)
+          assert(p1 != p1(2))
+          assert(p1 == p1(0))
