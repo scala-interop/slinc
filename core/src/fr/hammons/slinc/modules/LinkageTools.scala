@@ -29,6 +29,7 @@ object LinkageTools:
 
   private lazy val potentialArchMarks = arch match
     case Arch.X64         => Set("x64", "x86_64", "amd64")
+    case Arch.AArch64     => Set("arm64", "aarch64")
     case Arch.Unknown | _ => Set.empty
 
   private val resourcesLocation = "/native"
@@ -94,7 +95,8 @@ object LinkageTools:
             )
             .getOrElse(
               throw Error(
-                s"No library resource found for $arch $os with path like $path"
+                s"No library resource found for $arch $os. Make sure one of ${candidates
+                    .mkString("[", ", ", "]")} is located in resources/native."
               )
             )
 
@@ -138,10 +140,12 @@ object LinkageTools:
       suffixCandidates: Seq[String],
       archMarks: Set[String]
   ): Seq[String] =
-    suffixCandidates.flatMap { suffix =>
-      if archMarks.isEmpty then Seq(s"$location$suffix")
-      else archMarks.map(archMark => s"${location}_$archMark$suffix")
-    }
+    val withoutArchMarks = suffixCandidates.map(sfx => s"$location$sfx")
+    if archMarks.isEmpty then withoutArchMarks
+    else
+      suffixCandidates.flatMap { suffix =>
+        archMarks.map(archMark => s"${location}_$archMark$suffix")
+      } ++ withoutArchMarks
 
   def compileCachedCCode(cachedFile: CacheFile): Path =
     val libLocation = cachedFile.cachePath.toString() match
