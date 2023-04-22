@@ -13,7 +13,7 @@ final case class NeedsResource(val resourcePath: String)
     case path =>
       Dependency.LibraryResource(
         path,
-        path.endsWith(".so") || path.endsWith(".dll")
+        path.endsWith(".so") || path.endsWith(".dylib") || path.endsWith(".dll")
       )
 
 object NeedsResource:

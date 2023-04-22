@@ -15,6 +15,12 @@ import scala.sys.process.*
 
 object LinkageTools:
   private val dependenciesLoaded = AtomicReference(Set.empty[Dependency])
+  private lazy val libSuffixCandidates = os match
+    case OS.Linux => Seq(".so")
+    // prefer .dylib over .so on darwin
+    case OS.Darwin  => Seq(".dylib", ".so")
+    case OS.Windows => Seq(".dll")
+    case OS.Unknown => Seq.empty
 
   private lazy val libSuffix = os match
     case OS.Linux | OS.Darwin => ".so"
@@ -23,6 +29,7 @@ object LinkageTools:
 
   private lazy val potentialArchMarks = arch match
     case Arch.X64         => Set("x64", "x86_64", "amd64")
+    case Arch.AArch64     => Set("arm64", "aarch64")
     case Arch.Unknown | _ => Set.empty
 
   private val resourcesLocation = "/native"
@@ -80,14 +87,16 @@ object LinkageTools:
           load(cachedFile.cachePath)
 
         case Dependency.LibraryResource(path, false) =>
-          val resolvedPath = potentialArchMarks.view
-            .map(archMark => s"${path}_$archMark$libSuffix")
+          val candidates =
+            resolveCandidates(path, libSuffixCandidates, potentialArchMarks)
+          val resolvedPath = candidates
             .find(path =>
               getClass().getResource(s"$resourcesLocation/$path") != null
             )
             .getOrElse(
               throw Error(
-                s"No library resource found for $arch $os with path like $path"
+                s"No library resource found for $arch $os. Make sure one of ${candidates
+                    .mkString("[", ", ", "]")} is located in resources/native."
               )
             )
 
@@ -104,8 +113,13 @@ object LinkageTools:
           load(path)
 
         case Dependency.FilePath(path, false) =>
-          val resolvedPath = potentialArchMarks.view
-            .map(archMark => Paths.get(s"${path}_$archMark$libSuffix").nn)
+          val candidates = resolveCandidates(
+            path,
+            libSuffixCandidates,
+            potentialArchMarks
+          )
+          val resolvedPath = candidates
+            .map(Paths.get(_).nn)
             .find(Files.exists(_))
             .getOrElse(
               throw Error(
@@ -120,6 +134,17 @@ object LinkageTools:
         currentDeps + dependency
       )
   }
+
+  private def resolveCandidates(
+      location: String | Path,
+      suffixCandidates: Seq[String],
+      archMarks: Set[String]
+  ): Seq[String] =
+    if archMarks.isEmpty then Seq.empty
+    else
+      suffixCandidates.flatMap { suffix =>
+        archMarks.map(archMark => s"${location}_$archMark$suffix")
+      }
 
   def compileCachedCCode(cachedFile: CacheFile): Path =
     val libLocation = cachedFile.cachePath.toString() match
