@@ -140,12 +140,11 @@ object LinkageTools:
       suffixCandidates: Seq[String],
       archMarks: Set[String]
   ): Seq[String] =
-    val withoutArchMarks = suffixCandidates.map(sfx => s"$location$sfx")
-    if archMarks.isEmpty then withoutArchMarks
+    if archMarks.isEmpty then Seq.empty
     else
       suffixCandidates.flatMap { suffix =>
         archMarks.map(archMark => s"${location}_$archMark$suffix")
-      } ++ withoutArchMarks
+      }
 
   def compileCachedCCode(cachedFile: CacheFile): Path =
     val libLocation = cachedFile.cachePath.toString() match
