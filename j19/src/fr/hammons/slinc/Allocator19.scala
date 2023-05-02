@@ -11,7 +11,6 @@ import scala.jdk.FunctionConverters.*
 import java.lang.foreign.Addressable
 import java.lang.foreign.MemorySegment
 import fr.hammons.slinc.modules.LinkageModule19
-import scala.annotation.nowarn
 
 class Allocator19(
     val segmentAllocator: SegmentAllocator,
@@ -97,7 +96,6 @@ class Allocator19(
           )
         )
 
-  @nowarn("msg=unused import")
   override def makeVarArgs(vbuilder: VarArgsBuilder): VarArgs =
     import scala.compiletime.asMatchable
 

@@ -3,7 +3,6 @@ package fr.hammons.slinc
 import scala.quoted.*
 import fr.hammons.slinc.modules.FSetModule
 import java.util.concurrent.atomic.AtomicStampedReference
-import scala.annotation.nowarn
 import fr.hammons.slinc.fset.Dependency
 import fr.hammons.slinc.annotations.NeedsResource
 import fr.hammons.slinc.annotations.Needs
@@ -34,7 +33,6 @@ object FSet:
 
   inline def derived[L]: FSet[L] = ${ derivedImpl[L]() }
 
-  @nowarn
   private def derivedImpl[L]()(using q: Quotes, t: Type[L]) =
     import quotes.reflect.*
     val repr = TypeRepr.of[L]
@@ -66,7 +64,6 @@ object FSet:
         val generation = $generators
     }
 
-  @nowarn
   private def summonImpl[A](
       library: Expr[FSet[A]],
       libraryModule: Expr[FSetModule]

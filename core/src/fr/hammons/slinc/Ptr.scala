@@ -4,10 +4,8 @@ import scala.reflect.ClassTag
 import fr.hammons.slinc.modules.DescriptorModule
 import fr.hammons.slinc.modules.ReadWriteModule
 
-import scala.annotation.nowarn
 
 class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
-  @nowarn("msg=unused import")
   inline def `unary_!`(using rwm: ReadWriteModule): A =
     import scala.compiletime.summonFrom
 
@@ -21,7 +19,6 @@ class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
             mh => MethodHandleTools.wrappedMH[A](_, mh)
           )
 
-  @nowarn("msg=unused import")
   override def equals(x: Any): Boolean =
     import scala.compiletime.asMatchable
     x.asMatchable match

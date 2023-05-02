@@ -2,7 +2,6 @@ package fr.hammons.slinc
 
 import fr.hammons.slinc.container.*
 import scala.quoted.*
-import scala.annotation.nowarn
 
 /** Typeclass that summons TypeDescriptors
   */
@@ -56,8 +55,6 @@ object DescriptorOf:
   given DescriptorOf[VarArgs] with
     val descriptor: TypeDescriptor { type Inner = VarArgs } = VaListDescriptor
 
-  // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
-  @nowarn("msg=unused implicit parameter")
   def getDescriptorFor[A](using Quotes, Type[A]) =
     import quotes.reflect.*
     val expr = Expr

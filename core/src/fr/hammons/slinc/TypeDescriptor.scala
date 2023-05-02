@@ -60,8 +60,6 @@ sealed trait TypeDescriptor:
         writer(mem, size * i + offset, a(i))
         i += 1
 object TypeDescriptor:
-  @nowarn("msg=unused implicit parameter")
-  @nowarn("msg=unused local definition")
   def fromTypeRepr(using q: Quotes)(
       typeRepr: q.reflect.TypeRepr
   ): Expr[TypeDescriptor] =
@@ -82,38 +80,28 @@ object TypeDescriptor:
   inline val unusedImplicit = "msg=unused implicit parameter"
 
 sealed trait BasicDescriptor extends TypeDescriptor:
-  @nowarn("msg=unused implicit parameter")
   override val argumentTransition = identity
 
-  @nowarn("msg=unused implicit parameter")
   override val returnTransition = _.asInstanceOf[Inner]
 
 case object ByteDescriptor extends BasicDescriptor:
   type Inner = Byte
-  @nowarn("msg=unused implicit parameter")
   override val reader = readWriteModule.byteReader
-  @nowarn("msg=unused implicit parameter")
   override val writer = readWriteModule.byteWriter
 
 case object ShortDescriptor extends BasicDescriptor:
   type Inner = Short
-  @nowarn("msg=unused implicit parameter")
   val reader = readWriteModule.shortReader
-  @nowarn("msg=unused implicit parameter")
   val writer = readWriteModule.shortWriter
 
 case object IntDescriptor extends BasicDescriptor:
   type Inner = Int
-  @nowarn("msg=unused implicit parameter")
   val reader = readWriteModule.intReader
-  @nowarn("msg=unused implicit parameter")
   val writer = readWriteModule.intWriter
 
 case object LongDescriptor extends BasicDescriptor:
   type Inner = Long
-  @nowarn("msg=unused implicit parameter")
   val reader = readWriteModule.longReader
-  @nowarn("msg=unused implicit parameter")
   val writer = readWriteModule.longWriter
 
 case object FloatDescriptor extends BasicDescriptor:

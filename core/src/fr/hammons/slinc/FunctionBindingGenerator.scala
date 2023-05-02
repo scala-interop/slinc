@@ -1,7 +1,6 @@
 package fr.hammons.slinc
 
 import scala.quoted.*
-import scala.annotation.nowarn
 import fr.hammons.slinc.FunctionContext.{InputTransition, ReturnTransition}
 import fr.hammons.slinc.FunctionBindingGenerator.VariadicTransition
 
@@ -27,7 +26,6 @@ object FunctionBindingGenerator:
       LambdaInputs.VariadicInputs(args, varArgs = variadicInput)
     else LambdaInputs.Standard(args)
 
-  @nowarn("msg=unused implicit parameter")
   private def invokation(
       variadicTransition: Expr[VariadicTransition],
       mh: Expr[MethodHandler]
@@ -53,7 +51,6 @@ object FunctionBindingGenerator:
     applyImpl[L]('name)
   }
 
-  @nowarn("msg=unused implicit parameter")
   private def lambda(
       argNumbers: Int,
       scope: Expr[Scope],
@@ -107,7 +104,6 @@ object FunctionBindingGenerator:
         }.asTerm.changeOwner(sym)
     ).asExprOf[AnyRef]
 
-  @nowarn("msg=unused implicit parameter")
   private def applyImpl[L](name: Expr[String])(using
       Quotes,
       Type[L]

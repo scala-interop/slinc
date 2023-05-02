@@ -3,7 +3,6 @@ package fr.hammons.slinc
 import scala.quoted.*
 import scala.util.chaining.*
 import fr.hammons.slinc.modules.TransitionModule
-import scala.annotation.nowarn
 
 trait Fn[F, Inputs <: Tuple, Output]:
   type Function = F
@@ -25,9 +24,6 @@ object Fn:
     toNativeCompatibleImpl('a)
   }
 
-  // todo: remove once https://github.com/lampepfl/dotty/issues/16863 is fixed
-  @nowarn("msg=unused implicit parameter")
-  @nowarn("msg=unused local definition")
   def toNativeCompatibleImpl[A](a: Expr[A])(using Quotes, Type[A]): Expr[A] =
     import quotes.reflect.*
     val typeArgs = TypeRepr.of[A].typeArgs

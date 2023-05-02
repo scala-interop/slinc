@@ -3,7 +3,6 @@ package fr.hammons.slinc
 import scala.quoted.*
 import fr.hammons.slinc.modules.DescriptorModule
 import java.lang.invoke.MethodType
-import scala.annotation.nowarn
 
 final case class FunctionDescriptor(
     inputDescriptors: Seq[TypeDescriptor],
@@ -47,10 +46,6 @@ final case class FunctionDescriptor(
         MethodType.methodType(outputDescriptor.toCarrierType).nn
 
 object FunctionDescriptor:
-  // grabs a description of a method from its definition. Ignores Seq[Variadic] arguments.
-  // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
-  @nowarn("msg=unused implicit parameter")
-  @nowarn("msg=unused local definition")
   def fromDefDef(using q: Quotes)(symbol: q.reflect.Symbol) =
     import quotes.reflect.*
     val (inputRefs, outputType) = MacroHelpers.getInputsAndOutputType(symbol)
@@ -80,9 +75,6 @@ object FunctionDescriptor:
     fromFunctionImpl[A]
   }
 
-  // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
-  @nowarn("msg=unused implicit parameter")
-  @nowarn("msg=unused local definition")
   private[slinc] def fromFunctionImpl[A](using Quotes, Type[A]) =
     val (inputTypes, outputType) = MacroHelpers.getInputTypesAndOutputTypes[A]
 
