@@ -15,6 +15,9 @@ trait GlobalScope extends Scope:
 trait SharedScope extends Scope:
   def apply[A](fn: (Allocator) ?=> A): A
 
+trait InferredScope extends Scope:
+  def apply[A](fn: Allocator ?=> A): A
+
 object Scope:
   def temp(using t: TempScope): TempScope = t
   def confined(using c: ConfinedScope): ConfinedScope = c
@@ -26,6 +29,7 @@ class ScopeI(platformSpecific: ScopeI.PlatformSpecific):
   given GlobalScope = platformSpecific.createGlobalScope
   given ConfinedScope = platformSpecific.createConfinedScope
   given SharedScope = platformSpecific.createSharedScope
+  given InferredScope = platformSpecific.createInferredScope
 
 object ScopeI:
   trait PlatformSpecific:
@@ -33,4 +37,5 @@ object ScopeI:
     def createGlobalScope: GlobalScope
     def createConfinedScope: ConfinedScope
     def createSharedScope: SharedScope
+    def createInferredScope: InferredScope
     def nullPtr[A]: Ptr[A]
