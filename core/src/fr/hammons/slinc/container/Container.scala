@@ -4,7 +4,6 @@ import scala.reflect.ClassTag
 import scala.compiletime.erasedValue
 import scala.compiletime.error
 import scala.quoted.*
-import scala.annotation.nowarn
 
 class Data[A](a: A):
   type B = A
@@ -50,9 +49,6 @@ object Container:
       applyImpl[A]('data)
     }
 
-  // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
-  @nowarn("msg=unused implicit parameter")
-  @nowarn("msg=unused local definition")
   private def getEvidences[A <: Tuple](using
       Type[A],
       Quotes
@@ -75,9 +71,6 @@ object Container:
       case '[EmptyTuple] =>
         '{ Vector.empty }
 
-  // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
-  @nowarn("msg=unused implicit parameter")
-  @nowarn("msg=unused local definition")
   private def applyImpl[A <: Capabilities](
       data: Expr[Any]
   )(using Quotes, Type[A]) =

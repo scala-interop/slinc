@@ -8,14 +8,14 @@ It's designed to make use of Scala's type system, macros, and runtime multi-stag
 
 ## Quickstart 
 
-Slinc is published to Maven Central for Scala 3. It is built to take advantage of the cutting edge of Scala functionality and features, so your project will most certainly need to track the latest Scala version if you want to use the latest version of Slinc. Currently, the Scala version in use is `3.3.0-RC3`. 
+Slinc is published to Maven Central for Scala 3. It is built to take advantage of the cutting edge of Scala functionality and features, so your project will most certainly need to track the latest Scala version if you want to use the latest version of Slinc. Currently, the Scala version in use is `3.3.0-RC4`. 
 
 ### SBT setup 
 
 In your `build.sbt`:
 
 ```scala
-libraryDependencies += "fr.hammons" %% "slinc-runtime" % "0.3.0"
+libraryDependencies += "fr.hammons" %% "slinc-runtime" % "0.4.0"
 //if forking and on Java 17
 javaOptions ++= Seq("--add-modules=jdk.incubator.foreign", "--enable-native-access=ALL-UNNAMED")
 ```

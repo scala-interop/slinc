@@ -10,8 +10,6 @@ object SlincImpl:
   inline def findImpls(): Map[Int, () => Slinc] = ${
     findImplsImpl
   }
-  // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
-  @nowarn("msg=unused implicit parameter")
   private def findImplsImpl(using q: Quotes): Expr[Map[Int, () => Slinc]] =
     import quotes.reflect.*
     val syms = Symbol

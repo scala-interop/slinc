@@ -2,10 +2,8 @@ package fr.hammons.slinc.fset
 
 import scala.quoted.*
 import java.util.concurrent.atomic.AtomicReference
-import scala.annotation.nowarn
 
 class FSetBacking[A](arr: IArray[AtomicReference[AnyRef]]) extends Selectable:
-  @nowarn("msg=unused explicit parameter")
   transparent inline def applyDynamic(
       inline name: String,
       inline `types`: Class[?]*
@@ -16,9 +14,6 @@ class FSetBacking[A](arr: IArray[AtomicReference[AnyRef]]) extends Selectable:
   }
 
 object FSetBacking:
-  @nowarn("msg=unused implicit parameter")
-  @nowarn("msg=unused local definition")
-  @nowarn("msg=unused import")
   def applyDynamicImpl[A](
       name: Expr[String],
       args: Expr[Seq[Any]],

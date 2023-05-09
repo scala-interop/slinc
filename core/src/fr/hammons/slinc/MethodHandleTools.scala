@@ -29,8 +29,6 @@ object MethodHandleTools:
       case '[Object] => "O"
       case _         => "O"
 
-  // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
-  @nowarn("msg=unused implicit parameter")
   def invokeVariadicArguments(
       mhGen: Expr[Seq[TypeDescriptor] => MethodHandle],
       exprs: Expr[Seq[Any]],
@@ -43,8 +41,6 @@ object MethodHandleTools:
       )
     }
 
-  // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
-  @nowarn("msg=unused implicit parameter")
   def invokeArguments[R](
       mh: Expr[MethodHandle],
       exprs: Seq[Expr[Any]]
@@ -91,10 +87,6 @@ object MethodHandleTools:
     wrappedMHImpl[A]('mem, 'methodHandle)
   }
 
-  // todo: get rid of this once bug https://github.com/lampepfl/dotty/issues/16863 is fixed
-  @nowarn("msg=unused implicit parameter")
-  @nowarn("msg=unused local definition")
-  @nowarn("msg=unused import")
   private def wrappedMHImpl[A](
       mem: Expr[Mem],
       methodHandleExpr: Expr[MethodHandle]
