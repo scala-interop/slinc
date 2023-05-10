@@ -30,8 +30,9 @@ class VarArgs17(args: VaList) extends VarArgs:
             )
             .nn
         )
-      case AliasDescriptor(real) => get(real)
-      case VaListDescriptor      => args.vargAsAddress(C_POINTER).nn
+      case AliasDescriptor(real)           => get(real)
+      case VaListDescriptor                => args.vargAsAddress(C_POINTER).nn
+      case CUnionDescriptor(possibleTypes) => get(possibleTypes.maxBy(_.size))
   def get[A](using d: DescriptorOf[A]): A =
     transitionModule17.methodReturn[A](d.descriptor, get(d.descriptor))
 
@@ -46,8 +47,9 @@ class VarArgs17(args: VaList) extends VarArgs:
       case PtrDescriptor    => args.skip(C_POINTER)
       case sd: StructDescriptor =>
         args.skip(descriptorModule17.toGroupLayout(sd))
-      case AliasDescriptor(real) => skip(real)
-      case VaListDescriptor      => args.skip(C_POINTER)
+      case AliasDescriptor(real)           => skip(real)
+      case VaListDescriptor                => args.skip(C_POINTER)
+      case CUnionDescriptor(possibleTypes) => skip(possibleTypes.maxBy(_.size))
 
   def skip[A](using dO: DescriptorOf[A]): Unit = skip(dO.descriptor)
 

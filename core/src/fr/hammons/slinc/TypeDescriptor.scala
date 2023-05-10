@@ -8,11 +8,11 @@ import fr.hammons.slinc.modules.{
   ArrayReader,
   readWriteModule
 }
-import scala.annotation.nowarn
 import scala.reflect.ClassTag
 import scala.quoted.*
 import fr.hammons.slinc.modules.TransitionModule
 import fr.hammons.slinc.modules.{ArgumentTransition, ReturnTransition}
+import scala.NonEmptyTuple
 
 /** Describes types used by C interop
   */
@@ -106,31 +106,23 @@ case object LongDescriptor extends BasicDescriptor:
 
 case object FloatDescriptor extends BasicDescriptor:
   type Inner = Float
-  @nowarn("msg=unused implicit parameter")
   val reader = readWriteModule.floatReader
-  @nowarn("msg=unused implicit parameter")
   val writer = readWriteModule.floatWriter
 
 case object DoubleDescriptor extends BasicDescriptor:
   type Inner = Double
-  @nowarn("msg=unused implicit parameter")
   val reader = readWriteModule.doubleReader
-  @nowarn("msg=unused implicit parameter")
   val writer = readWriteModule.doubleWriter
 
 case object PtrDescriptor extends TypeDescriptor:
   type Inner = Ptr[?]
-  @nowarn("msg=unused implicit parameter")
   override val reader = (mem, offset) =>
     Ptr(readWriteModule.memReader(mem, offset), Bytes(0))
-  @nowarn("msg=unused implicit parameter")
   override val writer = (mem, offset, a) =>
     readWriteModule.memWriter(mem, offset, a.mem)
 
-  @nowarn("msg=unused implicit parameter")
   override val argumentTransition = _.mem.asAddress
 
-  @nowarn("msg=unused implicit parameter")
   override val returnTransition = o =>
     Ptr[Any](summon[TransitionModule].addressReturn(o), Bytes(0))
 
@@ -174,11 +166,9 @@ case class AliasDescriptor[A](val real: TypeDescriptor) extends TypeDescriptor:
   val writer: (ReadWriteModule, DescriptorModule) ?=> Writer[Inner] =
     (rwm, _) ?=> (mem, bytes, a) => rwm.write(mem, bytes, real, a)
 
-  @nowarn("msg=unused implicit parameter")
   override val argumentTransition =
     summon[TransitionModule].methodArgument(real, _, summon[Allocator])
 
-  @nowarn("msg=unused implicit parameter")
   override val returnTransition = summon[TransitionModule].methodReturn(real, _)
   override def size(using dm: DescriptorModule): Bytes = dm.sizeOf(real)
   override def alignment(using dm: DescriptorModule): Bytes =
@@ -189,22 +179,36 @@ case class AliasDescriptor[A](val real: TypeDescriptor) extends TypeDescriptor:
 case object VaListDescriptor extends TypeDescriptor:
   type Inner = VarArgs
 
-  @nowarn(TypeDescriptor.unusedImplicit)
   override val reader: (ReadWriteModule, DescriptorModule) ?=> Reader[Inner] =
     (mem, offset) => summon[ReadWriteModule].memReader(mem, offset).asVarArgs
 
-  @nowarn(TypeDescriptor.unusedImplicit)
   override val argumentTransition
       : (TransitionModule, ReadWriteModule, Allocator) ?=> ArgumentTransition[
         Inner
       ] = _.mem.asAddress
 
-  @nowarn(TypeDescriptor.unusedImplicit)
   override val writer: (ReadWriteModule, DescriptorModule) ?=> Writer[Inner] =
     (mem, offset, value) =>
       summon[ReadWriteModule].memWriter(mem, offset, value.mem)
 
-  @nowarn(TypeDescriptor.unusedImplicit)
   override val returnTransition
       : (TransitionModule, ReadWriteModule) ?=> ReturnTransition[Inner] = o =>
     summon[TransitionModule].addressReturn(o).asVarArgs
+
+case class CUnionDescriptor(possibleTypes: Set[TypeDescriptor])
+    extends TypeDescriptor:
+  type Inner = CUnion[? <: NonEmptyTuple]
+
+  override val reader: (ReadWriteModule, DescriptorModule) ?=> Reader[Inner] =
+    ???
+
+  override val returnTransition
+      : (TransitionModule, ReadWriteModule) ?=> ReturnTransition[Inner] = ???
+
+  override val argumentTransition
+      : (TransitionModule, ReadWriteModule, Allocator) ?=> ArgumentTransition[
+        Inner
+      ] = ???
+
+  override val writer: (ReadWriteModule, DescriptorModule) ?=> Writer[Inner] =
+    ???

@@ -9,8 +9,7 @@ import jdk.incubator.foreign.CLinker.{
   C_DOUBLE,
   C_FLOAT,
   C_LONG_LONG,
-  C_POINTER,
-  C_VA_LIST
+  C_POINTER
 }
 import jdk.incubator.foreign.{
   MemoryLayout,
@@ -18,7 +17,7 @@ import jdk.incubator.foreign.{
   MemorySegment,
   GroupLayout,
   CLinker
-}, CLinker.VaList
+}
 import scala.collection.concurrent.TrieMap
 
 given descriptorModule17: DescriptorModule with
@@ -36,6 +35,7 @@ given descriptorModule17: DescriptorModule with
     case _: StructDescriptor    => classOf[MemorySegment]
     case VaListDescriptor       => classOf[MemoryAddress]
     case ad: AliasDescriptor[?] => toCarrierType(ad.real)
+    case ud: CUnionDescriptor   => classOf[MemorySegment]
 
   def genLayoutList(
       layouts: Seq[MemoryLayout],
@@ -80,11 +80,14 @@ given descriptorModule17: DescriptorModule with
     case sd: StructDescriptor =>
       Bytes(toGroupLayout(sd).byteSize())
     case VaListDescriptor => Bytes(toMemoryLayout(VaListDescriptor).byteSize())
-    case ad: AliasDescriptor[?] => sizeOf(ad.real)
+    case ad: AliasDescriptor[?]          => sizeOf(ad.real)
+    case CUnionDescriptor(possibleTypes) => possibleTypes.map(sizeOf).max
 
   override def alignmentOf(td: TypeDescriptor): Bytes = td match
     case s: StructDescriptor =>
       s.members.view.map(_.descriptor).map(alignmentOf).max
+    case CUnionDescriptor(possibleTypes) =>
+      possibleTypes.view.map(alignmentOf).max
     case _ => sizeOf(td)
 
   override def memberOffsets(sd: List[TypeDescriptor]): IArray[Bytes] =
@@ -125,6 +128,8 @@ given descriptorModule17: DescriptorModule with
     case VaListDescriptor       => C_POINTER.nn
     case sd: StructDescriptor   => toGroupLayout(sd)
     case ad: AliasDescriptor[?] => toMemoryLayout(ad.real)
+    case CUnionDescriptor(possibleTypes) =>
+      MemoryLayout.unionLayout(possibleTypes.map(toMemoryLayout).toSeq*).nn
 
   def toMemoryLayout(smd: StructMemberDescriptor): MemoryLayout =
     toMemoryLayout(smd.descriptor).withName(smd.name).nn

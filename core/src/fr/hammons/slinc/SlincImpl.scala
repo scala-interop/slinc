@@ -2,7 +2,6 @@ package fr.hammons.slinc
 
 import scala.annotation.StaticAnnotation
 import scala.quoted.*
-import scala.annotation.nowarn
 
 class SlincImpl(val version: Int) extends StaticAnnotation
 

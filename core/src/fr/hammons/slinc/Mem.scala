@@ -1,7 +1,5 @@
 package fr.hammons.slinc
 
-import scala.annotation.nowarn
-
 trait Mem:
   import scala.compiletime.asMatchable
   def offset(bytes: Bytes): Mem

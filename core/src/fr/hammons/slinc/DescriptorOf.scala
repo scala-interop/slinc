@@ -2,6 +2,8 @@ package fr.hammons.slinc
 
 import fr.hammons.slinc.container.*
 import scala.quoted.*
+import scala.compiletime.{summonInline, erasedValue}
+import scala.NonEmptyTuple
 
 /** Typeclass that summons TypeDescriptors
   */
@@ -64,3 +66,14 @@ object DescriptorOf:
       )
 
     '{ $expr.descriptor }
+
+  private inline def helper[B <: Tuple]: Set[TypeDescriptor] =
+    inline erasedValue[B] match
+      case _: (a *: t)   => helper[t] + summonInline[DescriptorOf[a]].descriptor
+      case _: EmptyTuple => Set.empty[TypeDescriptor]
+
+  inline given [A <: NonEmptyTuple]: DescriptorOf[CUnion[A]] =
+    new DescriptorOf[CUnion[A]]:
+      val descriptor: CUnionDescriptor { type Inner = CUnion[A] } =
+        CUnionDescriptor(helper[A])
+          .asInstanceOf[CUnionDescriptor { type Inner = CUnion[A] }]

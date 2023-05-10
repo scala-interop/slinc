@@ -7,7 +7,7 @@ import fr.hammons.slinc.modules.ReadWriteModule
 import fr.hammons.slinc.modules.DescriptorModule
 import scala.NonEmptyTuple
 
-class CUnion[T <: Tuple](mem: Mem):
+class CUnion[T <: Tuple](private[slinc] val mem: Mem):
   private inline def getHelper[T <: Tuple, A](using
       dO: DescriptorOf[A],
       rwm: ReadWriteModule
