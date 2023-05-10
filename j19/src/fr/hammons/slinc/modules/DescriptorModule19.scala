@@ -7,7 +7,6 @@ import java.lang.foreign.MemoryLayout
 import java.lang.foreign.MemoryAddress
 import java.lang.foreign.MemorySegment
 import java.lang.foreign.GroupLayout
-import java.lang.foreign.VaList
 
 given descriptorModule19: DescriptorModule with
   private val sdt = TrieMap.empty[StructDescriptor, GroupLayout]
@@ -24,6 +23,8 @@ given descriptorModule19: DescriptorModule with
     case VaListDescriptor       => ValueLayout.ADDRESS.nn
     case sd: StructDescriptor   => toGroupLayout(sd)
     case ad: AliasDescriptor[?] => toMemoryLayout(ad.real)
+    case CUnionDescriptor(possibleTypes) =>
+      MemoryLayout.unionLayout(possibleTypes.view.map(toMemoryLayout).toSeq*).nn
 
   def toMemoryLayout(smd: StructMemberDescriptor): MemoryLayout =
     toMemoryLayout(smd.descriptor).withName(smd.name).nn
@@ -85,6 +86,7 @@ given descriptorModule19: DescriptorModule with
     case PtrDescriptor          => classOf[MemoryAddress]
     case _: StructDescriptor    => classOf[MemorySegment]
     case ad: AliasDescriptor[?] => toCarrierType(ad.real)
+    case CUnionDescriptor(_)    => classOf[MemorySegment]
 
   override def memberOffsets(sd: List[TypeDescriptor]): IArray[Bytes] =
     offsets.getOrElseUpdate(
@@ -124,6 +126,7 @@ given descriptorModule19: DescriptorModule with
     case VaListDescriptor       => Bytes(ValueLayout.ADDRESS.nn.byteSize())
     case sd: StructDescriptor   => Bytes(toGroupLayout(sd).byteSize())
     case ad: AliasDescriptor[?] => sizeOf(ad.real)
+    case CUnionDescriptor(possibleTypes) => possibleTypes.view.map(sizeOf).max
 
   override def alignmentOf(td: TypeDescriptor): Bytes =
     import java.lang.foreign.ValueLayout
@@ -140,3 +143,5 @@ given descriptorModule19: DescriptorModule with
         sd.members.view.map(_.descriptor).map(alignmentOf).max
       case ad: AliasDescriptor[?] =>
         alignmentOf(ad.real)
+      case CUnionDescriptor(possibleTypes) =>
+        possibleTypes.view.map(alignmentOf).max

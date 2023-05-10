@@ -1,8 +1,6 @@
 package fr.hammons.slinc
 
 import scala.quoted.*
-import scala.annotation.nowarn
-
 private[slinc] object MacroHelpers:
   def widenExpr(t: Expr[?])(using Quotes) =
     import quotes.reflect.*

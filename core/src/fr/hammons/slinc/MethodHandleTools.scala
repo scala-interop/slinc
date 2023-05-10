@@ -3,7 +3,6 @@ package fr.hammons.slinc
 import scala.quoted.*
 import java.lang.invoke.MethodHandle
 import fr.hammons.slinc.modules.TransitionModule
-import scala.annotation.nowarn
 
 object MethodHandleTools:
   def exprNameMapping(expr: Expr[Any])(using Quotes): String =

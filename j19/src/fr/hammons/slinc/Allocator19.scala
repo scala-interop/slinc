@@ -10,6 +10,7 @@ import java.lang.foreign.ValueLayout
 import scala.jdk.FunctionConverters.*
 import java.lang.foreign.Addressable
 import java.lang.foreign.MemorySegment
+import java.lang.foreign.GroupLayout
 import fr.hammons.slinc.modules.LinkageModule19
 
 class Allocator19(
@@ -95,6 +96,19 @@ class Allocator19(
               .asInstanceOf[Addressable]
           )
         )
+      case (cUnionDescriptor: CUnionDescriptor, c: CUnion[?]) =>
+        builder.addVarg(
+          descriptorModule19.toMemoryLayout(cUnionDescriptor) match
+            case g: GroupLayout => g
+            case _ =>
+              throw Error("CUnionDescriptor didn't resolve to group layout??")
+          ,
+          c.mem.asBase match
+            case ms: MemorySegment => ms
+            case _                 => throw Error("Illegal datatype")
+        )
+      case (td, d) =>
+        throw Error(s"Unsupported datatype for $td - $d")
 
   override def makeVarArgs(vbuilder: VarArgsBuilder): VarArgs =
     import scala.compiletime.asMatchable

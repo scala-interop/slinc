@@ -8,7 +8,6 @@ import fr.hammons.slinc.modules.TransitionModule
 import fr.hammons.slinc.modules.ReadWriteModule
 import fr.hammons.slinc.modules.Reader
 import fr.hammons.slinc.modules.Writer
-import scala.annotation.nowarn
 
 trait Struct[A <: Product] extends DescriptorOf[A]
 
@@ -110,12 +109,10 @@ object Struct:
         val reader = readGen[A]
         val writer = writeGen[A]
 
-        @nowarn("msg=unused implicit parameter")
         override val returnTransition = returnValue =>
           val mem = summon[TransitionModule].memReturn(returnValue)
           summon[ReadWriteModule].read(mem, Bytes(0), this)
 
-        @nowarn("msg=unused implicit parameter")
         override val argumentTransition = argument =>
           val mem = summon[Allocator].allocate(this, 1)
           summon[ReadWriteModule].write(mem, Bytes(0), this, argument)

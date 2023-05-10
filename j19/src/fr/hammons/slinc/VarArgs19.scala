@@ -28,6 +28,8 @@ private class VarArgs19(vaList: VaList) extends VarArgs:
     case PtrDescriptor | VaListDescriptor => vaList.skip(ValueLayout.ADDRESS)
     case sd: StructDescriptor =>
       vaList.skip(descriptorModule19.toGroupLayout(sd))
+    case cd: CUnionDescriptor =>
+      vaList.skip(descriptorModule19.toMemoryLayout(cd))
     case AliasDescriptor(real) => skip(real)
 
   override def skip[A](using dO: DescriptorOf[A]): Unit = skip(dO.descriptor)
@@ -61,6 +63,8 @@ private class VarArgs19(vaList: VaList) extends VarArgs:
         )
       case AliasDescriptor(real) => as(real)
       case VaListDescriptor      => vaList.nextVarg(ValueLayout.ADDRESS).nn
+      case CUnionDescriptor(possibleTypes) =>
+        as(possibleTypes.maxBy(_.size))
 
   override def get[A](using d: DescriptorOf[A]): A =
     transitionModule19.methodReturn[A](d.descriptor, as(d.descriptor))

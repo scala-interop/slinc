@@ -6,13 +6,12 @@ import jdk.incubator.foreign.{
   MemorySegment,
   ResourceScope,
   CLinker,
-  FunctionDescriptor as JFunctionDescriptor
+  FunctionDescriptor as JFunctionDescriptor,
+  GroupLayout
 }, CLinker.{C_POINTER, C_INT, C_LONG_LONG, C_DOUBLE, VaList}
 import fr.hammons.slinc.modules.{descriptorModule17, transitionModule17}
 import fr.hammons.slinc.modules.LinkageModule17
-import scala.annotation.nowarn
 
-@nowarn("msg=unused import")
 class Allocator17(
     segmentAllocator: SegmentAllocator,
     scope: ResourceScope,
@@ -59,6 +58,20 @@ class Allocator17(
             .methodArgument(VaListDescriptor, v, alloc)
             .asInstanceOf[Addressable]
         )
+      )
+    case (cd: CUnionDescriptor, v: CUnion[?]) =>
+      builder.vargFromSegment(
+        descriptorModule17.toMemoryLayout(cd) match
+          case gl: GroupLayout => gl
+          case _ => throw Error("got a non group layout from CUnionDescriptor")
+        ,
+        v.mem.asBase match
+          case ms: MemorySegment => ms
+          case _ => throw Error("base of mem was not J17 MemorySegment!!")
+      )
+    case (a, d) =>
+      throw Error(
+        s"Unsupported type descriptor/data pairing for VarArgs: $a - $d"
       )
 
   override def makeVarArgs(vbuilder: VarArgsBuilder): VarArgs =
