@@ -277,22 +277,25 @@ trait TransferSpec[ThreadException <: Throwable](val slinc: Slinc)(using
         assertEquals(res, 5)
       }
 
-  val randomA = for 
+  val randomA = for
     a <- Arbitrary.arbitrary[CInt]
     b <- Arbitrary.arbitrary[CInt]
-  yield A(a,b)
-  val randomUnion = Gen.oneOf[CInt | CFloat | A](Arbitrary.arbitrary[CInt], Arbitrary.arbitrary[CFloat], randomA)
+  yield A(a, b)
+  val randomUnion = Gen.oneOf[CInt | CFloat | A](
+    Arbitrary.arbitrary[CInt],
+    Arbitrary.arbitrary[CFloat],
+    randomA
+  )
 
   property("Can send and receive data from a Union"):
-    val union = CUnion[(CInt, CFloat, A)]
-    forAll(randomUnion):
-      case a: CInt => 
-        union.set(a)
-        assertEquals(a, union.get[CInt])
-      case a: CFloat => 
-        union.set(a)
-        assertEquals(a, union.get[CFloat])
-      case a: A => 
-        union.set(a)
-        assertEquals(a, union.get[A])
-        
+      val union = CUnion[(CInt, CFloat, A)]
+      forAll(randomUnion):
+          case a: CInt =>
+            union.set(a)
+            assertEquals(a, union.get[CInt])
+          case a: CFloat =>
+            union.set(a)
+            assertEquals(a, union.get[CFloat])
+          case a: A =>
+            union.set(a)
+            assertEquals(a, union.get[A])

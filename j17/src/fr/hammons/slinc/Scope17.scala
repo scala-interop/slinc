@@ -54,10 +54,10 @@ class Scope17(linker: CLinker) extends ScopeI.PlatformSpecific:
       res
 
   def createInferredScope: InferredScope = new InferredScope:
-    def apply[A](fn: Allocator ?=> A): A = 
-      val scope = ResourceScope.newImplicitScope().nn 
+    def apply[A](fn: Allocator ?=> A): A =
+      val scope = ResourceScope.newImplicitScope().nn
       given Allocator = Allocator17(
-        SegmentAllocator.arenaAllocator(scope).nn, 
+        SegmentAllocator.arenaAllocator(scope).nn,
         scope,
         linker
       )

@@ -4,7 +4,6 @@ import scala.reflect.ClassTag
 import fr.hammons.slinc.modules.DescriptorModule
 import fr.hammons.slinc.modules.ReadWriteModule
 
-
 class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
   inline def `unary_!`(using rwm: ReadWriteModule): A =
     import scala.compiletime.summonFrom
