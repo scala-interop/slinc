@@ -12,6 +12,7 @@ import scala.reflect.ClassTag
 import scala.quoted.*
 import fr.hammons.slinc.modules.TransitionModule
 import fr.hammons.slinc.modules.{ArgumentTransition, ReturnTransition}
+import scala.NonEmptyTuple
 
 /** Describes types used by C interop
   */
@@ -196,7 +197,7 @@ case object VaListDescriptor extends TypeDescriptor:
 
 case class CUnionDescriptor(possibleTypes: Set[TypeDescriptor])
     extends TypeDescriptor:
-  type Inner = CUnion[? <: Tuple]
+  type Inner = CUnion[? <: NonEmptyTuple]
 
   override val reader: (ReadWriteModule, DescriptorModule) ?=> Reader[Inner] =
     ???

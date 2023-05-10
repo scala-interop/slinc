@@ -74,5 +74,6 @@ object DescriptorOf:
 
   inline given [A <: NonEmptyTuple]: DescriptorOf[CUnion[A]] =
     new DescriptorOf[CUnion[A]]:
-      val descriptor: CUnionDescriptor { type Inner = CUnion[? <: Tuple] } =
+      val descriptor: CUnionDescriptor { type Inner = CUnion[A] } =
         CUnionDescriptor(helper[A])
+          .asInstanceOf[CUnionDescriptor { type Inner = CUnion[A] }]
