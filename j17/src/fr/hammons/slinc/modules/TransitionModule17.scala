@@ -5,13 +5,25 @@ import fr.hammons.slinc.TypeDescriptor
 import scala.collection.concurrent.TrieMap
 import fr.hammons.slinc.*
 
-import jdk.incubator.foreign.{MemoryAddress, MemorySegment}
+import jdk.incubator.foreign.{
+  MemoryAddress,
+  MemorySegment,
+  ResourceScope,
+  SegmentAllocator
+}
 
 given transitionModule17: TransitionModule with
 
   override def memReturn(value: Object): Mem = Mem17(
     value.asInstanceOf[MemorySegment]
   )
+
+  override def cUnionReturn(td: TypeDescriptor, value: Object): CUnion[?] =
+    val scope = ResourceScope.newImplicitScope().nn
+    val alloc = SegmentAllocator.arenaAllocator(scope).nn
+    val segment = alloc.allocate(descriptorModule17.toMemoryLayout(td)).nn
+    segment.copyFrom(value.asInstanceOf[MemorySegment])
+    new CUnion(Mem17(segment))
 
   override def addressReturn(value: Object): Mem = Mem17(
     MemorySegment

@@ -36,6 +36,15 @@ class FSetSpec extends munit.FunSuite:
 
       assertNoDiff(error, "")
 
+  test("CUnion support"):
+      val error = compileErrors("""
+    import fr.hammons.slinc.types.*
+    trait CUnionFSet derives FSet:
+      def m(u: CUnion[(CInt, CFloat)]): CUnion[(CLong, CChar)]
+    """)
+
+      assertNoDiff(error, "")
+
   test("platform dependent types"):
       val maybeError = compileErrors("""
     import fr.hammons.slinc.types.CLong

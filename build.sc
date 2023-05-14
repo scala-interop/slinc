@@ -26,6 +26,7 @@ trait BaseModule extends ScoverageModule with ScalafmtModule {
   def scalacOptions = Seq(
     "-deprecation",
     "-Wunused:all",
+    "-feature",
     "-unchecked",
     "-Xcheck-macros",
     "-Xprint-suspension",

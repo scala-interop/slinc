@@ -107,20 +107,23 @@ object MethodHandleTools:
         _ => retType
       ),
       (meth, params) =>
-        retType.asType match
+        val invokeExpr = retType.asType match
           case '[r] =>
-            val invokeExpr = invokeArguments[r](
+            invokeArguments[r](
               methodHandleExpr,
               '{ $mem.asBase } +:
                 params.map(_.asExpr)
             )
-            val invokeResultExpr = '{
-              val invokeResult = $invokeExpr
-              if invokeResult == null then ().asInstanceOf[r]
-              else invokeResult.asInstanceOf[r]
+
+        val invokeResultExpr = retType.asType match
+          case '[Unit] =>
+            '{
+              $invokeExpr
+              ()
             }
-            invokeResultExpr.asTerm
-              .changeOwner(meth)
+          case '[r] => '{ $invokeExpr.asInstanceOf[r] }
+        invokeResultExpr.asTerm
+          .changeOwner(meth)
     ).asExprOf[A]
 
     expr

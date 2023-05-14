@@ -3,6 +3,7 @@ package fr.hammons.slinc
 import scala.compiletime.erasedValue
 import scala.compiletime.error
 import scala.compiletime.summonInline
+import scala.compiletime.summonFrom
 import fr.hammons.slinc.modules.ReadWriteModule
 import fr.hammons.slinc.modules.DescriptorModule
 import scala.NonEmptyTuple
@@ -47,10 +48,14 @@ object CUnion:
     case EmptyTuple => td.nn
 
   inline def apply[T <: NonEmptyTuple](using
-      is: InferredScope,
       descriptorModule: DescriptorModule
-  ) =
+  ): CUnion[T] =
     val maxDescriptor = applyHelper[T](null).nn
-    is { allocator ?=>
-      new CUnion[T](allocator.allocate(maxDescriptor, 1))
+    summonFrom {
+      case allocator: Allocator =>
+        new CUnion[T](allocator.allocate(maxDescriptor, 1))
+      case inferredScope: InferredScope =>
+        inferredScope { allocator ?=>
+          new CUnion[T](allocator.allocate(maxDescriptor, 1))
+        }
     }

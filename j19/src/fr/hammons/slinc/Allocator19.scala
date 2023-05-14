@@ -18,6 +18,11 @@ class Allocator19(
     scope: MemorySession,
     linker: Linker
 ) extends Allocator:
+  override def addCloseAction(fn: () => Unit): Unit =
+    scope.addCloseAction(
+      new Runnable:
+        def run() = fn()
+    )
 
   override def upcall[Fn](descriptor: FunctionDescriptor, target: Fn): Mem =
     val mh = this.methodHandleFromFn(descriptor, target)

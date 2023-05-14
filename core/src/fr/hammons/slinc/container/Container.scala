@@ -4,6 +4,7 @@ import scala.reflect.ClassTag
 import scala.compiletime.erasedValue
 import scala.compiletime.error
 import scala.quoted.*
+import scala.language.implicitConversions
 
 class Data[A](a: A):
   type B = A

@@ -25,6 +25,7 @@ object FunctionContext:
         case a                      => a
       .exists:
         case _: StructDescriptor => true
+        case _: CUnionDescriptor => true
         case _                   => false
 
     val allocationTransition: Seq[InputTransition] =

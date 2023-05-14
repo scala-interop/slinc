@@ -11,6 +11,7 @@ import jdk.incubator.foreign.{
 }, CLinker.{C_POINTER, C_INT, C_LONG_LONG, C_DOUBLE, VaList}
 import fr.hammons.slinc.modules.{descriptorModule17, transitionModule17}
 import fr.hammons.slinc.modules.LinkageModule17
+import java.lang.ref.Cleaner
 
 class Allocator17(
     segmentAllocator: SegmentAllocator,
@@ -18,8 +19,61 @@ class Allocator17(
     linker: CLinker
 ) extends Allocator:
   import scala.compiletime.asMatchable
+  override def addCloseAction(fn: () => Unit): Unit =
+    scope.addCloseAction(
+      new Runnable:
+        def run() = fn()
+    )
 
-  private def makeVarArg(
+  override def makeVarArgs(vbuilder: VarArgsBuilder): VarArgs =
+    VarArgs17(
+      VaList
+        .make(
+          _b =>
+            val builder = _b.nn
+            vbuilder.vs.foreach(
+              _.use[DescriptorOf](dO ?=>
+                v =>
+                  Allocator17.makeVarArg(builder, dO.descriptor, v.asMatchable)
+              )
+            )
+          ,
+          scope
+        )
+        .nn
+    )
+
+  override def upcall[Fn](descriptor: FunctionDescriptor, target: Fn): Mem =
+    val mh = methodHandleFromFn(descriptor, target)
+    val fd = descriptor.outputDescriptor match
+      case Some(r) =>
+        JFunctionDescriptor.of(
+          descriptorModule17.toMemoryLayout(r),
+          descriptor.inputDescriptors.map(descriptorModule17.toMemoryLayout)*
+        )
+      case _ =>
+        JFunctionDescriptor.ofVoid(
+          descriptor.inputDescriptors.map(descriptorModule17.toMemoryLayout)*
+        )
+
+    Mem17(
+      linker
+        .upcallStub(mh, fd, scope)
+        .nn
+        .asSegment(C_POINTER.nn.byteSize(), scope)
+        .nn
+    )
+
+  override def allocate(descriptor: TypeDescriptor, num: Int): Mem =
+    Mem17(
+      segmentAllocator
+        .allocate(descriptor.size.toLong * num, descriptor.alignment.toLong)
+        .nn
+    )
+  override def base: Object = segmentAllocator
+
+object Allocator17:
+  def makeVarArg(
       builder: VaList.Builder,
       td: TypeDescriptor,
       v: Matchable
@@ -73,49 +127,3 @@ class Allocator17(
       throw Error(
         s"Unsupported type descriptor/data pairing for VarArgs: $a - $d"
       )
-
-  override def makeVarArgs(vbuilder: VarArgsBuilder): VarArgs =
-    VarArgs17(
-      VaList
-        .make(
-          _b =>
-            val builder = _b.nn
-            vbuilder.vs.foreach(
-              _.use[DescriptorOf](dO ?=>
-                v => makeVarArg(builder, dO.descriptor, v.asMatchable)
-              )
-            )
-          ,
-          scope
-        )
-        .nn
-    )
-
-  override def upcall[Fn](descriptor: FunctionDescriptor, target: Fn): Mem =
-    val mh = methodHandleFromFn(descriptor, target)
-    val fd = descriptor.outputDescriptor match
-      case Some(r) =>
-        JFunctionDescriptor.of(
-          descriptorModule17.toMemoryLayout(r),
-          descriptor.inputDescriptors.map(descriptorModule17.toMemoryLayout)*
-        )
-      case _ =>
-        JFunctionDescriptor.ofVoid(
-          descriptor.inputDescriptors.map(descriptorModule17.toMemoryLayout)*
-        )
-
-    Mem17(
-      linker
-        .upcallStub(mh, fd, scope)
-        .nn
-        .asSegment(C_POINTER.nn.byteSize(), scope)
-        .nn
-    )
-
-  override def allocate(descriptor: TypeDescriptor, num: Int): Mem =
-    Mem17(
-      segmentAllocator
-        .allocate(descriptor.size.toLong * num, descriptor.alignment.toLong)
-        .nn
-    )
-  override def base: Object = segmentAllocator
