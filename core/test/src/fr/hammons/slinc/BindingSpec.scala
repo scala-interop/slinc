@@ -48,6 +48,11 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
     ): CInt
     def i157_null_eq(): Ptr[Unit]
 
+    def i176_test(
+        input: CUnion[(CFloat, CInt)],
+        is_left: CChar
+    ): CUnion[(CLong, CDouble)]
+
   test("int_identity") {
     val test = FSet.instance[TestLib]
 
@@ -144,3 +149,16 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
   test("Null is null"):
       val test = FSet.instance[TestLib]
       assertEquals(Null[Unit], test.i157_null_eq())
+
+  property("issue 176 - can use and recieve union types from C functions"):
+      val test = FSet.instance[TestLib]
+      forAll: (float: CFloat, int: CInt, left: Boolean) =>
+        val union = CUnion[(Float, Int)]
+        if left then
+          union.set(float)
+          val res = test.i176_test(union, 1).get[CDouble]
+          assertEquals(res, float.toDouble)
+        else
+          union.set(int)
+          val res = test.i176_test(union, 0).get[CLong]
+          assertEquals(res, CLong(int))

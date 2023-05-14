@@ -6,7 +6,6 @@ import jdk.incubator.foreign.SegmentAllocator
 import jdk.incubator.foreign.MemoryAddress
 
 class Scope17(linker: CLinker) extends ScopeI.PlatformSpecific:
-
   private val baseNull = Ptr[Nothing](
     Mem17(MemoryAddress.NULL.nn.asSegment(1, ResourceScope.globalScope).nn),
     Bytes(0)
@@ -55,10 +54,6 @@ class Scope17(linker: CLinker) extends ScopeI.PlatformSpecific:
 
   def createInferredScope: InferredScope = new InferredScope:
     def apply[A](fn: Allocator ?=> A): A =
-      val scope = ResourceScope.newImplicitScope().nn
-      given Allocator = Allocator17(
-        SegmentAllocator.arenaAllocator(scope).nn,
-        scope,
-        linker
-      )
+      val scope = ResourceScope.newSharedScope().nn
+      given Allocator = InferredAllocator17(scope, linker)
       fn

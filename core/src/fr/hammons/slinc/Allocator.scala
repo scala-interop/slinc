@@ -5,6 +5,7 @@ import fr.hammons.slinc.modules.DescriptorModule
 
 trait Allocator:
   def allocate(descriptor: TypeDescriptor, num: Int): Mem
+  def addCloseAction(fn: () => Unit): Unit
   def upcall[Fn](descriptor: FunctionDescriptor, target: Fn): Mem
   protected def methodHandleFromFn[Fn](
       descriptor: FunctionDescriptor,

@@ -44,6 +44,8 @@ trait TransitionModule:
 
   def memReturn(value: Object): Mem
 
+  def cUnionReturn(td: TypeDescriptor, value: Object): CUnion[?]
+
   def functionArgument[A](td: TypeDescriptor, value: Object): A =
     methodReturn[A](td, value)
 

@@ -55,6 +55,7 @@ class Scope19(linker: Linker) extends ScopeI.PlatformSpecific:
   override def createInferredScope: InferredScope = new InferredScope:
     def apply[A](fn: Allocator ?=> A): A =
       val rs = MemorySession.openImplicit().nn
+
       given Allocator =
         Allocator19(SegmentAllocator.newNativeArena(rs).nn, rs, linker)
       fn

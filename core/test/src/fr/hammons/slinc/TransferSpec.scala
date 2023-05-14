@@ -114,7 +114,8 @@ trait TransferSpec[ThreadException <: Throwable](val slinc: Slinc)(using
     forAll { (fn: Int => Int, i: Int) =>
       Scope.confined {
         val mem = Ptr.upcall(fn)
-        assertEquals((!mem)(i), fn(i))
+        val returnedFn = mem.unary_!
+        assertEquals(returnedFn(i), fn(i))
       }
     }
   }
@@ -299,3 +300,34 @@ trait TransferSpec[ThreadException <: Throwable](val slinc: Slinc)(using
           case a: A =>
             union.set(a)
             assertEquals(a, union.get[A])
+
+  test("Unions deallocate when no-longer reachable"):
+      var deallocated = false
+      Scope.inferred { alloc ?=>
+        alloc.addCloseAction(() => deallocated = true)
+        CUnion[Tuple1[CInt]]
+      }
+
+      var tries = 5
+      while tries > 0 && !deallocated do
+        System.gc()
+        Thread.sleep(100)
+        tries -= 1
+
+      assertEquals(deallocated, true)
+
+  test("Unions are not deallocated early"):
+      var deallocated = false
+      val union = Scope.inferred { alloc ?=>
+        alloc.addCloseAction(() => deallocated = true)
+        CUnion[Tuple1[CInt]]
+      }
+
+      var tries = 5
+      while tries > 0 && deallocated == false do
+        System.gc()
+        Thread.sleep(100)
+        tries -= 1
+
+      assertEquals(deallocated, false)
+      assertEquals(union.get[CInt], 0)

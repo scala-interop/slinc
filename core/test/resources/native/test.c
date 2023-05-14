@@ -103,3 +103,24 @@ EXPORTED int i30_function_ptr_va_list(int count, Adder adder, ...) {
 EXPORTED void* i157_null_eq() {
   return NULL;
 }
+
+typedef union {
+  float x;
+  int y;
+} union_a_issue_176;
+
+typedef union {
+  long x;
+  double y;
+} union_b_issue_176;
+
+static union_b_issue_176 b;
+EXPORTED union_b_issue_176 i176_test(union_a_issue_176 a, char is_left) {
+  if(is_left) {
+    b.y = (double) a.x;
+  } else {
+    b.x = (long) a.y;
+  }
+
+  return b;
+}

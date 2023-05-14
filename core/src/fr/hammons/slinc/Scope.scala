@@ -23,6 +23,7 @@ object Scope:
   def confined(using c: ConfinedScope): ConfinedScope = c
   def global(using g: GlobalScope): GlobalScope = g
   def shared(using s: SharedScope): SharedScope = s
+  def inferred(using i: InferredScope): InferredScope = i
 
 class ScopeI(platformSpecific: ScopeI.PlatformSpecific):
   given TempScope = platformSpecific.createTempScope

@@ -13,6 +13,7 @@ import scala.quoted.*
 import fr.hammons.slinc.modules.TransitionModule
 import fr.hammons.slinc.modules.{ArgumentTransition, ReturnTransition}
 import scala.NonEmptyTuple
+import scala.language.implicitConversions
 
 /** Describes types used by C interop
   */
@@ -203,12 +204,13 @@ case class CUnionDescriptor(possibleTypes: Set[TypeDescriptor])
     ???
 
   override val returnTransition
-      : (TransitionModule, ReadWriteModule) ?=> ReturnTransition[Inner] = ???
+      : (TransitionModule, ReadWriteModule) ?=> ReturnTransition[Inner] = obj =>
+    summon[TransitionModule].cUnionReturn(this, obj).asInstanceOf[Inner]
 
   override val argumentTransition
       : (TransitionModule, ReadWriteModule, Allocator) ?=> ArgumentTransition[
         Inner
-      ] = ???
+      ] = (i: Inner) => i.mem.asBase
 
   override val writer: (ReadWriteModule, DescriptorModule) ?=> Writer[Inner] =
     ???
