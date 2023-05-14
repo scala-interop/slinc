@@ -9,10 +9,8 @@ import java.lang.invoke.MethodType
 object LinkageModule17 extends LinkageModule:
   import descriptorModule17.*
   override type CSymbol = Addressable
-  private val linker = CLinker.getInstance().nn
   private val lookup = CLinker.systemLookup().nn
   private val lookupLoader = SymbolLookup.loaderLookup().nn
-  private val ts = Scope17(linker)
 
   override def defaultLookup(name: String): Option[CSymbol] =
     lookup.lookup(name).nn.toScala
@@ -59,7 +57,7 @@ object LinkageModule17 extends LinkageModule:
         .toSeq
     )
 
-    linker.downcallHandle(mt, fd).nn
+    Slinc17.linker.downcallHandle(mt, fd).nn
   end getDowncall
 
-  lazy val tempScope: Scope = ts.createTempScope
+  lazy val tempScope: Scope = Scope17.createTempScope

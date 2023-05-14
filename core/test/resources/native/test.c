@@ -124,3 +124,18 @@ EXPORTED union_b_issue_176 i176_test(union_a_issue_176 a, char is_left) {
 
   return b;
 }
+
+typedef struct {
+  union {
+    long x;
+    double y;
+  } my_union;
+} struct_issue_175;
+EXPORTED struct_issue_175 i175_test(struct_issue_175 a, char left) {
+  if(left) {
+    a.my_union.x = a.my_union.x * 2;
+  } else {
+    a.my_union.y = a.my_union.y / 2;
+  }
+  return a;
+}

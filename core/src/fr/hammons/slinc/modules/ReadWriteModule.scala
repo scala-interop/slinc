@@ -3,6 +3,7 @@ package fr.hammons.slinc.modules
 import fr.hammons.slinc.*
 import java.lang.invoke.MethodHandle
 import scala.reflect.ClassTag
+import scala.NonEmptyTuple
 
 type Reader[A] = (Mem, Bytes) => A
 type Writer[A] = (Mem, Bytes, A) => Unit
@@ -27,6 +28,8 @@ trait ReadWriteModule:
 
   val memReader: Reader[Mem]
   val memWriter: Writer[Mem]
+  def unionReader(td: TypeDescriptor): Reader[CUnion[? <: NonEmptyTuple]]
+  def unionWriter(td: TypeDescriptor): Writer[CUnion[? <: NonEmptyTuple]]
 
   def write(
       memory: Mem,

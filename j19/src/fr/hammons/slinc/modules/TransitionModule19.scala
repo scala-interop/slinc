@@ -5,7 +5,6 @@ import scala.collection.concurrent.TrieMap
 import java.lang.foreign.MemorySegment
 import java.lang.foreign.MemorySession
 import java.lang.foreign.MemoryAddress
-import java.lang.foreign.SegmentAllocator
 
 given transitionModule19: TransitionModule with
 
@@ -44,14 +43,3 @@ given transitionModule19: TransitionModule with
   override def memReturn(value: Object): Mem = Mem19(
     value.asInstanceOf[MemorySegment]
   )
-
-  override def cUnionReturn(td: TypeDescriptor, value: Object): CUnion[?] =
-    val session = MemorySession.openImplicit().nn
-    val segmentAlloc = SegmentAllocator.newNativeArena(session).nn
-    val segment =
-      segmentAlloc.allocate(descriptorModule19.toMemoryLayout(td)).nn
-    new CUnion(
-      Mem19(
-        segment.copyFrom(value.asInstanceOf[MemorySegment]).nn
-      )
-    )

@@ -7,6 +7,7 @@ trait Mem:
   def asBase: Object
   def asAddress: Object
   def asVarArgs: VarArgs
+  def copyFrom(other: Mem): Unit
 
   def writeFloat(v: Float, offset: Bytes): Unit
   def writeLong(v: Long, offset: Bytes): Unit
