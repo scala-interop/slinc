@@ -19,6 +19,9 @@ object Mem19:
 class Mem19(private[slinc] val mem: MemorySegment) extends Mem:
   import Mem19.*
 
+  override def copyFrom(other: Mem): Unit = other match
+    case oMem: Mem19 => mem.copyFrom(oMem.mem).nn
+
   override def writeByteArray(v: Array[Byte], offset: Bytes): Unit =
     mem.asSlice(offset.toLong).nn.copyFrom(MemorySegment.ofArray(v))
 

@@ -201,11 +201,12 @@ case class CUnionDescriptor(possibleTypes: Set[TypeDescriptor])
   type Inner = CUnion[? <: NonEmptyTuple]
 
   override val reader: (ReadWriteModule, DescriptorModule) ?=> Reader[Inner] =
-    ???
+    summon[ReadWriteModule].unionReader(this)
 
   override val returnTransition
       : (TransitionModule, ReadWriteModule) ?=> ReturnTransition[Inner] = obj =>
-    summon[TransitionModule].cUnionReturn(this, obj).asInstanceOf[Inner]
+    summon[ReadWriteModule]
+      .unionReader(this)(summon[TransitionModule].memReturn(obj), Bytes(0))
 
   override val argumentTransition
       : (TransitionModule, ReadWriteModule, Allocator) ?=> ArgumentTransition[
@@ -213,4 +214,4 @@ case class CUnionDescriptor(possibleTypes: Set[TypeDescriptor])
       ] = (i: Inner) => i.mem.asBase
 
   override val writer: (ReadWriteModule, DescriptorModule) ?=> Writer[Inner] =
-    ???
+    summon[ReadWriteModule].unionWriter(this)

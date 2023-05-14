@@ -1,7 +1,6 @@
 package fr.hammons.slinc.modules
 
 import java.lang.invoke.MethodHandle
-import java.lang.foreign.Linker
 import java.lang.foreign.{FunctionDescriptor as JFunctionDescriptor}
 import scala.jdk.OptionConverters.*
 import java.lang.foreign.MemorySegment
@@ -12,10 +11,8 @@ import java.lang.foreign.SymbolLookup
 object LinkageModule19 extends LinkageModule:
   import descriptorModule19.*
   override type CSymbol = MemorySegment
-  private val linker = Linker.nativeLinker().nn
-  private val lookup = linker.defaultLookup().nn
+  private val lookup = Slinc19.linker.defaultLookup().nn
   private val loaderLookup = SymbolLookup.loaderLookup().nn
-  private val ts = Scope19(linker)
 
   override def defaultLookup(name: String): Option[CSymbol] =
     lookup.lookup(name).nn.toScala
@@ -57,7 +54,7 @@ object LinkageModule19 extends LinkageModule:
         .toList
     )
 
-    linker.downcallHandle(fd).nn
+    Slinc19.linker.downcallHandle(fd).nn
   end getDowncall
 
-  lazy val tempScope: Scope = ts.createTempScope
+  lazy val tempScope: Scope = Scope19.createTempScope

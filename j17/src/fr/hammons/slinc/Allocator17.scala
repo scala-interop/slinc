@@ -11,7 +11,6 @@ import jdk.incubator.foreign.{
 }, CLinker.{C_POINTER, C_INT, C_LONG_LONG, C_DOUBLE, VaList}
 import fr.hammons.slinc.modules.{descriptorModule17, transitionModule17}
 import fr.hammons.slinc.modules.LinkageModule17
-import java.lang.ref.Cleaner
 
 class Allocator17(
     segmentAllocator: SegmentAllocator,

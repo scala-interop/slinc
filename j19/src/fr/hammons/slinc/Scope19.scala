@@ -1,12 +1,11 @@
 package fr.hammons.slinc
 
-import java.lang.foreign.Linker
 import java.lang.foreign.MemorySession
 import java.lang.foreign.SegmentAllocator
 import java.lang.foreign.MemorySegment
 import java.lang.foreign.MemoryAddress
 
-class Scope19(linker: Linker) extends ScopeI.PlatformSpecific:
+object Scope19 extends ScopeI.PlatformSpecific:
 
   val baseNull: Ptr[Any] = Ptr(
     Mem19(
@@ -20,7 +19,7 @@ class Scope19(linker: Linker) extends ScopeI.PlatformSpecific:
     given Allocator = Allocator19(
       TempAllocator19.localAllocator,
       MemorySession.global().nn,
-      linker
+      Slinc19.linker
     )
     def apply[A](fn: Allocator ?=> A): A =
       val res = fn
@@ -31,14 +30,14 @@ class Scope19(linker: Linker) extends ScopeI.PlatformSpecific:
     def apply[A](fn: Allocator ?=> A): A =
       val rs = MemorySession.global().nn
       given Allocator =
-        Allocator19(SegmentAllocator.newNativeArena(rs).nn, rs, linker)
+        Allocator19(SegmentAllocator.newNativeArena(rs).nn, rs, Slinc19.linker)
       fn
 
   override def createConfinedScope: ConfinedScope = new ConfinedScope:
     def apply[A](fn: Allocator ?=> A): A =
       val rs = MemorySession.openConfined().nn
       given Allocator =
-        Allocator19(SegmentAllocator.newNativeArena(rs).nn, rs, linker)
+        Allocator19(SegmentAllocator.newNativeArena(rs).nn, rs, Slinc19.linker)
       val res = fn
       rs.close()
       res
@@ -47,7 +46,7 @@ class Scope19(linker: Linker) extends ScopeI.PlatformSpecific:
     def apply[A](fn: Allocator ?=> A): A =
       val rs = MemorySession.openShared().nn
       given Allocator =
-        Allocator19(SegmentAllocator.newNativeArena(rs).nn, rs, linker)
+        Allocator19(SegmentAllocator.newNativeArena(rs).nn, rs, Slinc19.linker)
       val res = fn
       rs.close()
       res
@@ -57,5 +56,5 @@ class Scope19(linker: Linker) extends ScopeI.PlatformSpecific:
       val rs = MemorySession.openImplicit().nn
 
       given Allocator =
-        Allocator19(SegmentAllocator.newNativeArena(rs).nn, rs, linker)
+        Allocator19(SegmentAllocator.newNativeArena(rs).nn, rs, Slinc19.linker)
       fn

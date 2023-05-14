@@ -22,6 +22,7 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
   case class I36Outer(inner: Ptr[I36Inner]) derives Struct
 
   case class I30Struct(list: Ptr[VarArgs]) derives Struct
+  case class I175_Struct(union: CUnion[(CInt, CDouble)]) derives Struct
 
   @NeedsResource("test")
   trait TestLib derives FSet:
@@ -52,6 +53,11 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
         input: CUnion[(CFloat, CInt)],
         is_left: CChar
     ): CUnion[(CLong, CDouble)]
+
+    def i175_test(
+        input: I175_Struct,
+        left: CChar
+    ): I175_Struct
 
   test("int_identity") {
     val test = FSet.instance[TestLib]
@@ -162,3 +168,21 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
           union.set(int)
           val res = test.i176_test(union, 0).get[CLong]
           assertEquals(res, CLong(int))
+
+  property(
+    "issue 175 - can send and receive structs with union types to C functions"
+  ):
+      val test = FSet.instance[TestLib]
+      forAll: (int: CInt, double: CDouble, left: Boolean) =>
+        val union = CUnion[(CInt, CDouble)]
+        if left then
+          union.set(int)
+          val res = test.i175_test(I175_Struct(union), 1)
+          assertEquals(
+            res.union.get[CInt],
+            int * 2
+          )
+        else
+          union.set(double)
+          val res = test.i175_test(I175_Struct(union), 0)
+          assertEquals(res.union.get[CDouble], double / 2)

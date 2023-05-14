@@ -26,6 +26,8 @@ trait TransferSpec[ThreadException <: Throwable](val slinc: Slinc)(using
 
   case class E(list: VarArgs) derives Struct
 
+  case class F(u: CUnion[(CInt, CFloat)]) derives Struct
+
   test("can read and write jvm ints") {
     Scope.global {
       val mem = Ptr.blank[Int]
@@ -331,3 +333,23 @@ trait TransferSpec[ThreadException <: Throwable](val slinc: Slinc)(using
 
       assertEquals(deallocated, false)
       assertEquals(union.get[CInt], 0)
+
+  property("can create F ptrs"):
+      val union = CUnion[(CInt, CFloat)]
+      forAll: (a: CInt, b: CFloat, left: Boolean) =>
+        if left then
+          union.set(a)
+          val fReturn = Scope.confined {
+            val f = Ptr.copy(F(union))
+            !f
+          }
+
+          assertEquals(fReturn.u.get[CInt], union.get[CInt])
+        else
+          union.set(b)
+          val fReturn = Scope.confined {
+            val f = Ptr.copy(F(union))
+            !f
+          }
+
+          assertEquals(fReturn.u.get[CFloat], union.get[CFloat])

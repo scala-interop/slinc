@@ -18,6 +18,10 @@ class Mem17(private[slinc] val mem: MemorySegment) extends Mem:
     VaList.ofAddress(mem.address().nn).nn
   )
 
+  override def copyFrom(other: Mem): Unit =
+    other match
+      case oMem: Mem17 => mem.copyFrom(oMem.mem)
+
   override def readLong(offset: Bytes): Long =
     MemoryAccess.getLongAtOffset(mem, offset.toLong)
 
