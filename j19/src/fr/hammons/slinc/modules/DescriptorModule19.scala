@@ -36,7 +36,9 @@ given descriptorModule19: DescriptorModule with
           .structLayout(
             genLayoutList(
               sd.members.map(toMemoryLayout),
-              alignmentOf(sd)
+              Bytes(
+                sd.members.view.map(toMemoryLayout).map(_.byteAlignment()).max
+              )
             )*
           )
           .nn
@@ -115,33 +117,10 @@ given descriptorModule19: DescriptorModule with
       }
     )
 
-  override def sizeOf(td: TypeDescriptor): Bytes = td match
-    case ByteDescriptor         => Bytes(1)
-    case ShortDescriptor        => Bytes(2)
-    case IntDescriptor          => Bytes(4)
-    case LongDescriptor         => Bytes(8)
-    case FloatDescriptor        => Bytes(4)
-    case DoubleDescriptor       => Bytes(8)
-    case PtrDescriptor          => Bytes(ValueLayout.ADDRESS.nn.byteSize())
-    case VaListDescriptor       => Bytes(ValueLayout.ADDRESS.nn.byteSize())
-    case sd: StructDescriptor   => Bytes(toGroupLayout(sd).byteSize())
-    case ad: AliasDescriptor[?] => sizeOf(ad.real)
-    case CUnionDescriptor(possibleTypes) => possibleTypes.view.map(sizeOf).max
+  override def sizeOf(td: TypeDescriptor): Bytes = Bytes(
+    toMemoryLayout(td).byteSize()
+  )
 
-  override def alignmentOf(td: TypeDescriptor): Bytes =
-    import java.lang.foreign.ValueLayout
-    td match
-      case ByteDescriptor   => Bytes(1)
-      case ShortDescriptor  => Bytes(2)
-      case IntDescriptor    => Bytes(4)
-      case LongDescriptor   => Bytes(8)
-      case FloatDescriptor  => Bytes(4)
-      case DoubleDescriptor => Bytes(8)
-      case PtrDescriptor    => Bytes(ValueLayout.ADDRESS.nn.byteAlignment())
-      case VaListDescriptor => Bytes(ValueLayout.ADDRESS.nn.byteSize())
-      case sd: StructDescriptor =>
-        sd.members.view.map(_.descriptor).map(alignmentOf).max
-      case ad: AliasDescriptor[?] =>
-        alignmentOf(ad.real)
-      case CUnionDescriptor(possibleTypes) =>
-        possibleTypes.view.map(alignmentOf).max
+  override def alignmentOf(td: TypeDescriptor): Bytes = Bytes(
+    toMemoryLayout(td).byteAlignment()
+  )

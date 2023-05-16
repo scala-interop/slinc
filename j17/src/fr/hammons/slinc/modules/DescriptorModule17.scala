@@ -2,23 +2,17 @@ package fr.hammons.slinc.modules
 
 import fr.hammons.slinc.*
 
-import jdk.incubator.foreign.CLinker.{
-  C_CHAR,
-  C_SHORT,
-  C_INT,
-  C_DOUBLE,
-  C_FLOAT,
-  C_LONG_LONG,
-  C_POINTER
-}
 import jdk.incubator.foreign.{
   MemoryLayout,
   MemoryAddress,
   MemorySegment,
   GroupLayout,
-  CLinker
-}
+  CLinker,
+  ValueLayout
+}, CLinker.C_POINTER
 import scala.collection.concurrent.TrieMap
+import fr.hammons.slinc.types.{arch, os, OS, Arch}
+import fr.hammons.slinc.modules.platform.*
 
 given descriptorModule17: DescriptorModule with
   val chm: TrieMap[StructDescriptor, GroupLayout] = TrieMap.empty
@@ -69,26 +63,13 @@ given descriptorModule17: DescriptorModule with
       else Seq.empty
     )
 
-  override def sizeOf(td: TypeDescriptor): Bytes = td match
-    case ByteDescriptor   => Bytes(1)
-    case ShortDescriptor  => Bytes(2)
-    case IntDescriptor    => Bytes(4)
-    case LongDescriptor   => Bytes(8)
-    case FloatDescriptor  => Bytes(4)
-    case DoubleDescriptor => Bytes(8)
-    case PtrDescriptor    => Bytes(toMemoryLayout(PtrDescriptor).byteSize())
-    case sd: StructDescriptor =>
-      Bytes(toGroupLayout(sd).byteSize())
-    case VaListDescriptor => Bytes(toMemoryLayout(VaListDescriptor).byteSize())
-    case ad: AliasDescriptor[?]          => sizeOf(ad.real)
-    case CUnionDescriptor(possibleTypes) => possibleTypes.map(sizeOf).max
+  override def sizeOf(td: TypeDescriptor): Bytes = Bytes(
+    toMemoryLayout(td).byteSize()
+  )
 
-  override def alignmentOf(td: TypeDescriptor): Bytes = td match
-    case s: StructDescriptor =>
-      s.members.view.map(_.descriptor).map(alignmentOf).max
-    case CUnionDescriptor(possibleTypes) =>
-      possibleTypes.view.map(alignmentOf).max
-    case _ => sizeOf(td)
+  override def alignmentOf(td: TypeDescriptor): Bytes = Bytes(
+    toMemoryLayout(td).byteAlignment
+  )
 
   override def memberOffsets(sd: List[TypeDescriptor]): IArray[Bytes] =
     offsets.getOrElseUpdate(
@@ -117,13 +98,21 @@ given descriptorModule17: DescriptorModule with
       }
     )
 
+  val platform = (os, arch) match
+    case (OS.Linux, Arch.X64)      => x64.Linux
+    case (OS.Darwin, Arch.X64)     => x64.Darwin
+    case (OS.Windows, Arch.X64)    => x64.Windows
+    case (OS.Linux, Arch.AArch64)  => aarch64.Linux
+    case (OS.Darwin, Arch.AArch64) => aarch64.Darwin
+    case _                         => throw Error("Unsupported platform!")
+
   def toMemoryLayout(td: TypeDescriptor): MemoryLayout = td match
-    case ByteDescriptor         => C_CHAR.nn
-    case ShortDescriptor        => C_SHORT.nn
-    case IntDescriptor          => C_INT.nn
-    case LongDescriptor         => C_LONG_LONG.nn
-    case FloatDescriptor        => C_FLOAT.nn
-    case DoubleDescriptor       => C_DOUBLE.nn
+    case ByteDescriptor         => platform.jByte
+    case ShortDescriptor        => platform.jShort
+    case IntDescriptor          => platform.jInt
+    case LongDescriptor         => platform.jLong
+    case FloatDescriptor        => platform.jFloat
+    case DoubleDescriptor       => platform.jDouble
     case PtrDescriptor          => C_POINTER.nn
     case VaListDescriptor       => C_POINTER.nn
     case sd: StructDescriptor   => toGroupLayout(sd)
@@ -138,7 +127,7 @@ given descriptorModule17: DescriptorModule with
     chm.getOrElseUpdate(
       sd, {
         val originalMembers = sd.members.map(toMemoryLayout)
-        val alignment = alignmentOf(sd)
+        val alignment = Bytes(originalMembers.view.map(_.byteAlignment()).max)
         MemoryLayout
           .structLayout(genLayoutList(originalMembers, alignment)*)
           .nn
