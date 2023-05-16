@@ -15,6 +15,7 @@ object Bytes:
     inline def %(b: Bytes): Bytes = a % b
     inline def -(b: Bytes): Bytes = a - b
     inline def >(b: Bytes): Boolean = a > b
+    inline def >=(b: Bytes): Boolean = a >= b
     inline def toLong: Long = a
     inline def toBits: Long = a * 8
     def toSizeT = SizeT
