@@ -4,6 +4,7 @@ import fr.hammons.slinc.container.*
 import scala.quoted.*
 import scala.compiletime.{summonInline, erasedValue, constValue}
 import scala.NonEmptyTuple
+import scala.reflect.ClassTag
 
 /** Typeclass that summons TypeDescriptors
   */
@@ -78,8 +79,8 @@ object DescriptorOf:
         CUnionDescriptor(helper[A])
           .asInstanceOf[CUnionDescriptor { type Inner = CUnion[A] }]
 
-  inline given [A, B <: Int](using
-      innerDesc: DescriptorOf[A]
+  inline given [A, B <: Int](using innerDesc: DescriptorOf[A])(using
+      classTag: ClassTag[innerDesc.descriptor.Inner]
   ): DescriptorOf[SetSizeArray[A, B]] = new DescriptorOf[SetSizeArray[A, B]]:
     val descriptor: TypeDescriptor { type Inner = SetSizeArray[A, B] } =
       SetSizeArrayDescriptor(innerDesc.descriptor, constValue[B]).asInstanceOf[

@@ -28,6 +28,8 @@ trait TransferSpec[ThreadException <: Throwable](val slinc: Slinc)(using
 
   case class F(u: CUnion[(CInt, CFloat)]) derives Struct
 
+  case class G(arr: SetSizeArray[CLong, 2]) derives Struct
+
   test("can read and write jvm ints") {
     Scope.global {
       val mem = Ptr.blank[Int]
@@ -353,3 +355,27 @@ trait TransferSpec[ThreadException <: Throwable](val slinc: Slinc)(using
           }
 
           assertEquals(fReturn.u.get[CFloat], union.get[CFloat])
+
+  test("can copy SetSizeArray[Int, 2] to native memory"):
+      val ssa = SetSizeArray(1, 2)
+
+      Scope.confined {
+        val ptr = Ptr.copy(ssa)
+        assertEquals((!ptr)[0], 1)
+      }
+
+  test("can copy SetSizeArray[CLong, 2] to native memory"):
+      val ssa = SetSizeArray(CLong(1), CLong(2))
+
+      Scope.confined {
+        val ptr = Ptr.copy(ssa)
+        assertEquals((!ptr)[0], CLong(1))
+      }
+
+  test("can copy G to native memory and back"):
+      val g = G(SetSizeArray(CLong(1), CLong(2)))
+
+      Scope.confined {
+        val ptr = Ptr.copy(g)
+        assertEquals((!ptr).arr[0], CLong(1))
+      }
