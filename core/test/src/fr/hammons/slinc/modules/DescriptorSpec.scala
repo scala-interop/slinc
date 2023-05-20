@@ -14,6 +14,7 @@ import fr.hammons.slinc.IntDescriptor
 import fr.hammons.slinc.LongDescriptor
 import fr.hammons.slinc.FloatDescriptor
 import fr.hammons.slinc.DoubleDescriptor
+import fr.hammons.slinc.SetSizeArray
 
 trait DescriptorSpec(val slinc: Slinc) extends munit.FunSuite:
   import slinc.dm
@@ -59,4 +60,16 @@ trait DescriptorSpec(val slinc: Slinc) extends munit.FunSuite:
         DescriptorOf[A].size >= (DescriptorOf[CInt].size * 3 + DescriptorOf[
           CLongLong
         ].size * 2)
+      )
+
+  test("SetSizeArrayDescriptor is size of inner type * num"):
+      assertEquals(
+        DescriptorOf[SetSizeArray[CInt, 15]].size,
+        DescriptorOf[CInt].size * 15
+      )
+
+  test("SetSizeArrayDescriptor is alignment of inner type"):
+      assertEquals(
+        DescriptorOf[SetSizeArray[CInt, 15]].alignment,
+        DescriptorOf[CInt].alignment
       )

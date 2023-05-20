@@ -13,14 +13,16 @@ given descriptorModule19: DescriptorModule with
   private val offsets = TrieMap.empty[List[TypeDescriptor], IArray[Bytes]]
 
   def toMemoryLayout(td: TypeDescriptor): MemoryLayout = td match
-    case ByteDescriptor         => ValueLayout.JAVA_BYTE.nn
-    case ShortDescriptor        => ValueLayout.JAVA_SHORT.nn
-    case IntDescriptor          => ValueLayout.JAVA_INT.nn
-    case LongDescriptor         => ValueLayout.JAVA_LONG.nn
-    case FloatDescriptor        => ValueLayout.JAVA_FLOAT.nn
-    case DoubleDescriptor       => ValueLayout.JAVA_DOUBLE.nn
-    case PtrDescriptor          => ValueLayout.ADDRESS.nn
-    case VaListDescriptor       => ValueLayout.ADDRESS.nn
+    case ByteDescriptor   => ValueLayout.JAVA_BYTE.nn
+    case ShortDescriptor  => ValueLayout.JAVA_SHORT.nn
+    case IntDescriptor    => ValueLayout.JAVA_INT.nn
+    case LongDescriptor   => ValueLayout.JAVA_LONG.nn
+    case FloatDescriptor  => ValueLayout.JAVA_FLOAT.nn
+    case DoubleDescriptor => ValueLayout.JAVA_DOUBLE.nn
+    case PtrDescriptor    => ValueLayout.ADDRESS.nn
+    case VaListDescriptor => ValueLayout.ADDRESS.nn
+    case SetSizeArrayDescriptor(inner, num) =>
+      MemoryLayout.sequenceLayout(num, toMemoryLayout(inner)).nn
     case sd: StructDescriptor   => toGroupLayout(sd)
     case ad: AliasDescriptor[?] => toMemoryLayout(ad.real)
     case CUnionDescriptor(possibleTypes) =>
@@ -78,17 +80,18 @@ given descriptorModule19: DescriptorModule with
     )
 
   def toCarrierType(td: TypeDescriptor): Class[?] = td match
-    case ByteDescriptor         => classOf[Byte]
-    case ShortDescriptor        => classOf[Short]
-    case IntDescriptor          => classOf[Int]
-    case LongDescriptor         => classOf[Long]
-    case FloatDescriptor        => classOf[Float]
-    case DoubleDescriptor       => classOf[Double]
-    case VaListDescriptor       => classOf[MemoryAddress]
-    case PtrDescriptor          => classOf[MemoryAddress]
-    case _: StructDescriptor    => classOf[MemorySegment]
+    case ByteDescriptor   => classOf[Byte]
+    case ShortDescriptor  => classOf[Short]
+    case IntDescriptor    => classOf[Int]
+    case LongDescriptor   => classOf[Long]
+    case FloatDescriptor  => classOf[Float]
+    case DoubleDescriptor => classOf[Double]
+    case VaListDescriptor => classOf[MemoryAddress]
+    case PtrDescriptor    => classOf[MemoryAddress]
+    case _: StructDescriptor | _: CUnionDescriptor |
+        _: SetSizeArrayDescriptor =>
+      classOf[MemorySegment]
     case ad: AliasDescriptor[?] => toCarrierType(ad.real)
-    case CUnionDescriptor(_)    => classOf[MemorySegment]
 
   override def memberOffsets(sd: List[TypeDescriptor]): IArray[Bytes] =
     offsets.getOrElseUpdate(
