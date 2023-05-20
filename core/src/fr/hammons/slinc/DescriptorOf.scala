@@ -2,7 +2,7 @@ package fr.hammons.slinc
 
 import fr.hammons.slinc.container.*
 import scala.quoted.*
-import scala.compiletime.{summonInline, erasedValue}
+import scala.compiletime.{summonInline, erasedValue, constValue}
 import scala.NonEmptyTuple
 
 /** Typeclass that summons TypeDescriptors
@@ -77,3 +77,11 @@ object DescriptorOf:
       val descriptor: CUnionDescriptor { type Inner = CUnion[A] } =
         CUnionDescriptor(helper[A])
           .asInstanceOf[CUnionDescriptor { type Inner = CUnion[A] }]
+
+  inline given [A, B <: Int](using
+      innerDesc: DescriptorOf[A]
+  ): DescriptorOf[SetSizeArray[A, B]] = new DescriptorOf[SetSizeArray[A, B]]:
+    val descriptor: TypeDescriptor { type Inner = SetSizeArray[A, B] } =
+      SetSizeArrayDescriptor(innerDesc.descriptor, constValue[B]).asInstanceOf[
+        SetSizeArrayDescriptor { type Inner = SetSizeArray[A, B] }
+      ]

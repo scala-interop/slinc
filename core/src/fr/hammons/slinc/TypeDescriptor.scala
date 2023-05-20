@@ -14,6 +14,7 @@ import fr.hammons.slinc.modules.TransitionModule
 import fr.hammons.slinc.modules.{ArgumentTransition, ReturnTransition}
 import scala.NonEmptyTuple
 import scala.language.implicitConversions
+import dotty.tools.dotc.transform.patmat.Typ
 
 /** Describes types used by C interop
   */
@@ -215,3 +216,24 @@ case class CUnionDescriptor(possibleTypes: Set[TypeDescriptor])
 
   override val writer: (ReadWriteModule, DescriptorModule) ?=> Writer[Inner] =
     summon[ReadWriteModule].unionWriter(this)
+
+case class SetSizeArrayDescriptor(
+    val contained: TypeDescriptor,
+    val number: Int
+) extends TypeDescriptor:
+
+  override val reader: (ReadWriteModule, DescriptorModule) ?=> Reader[Inner] =
+    ???
+
+  override val writer: (ReadWriteModule, DescriptorModule) ?=> Writer[Inner] =
+    ???
+
+  override val argumentTransition
+      : (TransitionModule, ReadWriteModule, Allocator) ?=> ArgumentTransition[
+        Inner
+      ] = ???
+
+  override val returnTransition
+      : (TransitionModule, ReadWriteModule) ?=> ReturnTransition[Inner] = ???
+
+  type Inner = SetSizeArray[?, ?]

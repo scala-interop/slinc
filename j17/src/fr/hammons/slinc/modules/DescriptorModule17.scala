@@ -19,17 +19,18 @@ given descriptorModule17: DescriptorModule with
   val offsets: TrieMap[List[TypeDescriptor], IArray[Bytes]] = TrieMap.empty
 
   def toCarrierType(td: TypeDescriptor): Class[?] = td match
-    case ByteDescriptor         => classOf[Byte]
-    case ShortDescriptor        => classOf[Short]
-    case IntDescriptor          => classOf[Int]
-    case LongDescriptor         => classOf[Long]
-    case FloatDescriptor        => classOf[Float]
-    case DoubleDescriptor       => classOf[Double]
-    case PtrDescriptor          => classOf[MemoryAddress]
-    case _: StructDescriptor    => classOf[MemorySegment]
+    case ByteDescriptor   => classOf[Byte]
+    case ShortDescriptor  => classOf[Short]
+    case IntDescriptor    => classOf[Int]
+    case LongDescriptor   => classOf[Long]
+    case FloatDescriptor  => classOf[Float]
+    case DoubleDescriptor => classOf[Double]
+    case PtrDescriptor    => classOf[MemoryAddress]
+    case _: StructDescriptor | _: CUnionDescriptor |
+        _: SetSizeArrayDescriptor =>
+      classOf[MemorySegment]
     case VaListDescriptor       => classOf[MemoryAddress]
     case ad: AliasDescriptor[?] => toCarrierType(ad.real)
-    case ud: CUnionDescriptor   => classOf[MemorySegment]
 
   def genLayoutList(
       layouts: Seq[MemoryLayout],
@@ -117,6 +118,8 @@ given descriptorModule17: DescriptorModule with
     case VaListDescriptor       => C_POINTER.nn
     case sd: StructDescriptor   => toGroupLayout(sd)
     case ad: AliasDescriptor[?] => toMemoryLayout(ad.real)
+    case SetSizeArrayDescriptor(inner, num) =>
+      MemoryLayout.sequenceLayout(num, toMemoryLayout(inner)).nn
     case CUnionDescriptor(possibleTypes) =>
       MemoryLayout.unionLayout(possibleTypes.map(toMemoryLayout).toSeq*).nn
 
