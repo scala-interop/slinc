@@ -9,6 +9,7 @@ import fr.hammons.slinc.modules.{
 }
 import scala.util.chaining.*
 import java.lang.foreign.MemorySegment
+import java.lang.foreign.GroupLayout
 
 private class VarArgs19(vaList: VaList) extends VarArgs:
 
@@ -25,7 +26,8 @@ private class VarArgs19(vaList: VaList) extends VarArgs:
     case LongDescriptor => vaList.skip(ValueLayout.JAVA_LONG)
     case FloatDescriptor | DoubleDescriptor =>
       vaList.skip(ValueLayout.JAVA_DOUBLE)
-    case PtrDescriptor | VaListDescriptor => vaList.skip(ValueLayout.ADDRESS)
+    case PtrDescriptor | VaListDescriptor | _: SetSizeArrayDescriptor =>
+      vaList.skip(ValueLayout.ADDRESS)
     case sd: StructDescriptor =>
       vaList.skip(descriptorModule19.toGroupLayout(sd))
     case cd: CUnionDescriptor =>
@@ -50,7 +52,7 @@ private class VarArgs19(vaList: VaList) extends VarArgs:
         Float.box(vaList.nextVarg(ValueLayout.JAVA_DOUBLE).toFloat)
       case DoubleDescriptor =>
         Double.box(vaList.nextVarg(ValueLayout.JAVA_DOUBLE).toDouble)
-      case PtrDescriptor =>
+      case PtrDescriptor | VaListDescriptor | _: SetSizeArrayDescriptor =>
         vaList.nextVarg(ValueLayout.ADDRESS).nn
       case sd: StructDescriptor =>
         LinkageModule19.tempScope(alloc ?=>
@@ -62,9 +64,17 @@ private class VarArgs19(vaList: VaList) extends VarArgs:
             .nn
         )
       case AliasDescriptor(real) => as(real)
-      case VaListDescriptor      => vaList.nextVarg(ValueLayout.ADDRESS).nn
-      case CUnionDescriptor(possibleTypes) =>
-        as(possibleTypes.maxBy(_.size))
+      case cud: CUnionDescriptor =>
+        val desc =
+          descriptorModule19.toMemoryLayout(cud).asInstanceOf[GroupLayout]
 
+        LinkageModule19.tempScope(alloc ?=>
+          vaList
+            .nextVarg(
+              descriptorModule19.toMemoryLayout(cud).asInstanceOf[GroupLayout],
+              alloc.asInstanceOf[Allocator19].segmentAllocator
+            )
+            .nn
+        )
   override def get[A](using d: DescriptorOf[A]): A =
     transitionModule19.methodReturn[A](d.descriptor, as(d.descriptor))

@@ -122,6 +122,15 @@ object Allocator17:
           case ms: MemorySegment => ms
           case _ => throw Error("base of mem was not J17 MemorySegment!!")
       )
+    case (ssad: SetSizeArrayDescriptor, s: SetSizeArray[?, ?]) =>
+      LinkageModule17.tempScope(alloc ?=>
+        builder.vargFromAddress(
+          C_POINTER,
+          transitionModule17
+            .methodArgument(ssad, s, alloc)
+            .asInstanceOf[Addressable]
+        )
+      )
     case (a, d) =>
       throw Error(
         s"Unsupported type descriptor/data pairing for VarArgs: $a - $d"

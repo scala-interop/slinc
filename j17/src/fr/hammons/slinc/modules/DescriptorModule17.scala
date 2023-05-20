@@ -8,7 +8,8 @@ import jdk.incubator.foreign.{
   MemorySegment,
   GroupLayout,
   CLinker,
-  ValueLayout
+  ValueLayout,
+  SequenceLayout
 }, CLinker.C_POINTER
 import scala.collection.concurrent.TrieMap
 import fr.hammons.slinc.types.{arch, os, OS, Arch}
@@ -26,11 +27,10 @@ given descriptorModule17: DescriptorModule with
     case FloatDescriptor  => classOf[Float]
     case DoubleDescriptor => classOf[Double]
     case PtrDescriptor    => classOf[MemoryAddress]
-    case _: StructDescriptor | _: CUnionDescriptor |
-        _: SetSizeArrayDescriptor =>
+    case _: StructDescriptor | _: CUnionDescriptor =>
       classOf[MemorySegment]
-    case VaListDescriptor       => classOf[MemoryAddress]
-    case ad: AliasDescriptor[?] => toCarrierType(ad.real)
+    case VaListDescriptor | _: SetSizeArrayDescriptor => classOf[MemoryAddress]
+    case ad: AliasDescriptor[?]                       => toCarrierType(ad.real)
 
   def genLayoutList(
       layouts: Seq[MemoryLayout],
@@ -123,6 +123,11 @@ given descriptorModule17: DescriptorModule with
     case CUnionDescriptor(possibleTypes) =>
       MemoryLayout.unionLayout(possibleTypes.map(toMemoryLayout).toSeq*).nn
 
+  def toDowncallLayout(td: TypeDescriptor): MemoryLayout = toMemoryLayout(
+    td
+  ) match
+    case _: SequenceLayout => C_POINTER.nn
+    case o                 => o
   def toMemoryLayout(smd: StructMemberDescriptor): MemoryLayout =
     toMemoryLayout(smd.descriptor).withName(smd.name).nn
 

@@ -7,6 +7,7 @@ import java.lang.foreign.MemoryLayout
 import java.lang.foreign.MemoryAddress
 import java.lang.foreign.MemorySegment
 import java.lang.foreign.GroupLayout
+import java.lang.foreign.SequenceLayout
 
 given descriptorModule19: DescriptorModule with
   private val sdt = TrieMap.empty[StructDescriptor, GroupLayout]
@@ -79,6 +80,11 @@ given descriptorModule19: DescriptorModule with
       else Seq.empty
     )
 
+  def toDowncallLayout(td: TypeDescriptor): MemoryLayout =
+    toMemoryLayout(td) match
+      case _: SequenceLayout => ValueLayout.ADDRESS.nn
+      case o                 => o
+
   def toCarrierType(td: TypeDescriptor): Class[?] = td match
     case ByteDescriptor   => classOf[Byte]
     case ShortDescriptor  => classOf[Short]
@@ -86,10 +92,9 @@ given descriptorModule19: DescriptorModule with
     case LongDescriptor   => classOf[Long]
     case FloatDescriptor  => classOf[Float]
     case DoubleDescriptor => classOf[Double]
-    case VaListDescriptor => classOf[MemoryAddress]
-    case PtrDescriptor    => classOf[MemoryAddress]
-    case _: StructDescriptor | _: CUnionDescriptor |
-        _: SetSizeArrayDescriptor =>
+    case VaListDescriptor | _: SetSizeArrayDescriptor | PtrDescriptor =>
+      classOf[MemoryAddress]
+    case _: StructDescriptor | _: CUnionDescriptor =>
       classOf[MemorySegment]
     case ad: AliasDescriptor[?] => toCarrierType(ad.real)
 
