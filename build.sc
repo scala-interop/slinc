@@ -13,7 +13,7 @@ import mill.contrib.scoverage.{ScoverageModule, ScoverageReport}
 object scoverage extends BaseModule with ScoverageReport
 
 trait BaseModule extends ScoverageModule with ScalafmtModule {
-  def scalaVersion = "3.3.0-RC5"
+  def scalaVersion = "3.3.0-RC6"
   def scoverageVersion = "2.0.7"
 
   val munitVersion = "1.0.0-M7"

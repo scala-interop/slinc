@@ -14,12 +14,14 @@ import fr.hammons.slinc.modules.TransitionModule
 import fr.hammons.slinc.modules.{ArgumentTransition, ReturnTransition}
 import scala.NonEmptyTuple
 import scala.language.implicitConversions
-import dotty.tools.dotc.transform.patmat.Typ
 
 /** Describes types used by C interop
   */
 sealed trait TypeDescriptor:
+  self =>
   type Inner
+  given DescriptorOf[Inner] with
+    val descriptor = self
   def size(using dm: DescriptorModule): Bytes = dm.sizeOf(this)
   def alignment(using dm: DescriptorModule): Bytes = dm.alignmentOf(this)
   def toCarrierType(using dm: DescriptorModule): Class[?] =
@@ -220,13 +222,19 @@ case class CUnionDescriptor(possibleTypes: Set[TypeDescriptor])
 case class SetSizeArrayDescriptor(
     val contained: TypeDescriptor,
     val number: Int
-) extends TypeDescriptor:
+)(using ClassTag[contained.Inner])
+    extends TypeDescriptor:
 
   override val reader: (ReadWriteModule, DescriptorModule) ?=> Reader[Inner] =
-    ???
+    (mem, offset) =>
+      new SetSizeArray(
+        summon[ReadWriteModule].readArray[contained.Inner](mem, offset, number)
+      )
 
   override val writer: (ReadWriteModule, DescriptorModule) ?=> Writer[Inner] =
-    ???
+    (mem, offset, value) =>
+      summon[ReadWriteModule]
+        .writeArray[contained.Inner](mem, offset, value.toArray)
 
   override val argumentTransition
       : (TransitionModule, ReadWriteModule, Allocator) ?=> ArgumentTransition[
@@ -236,4 +244,4 @@ case class SetSizeArrayDescriptor(
   override val returnTransition
       : (TransitionModule, ReadWriteModule) ?=> ReturnTransition[Inner] = ???
 
-  type Inner = SetSizeArray[?, ?]
+  type Inner = SetSizeArray[contained.Inner, ?]

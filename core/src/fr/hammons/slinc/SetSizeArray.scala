@@ -5,7 +5,6 @@ import scala.compiletime.ops.int.{`*`, `-`, `<=`, `+`, `<`}
 import scala.compiletime.constValue
 import scala.quoted.*
 import scala.language.experimental.erasedDefinitions
-import scala.annotation.experimental
 
 class SetSizeArray[A, B <: Int] private[slinc] (private val array: Array[A])
     extends AnyVal:
@@ -16,6 +15,7 @@ class SetSizeArray[A, B <: Int] private[slinc] (private val array: Array[A])
   ): SetSizeArray[C, B * D] =
     new SetSizeArray[C, B * D](array.flatMap(fn.andThen(_.array)))
   def toSeq: Seq[A] = array.toSeq
+  def toArray: Array[A] = array
   inline def take[C <: Int](using
       C <= B =:= true,
       0 <= C =:= true
