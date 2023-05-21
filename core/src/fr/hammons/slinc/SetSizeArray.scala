@@ -44,6 +44,10 @@ class SetSizeArray[A, B <: Int] private[slinc] (private val array: Array[A])
       value: A
   )(using 0 <= C =:= true, C < B =:= true): Unit = array(constValue[C]) = value
 
+  def zip[C](oArr: SetSizeArray[C, B]): SetSizeArray[(A, C), B] =
+    new SetSizeArray[(A, C), B](array.zip(oArr.array))
+  def foreach(fn: A => Unit) = array.foreach(fn)
+
 object SetSizeArray:
   class SetSizeArrayBuilderUnsafe[B <: Int]:
     def apply[A](array: Array[A]): SetSizeArray[A, B] = new SetSizeArray(array)

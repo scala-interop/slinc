@@ -26,11 +26,11 @@ object LinkageModule17 extends LinkageModule:
       varArgs.view.map(_.use[DescriptorOf](d ?=> _ => d.descriptor))
     val fdConstructor = descriptor.returnDescriptor match
       case None        => FunctionDescriptor.ofVoid(_*)
-      case Some(value) => FunctionDescriptor.of(toMemoryLayout(value), _*)
+      case Some(value) => FunctionDescriptor.of(toDowncallLayout(value), _*)
 
     val fd = fdConstructor(
       descriptor.inputDescriptors.view
-        .map(toMemoryLayout)
+        .map(toDowncallLayout)
         .concat(variadicDescriptors.map(toMemoryLayout).map(CLinker.asVarArg))
         .toSeq
     )

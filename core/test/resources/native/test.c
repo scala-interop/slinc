@@ -139,3 +139,12 @@ EXPORTED struct_issue_175 i175_test(struct_issue_175 a, char left) {
   }
   return a;
 }
+
+EXPORTED int* i180_test(int my_array[5]) {
+  int i = 0;
+  while(i < 5) {
+    my_array[i] = my_array[i] * 2;
+    i++;
+  }
+  return my_array;
+}

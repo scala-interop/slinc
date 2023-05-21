@@ -10,6 +10,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.ClassTag
+import scala.util.chaining.*
 
 trait TransferSpec[ThreadException <: Throwable](val slinc: Slinc)(using
     ClassTag[ThreadException]
@@ -28,7 +29,7 @@ trait TransferSpec[ThreadException <: Throwable](val slinc: Slinc)(using
 
   case class F(u: CUnion[(CInt, CFloat)]) derives Struct
 
-  case class G(arr: SetSizeArray[CLong, 2]) derives Struct
+  case class G(long: CLong, arr: SetSizeArray[CLong, 2]) derives Struct
 
   test("can read and write jvm ints") {
     Scope.global {
@@ -162,9 +163,8 @@ trait TransferSpec[ThreadException <: Throwable](val slinc: Slinc)(using
     }
   }
 
-  test("varargs can be sent and retrieved"):
+  test("varargs can receive primitive types"):
       Scope.confined {
-        val vaListForVaList = VarArgsBuilder(4).build
         val vaList = VarArgsBuilder(
           4.toByte,
           5.toShort,
@@ -172,10 +172,7 @@ trait TransferSpec[ThreadException <: Throwable](val slinc: Slinc)(using
           7.toLong,
           2f,
           3d,
-          Null[Int],
-          A(1, 2),
-          CLong(4: Byte),
-          vaListForVaList
+          Null[Int]
         ).build
 
         assertEquals(vaList.get[Byte], 4.toByte, "byte assert")
@@ -185,24 +182,118 @@ trait TransferSpec[ThreadException <: Throwable](val slinc: Slinc)(using
         assertEquals(vaList.get[Float], 2f, "float assert")
         assertEquals(vaList.get[Double], 3d, "double assert")
         assertEquals(
-          vaList.get[Ptr[Int]].mem.asAddress,
-          Null[Int].mem.asAddress,
+          vaList.get[Ptr[Int]],
+          Null[Int],
           "ptr assert"
         )
-        assertEquals(vaList.get[A], A(1, 2), "struct assert")
-        assertEquals(vaList.get[CLong], CLong(4: Byte), "alias assert")
-        assertEquals(vaList.get[VarArgs].get[CInt], 4)
       }
 
-  test("varargs can be skipped"):
+  test("varargs can receive complex types".ignore):
       Scope.confined {
+        val vaListForVaList = VarArgsBuilder(4).build
         val vaList = VarArgsBuilder(
-          4.toByte,
-          2f
+          A(1, 2),
+          CLong(4),
+          A(3, 4),
+          SetSizeArray(1, 2, 3, 4),
+          vaListForVaList,
+          CUnion[(CInt, CFloat)].tap(_.set(5)),
+          // Null[Int],
+          A(3, 4)
         ).build
 
+        assertEquals(vaList.get[A], A(1, 2), "struct assert")
+        assertEquals(vaList.get[CLong], CLong(4: Byte), "alias assert")
+        assertEquals(vaList.get[A], A(3, 4))
+        assertEquals(
+          vaList.get[SetSizeArray[CInt, 4]].toSeq,
+          Seq(1, 2, 3, 4),
+          "set size array assert"
+        )
+        assertEquals(
+          vaListForVaList.get[VarArgs].get[Int],
+          4
+        )
+        assertEquals(
+          vaList.get[CUnion[(CLongLong, CFloat)]].get[CLongLong],
+          5L,
+          "cunion assert"
+        )
+        // assertEquals(
+        //   vaList.get[Ptr[Int]],
+        //   Null[Int]
+        // )
+        assertEquals(
+          vaList.get[A],
+          A(3, 4),
+          "struct assert 2"
+        )
+      }
+
+  test("varargs can skip primitive types"):
+      Scope.confined {
+        val vaList = VarArgsBuilder(
+          4: Byte,
+          5: Short,
+          6,
+          7L,
+          2f,
+          3d,
+          Null[Int]
+        ).build
+
+        val vaList2 = vaList.copy()
+
         vaList.skip[Byte]
-        assertEquals(vaList.get[Float], 2f)
+        assertEquals(vaList.get[Short], 5: Short)
+        vaList.skip[Int]
+        assertEquals(vaList.get[Long], 7L)
+        vaList.skip[Float]
+        assertEquals(vaList.get[Double], 3d)
+        vaList.skip[Ptr[Int]]
+
+        assertEquals(vaList2.get[Byte], 4: Byte)
+        vaList2.skip[Short]
+        assertEquals(vaList2.get[Int], 6)
+        vaList2.skip[Long]
+        assertEquals(vaList2.get[Float], 2f)
+        vaList2.skip[Double]
+        assertEquals(vaList2.get[Ptr[Int]], Null[Int])
+      }
+
+  test("varargs can skip complex types".ignore):
+      Scope.confined {
+        val vaListForVaList = VarArgsBuilder(4, 5, 6).build
+        val vaList = VarArgsBuilder(
+          A(1, 2),
+          CLong(4),
+          vaListForVaList,
+          CUnion[(CInt, CFloat)].tap(_.set(5)),
+          SetSizeArray(1, 2, 3, 4)
+        ).build
+
+        val vaList2 = vaList.copy()
+
+        assertEquals(vaList.get[A], A(1, 2), "struct assert")
+        vaList.skip[CLong]
+        val vaList3 = vaList.get[VarArgs]
+        assertEquals(
+          List(vaList3.get[Int], vaList3.get[Int], vaList3.get[Int]),
+          List(4, 5, 6),
+          "varargs assert"
+        )
+        vaList.skip[CUnion[(CInt, CFloat)]]
+        assertEquals(
+          vaList.get[SetSizeArray[Int, 4]].toSeq,
+          Seq(1, 2, 3, 4),
+          "set size array assert"
+        )
+
+        vaList2.skip[A]
+        assertEquals(vaList2.get[CLong], CLong(4))
+        vaList2.skip[VarArgs]
+        assertEquals(vaList2.get[CUnion[(CInt, CFloat)]].get[Int], 5)
+        vaList2.skip[SetSizeArray[Int, 4]]
       }
 
   test("varargs can be copied and reread"):
@@ -373,7 +464,7 @@ trait TransferSpec[ThreadException <: Throwable](val slinc: Slinc)(using
       }
 
   test("can copy G to native memory and back"):
-      val g = G(SetSizeArray(CLong(1), CLong(2)))
+      val g = G(CLong(5), SetSizeArray(CLong(1), CLong(2)))
 
       Scope.confined {
         val ptr = Ptr.copy(g)

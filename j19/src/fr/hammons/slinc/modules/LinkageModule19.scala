@@ -39,7 +39,7 @@ object LinkageModule19 extends LinkageModule:
         case Some(value) =>
           JFunctionDescriptor
             .of(
-              toMemoryLayout(value),
+              toDowncallLayout(value),
               argDescriptors*
             )
             .nn
@@ -47,7 +47,7 @@ object LinkageModule19 extends LinkageModule:
 
     val fd = fdGen(
       descriptor.inputDescriptors
-        .map(toMemoryLayout),
+        .map(toDowncallLayout),
       varargs.view
         .map(_.use[DescriptorOf](dc ?=> _ => dc.descriptor))
         .map(toMemoryLayout)

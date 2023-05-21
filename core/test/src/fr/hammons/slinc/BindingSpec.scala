@@ -59,6 +59,10 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
         left: CChar
     ): I175_Struct
 
+    def i180_test(
+        input: SetSizeArray[CInt, 5]
+    ): SetSizeArray[CInt, 5]
+
   test("int_identity") {
     val test = FSet.instance[TestLib]
 
@@ -186,3 +190,11 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
           union.set(double)
           val res = test.i175_test(I175_Struct(union), 0)
           assertEquals(res.union.get[CDouble], double / 2)
+
+  property("issue 180 - can send and receive set size arrays to C functions"):
+      val test = FSet.instance[TestLib]
+      forAll(Gen.listOfN(5, Arbitrary.arbitrary[CInt])): list =>
+        val arr = SetSizeArray.fromArrayUnsafe[5](list.toArray)
+        val retArr = test.i180_test(arr)
+
+        retArr.zip(arr.map(_ * 2)).foreach(assertEquals(_, _))

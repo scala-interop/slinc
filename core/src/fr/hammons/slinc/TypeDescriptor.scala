@@ -239,9 +239,20 @@ case class SetSizeArrayDescriptor(
   override val argumentTransition
       : (TransitionModule, ReadWriteModule, Allocator) ?=> ArgumentTransition[
         Inner
-      ] = ???
+      ] = arg =>
+    val mem = summon[Allocator].allocate(this, 1)
+    summon[ReadWriteModule].write(
+      mem,
+      Bytes(0),
+      this,
+      arg
+    )
+    mem.asAddress
 
   override val returnTransition
-      : (TransitionModule, ReadWriteModule) ?=> ReturnTransition[Inner] = ???
+      : (TransitionModule, ReadWriteModule) ?=> ReturnTransition[Inner] =
+    obj =>
+      val mem = summon[TransitionModule].addressReturn(obj)
+      summon[ReadWriteModule].read(mem, Bytes(0), this)
 
   type Inner = SetSizeArray[contained.Inner, ?]

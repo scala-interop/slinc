@@ -112,6 +112,16 @@ class Allocator19(
             case ms: MemorySegment => ms
             case _                 => throw Error("Illegal datatype")
         )
+
+      case (ssad: SetSizeArrayDescriptor, s: SetSizeArray[?, ?]) =>
+        LinkageModule19.tempScope(alloc ?=>
+          builder.addVarg(
+            ValueLayout.ADDRESS,
+            transitionModule19
+              .methodArgument(ssad, s, alloc)
+              .asInstanceOf[Addressable]
+          )
+        )
       case (td, d) =>
         throw Error(s"Unsupported datatype for $td - $d")
 
