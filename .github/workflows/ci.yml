@@ -16,8 +16,7 @@ jobs:
         with:
           jvm: temurin:1.17
           apps: mill
-      - run: mill mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll __.sources
-
+      - run: mill mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll __.sources    
   unit-tests:
     strategy: 
       matrix:
@@ -94,3 +93,10 @@ jobs:
         with:
           directory: reports
           flags: ${{ matrix.os }}
+          
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
