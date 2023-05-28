@@ -4,6 +4,7 @@ import fr.hammons.slinc.*
 import java.lang.invoke.MethodHandle
 import scala.reflect.ClassTag
 import scala.NonEmptyTuple
+import fr.hammons.slinc.fnutils.Fn
 
 type Reader[A] = (Mem, Bytes) => A
 type Writer[A] = (Mem, Bytes, A) => Unit

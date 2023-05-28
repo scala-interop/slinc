@@ -4,6 +4,7 @@ import fr.hammons.slinc.*
 import scala.collection.concurrent.TrieMap
 import java.lang.invoke.MethodHandle
 import scala.reflect.ClassTag
+import fr.hammons.slinc.fnutils.Fn
 
 given readWriteModule17: ReadWriteModule with
   // todo: eliminate this

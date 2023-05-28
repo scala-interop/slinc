@@ -1,58 +1,111 @@
 package fr.hammons.slinc.jitc
 
 import scala.concurrent.Future
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext.Implicits.global
-import munit.ScalaCheckSuite
-import org.scalacheck.Prop.*
-import org.scalacheck.Gen
+import scala.compiletime.codeOf
 
-class JitSpecification extends ScalaCheckSuite:
-  test("single-threaded count works"):
-      var optimizationTriggered = false
-      val fn = UnoptimizedFunction(
-        (i: Int) => i,
-        10,
-        () => optimizationTriggered = true
+class JitSpecification extends munit.FunSuite:
+  test("jit-compilation works"):
+      var optimized = false
+      var fn = OptimizableFn.standard(jitCompiler =>
+        jitCompiler('{ (optimizedFn: Boolean => Unit) => (i: Int) =>
+          optimizedFn(true)
+          i
+        })(optimized = _)
+      )(
+        i => i((a: Int) => i.instrument(a)),
+        10
       )
+      for _ <- 0 to 10
+      yield fn.get(3)
 
-      var i = 0
-      while i < 10 do
-        fn(_(6))
-        i += 1
+      while !JitCService.standard.processedRecently(fn.uuid) do
+        Thread.sleep(100)
+      fn.get(4)
+      assertEquals(optimized, true)
 
-      assertEquals(fn.getCount(), 10)
-      assert(
-        optimizationTriggered,
-        s"Optimization function not run? ${optimizationTriggered} - ${fn.getCount()}"
+  test("jit-compilation in multithreaded env works"):
+      var optimized = false
+      val fn = new OptimizableFn(JitCService.standard)(
+        i => i((a: Int) => i.instrument(a)),
+        10
+      )(jitCompiler =>
+        jitCompiler('{ (optimizedFn: Boolean => Unit) => (i: Int) =>
+          optimizedFn(true)
+          i
+        })(
+          optimized = _
+        )
       )
-      assertNoDiff(
-        fn.originalCode,
-        """|{
-       |  def $anonfun(i: Int): Int = i
-       |  closure($anonfun)
-       |}
-       |""".stripMargin
-      )
+      for _ <- 0 to 5
+      yield Future {
+        for _ <- 0 until 2
+        yield fn.get(3)
+      }
 
-  property("multi-threaded count works"):
-      forAll(Gen.choose(0, 100)): (runs: Int) =>
-        var optimizationTriggered = false
-        val fn = UnoptimizedFunction(
-          (i: Int) => i,
-          10,
-          () => optimizationTriggered = true
+      while !JitCService.standard.processedRecently(fn.uuid) do
+        println("waiting")
+        Thread.sleep(100)
+
+      fn.get(6)
+      assertEquals(optimized, true)
+
+  test("instant compilation works"):
+      var optimized = false
+      val fn =
+        new OptimizableFn(JitCService.synchronous, IgnoreInstrumentation)(
+          i => i((a: Int) => i.instrument(a)),
+          0
+        )(jitCompiler =>
+          jitCompiler('{ (optimizedFn: Boolean => Unit) => (i: Int) =>
+            optimizedFn(true)
+            i
+          })(optimized = _)
         )
 
-        val futures: Seq[Future[Unit]] = for
-          j <- 0 until 5
-          res = Future(
-            (0 until runs).foreach(i => fn(_(i * j)))
-          )
-        yield res
+      fn.get(6)
+      assertEquals(optimized, true)
 
-        Await.result(Future.traverse(futures)(identity), Duration.Inf)
+  test("instant compilation from properties"):
+      System.setProperty(OptimizableFn.modeSetting, "immediate")
+      var optimized = false
+      val fn = OptimizableFn(jitCompiler =>
+        jitCompiler('{ (optimizedFn: Boolean => Unit) => (i: Int) =>
+          optimizedFn(true)
+          i
+        })(optimized = _)
+      )(i => i((a: Int) => i.instrument(a)))
 
-        assert(fn.getCount() >= runs)
-        assert(runs < 10 || optimizationTriggered)
+      fn.get(6)
+      assertEquals(optimized, true)
+
+  test("jitc disable from properties"):
+      System.setProperty(OptimizableFn.modeSetting, "disabled")
+      var optimized = false
+      val fn = OptimizableFn(jitCompiler =>
+        jitCompiler('{ (optimizedFn: Boolean => Unit) => (i: Int) =>
+          optimizedFn(true)
+          i
+        })(optimized = _)
+      )(i => i((a: Int) => i.instrument(a)))
+
+      var i = 0
+      while i < 100000 do
+        fn.get(i)
+        i += 1
+
+      assertEquals(optimized, false)
+
+  test("Ignore instrumentation records no info"):
+      val ignoreInstrumentation = IgnoreInstrumentation
+
+      assertEquals(ignoreInstrumentation.getCount(), 0)
+      ignoreInstrumentation.instrument(5)
+      assertEquals(ignoreInstrumentation.getCount(), 0)
+
+  test("Count instrumentation records invokations"):
+      val countInstrumentation = CountbasedInstrumentation()
+
+      assertEquals(countInstrumentation.getCount(), 0)
+      countInstrumentation.instrument(5)
+      assertEquals(countInstrumentation.getCount(), 1)

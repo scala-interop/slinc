@@ -7,8 +7,6 @@ import types.SizeT
 
 trait Slinc:
   val version: Int
-  protected def jitManager: JitManager
-
   protected def scopePlatformSpecific: ScopeI.PlatformSpecific
 
   given dm: DescriptorModule

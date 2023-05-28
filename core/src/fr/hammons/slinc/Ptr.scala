@@ -3,6 +3,7 @@ package fr.hammons.slinc
 import scala.reflect.ClassTag
 import fr.hammons.slinc.modules.DescriptorModule
 import fr.hammons.slinc.modules.ReadWriteModule
+import fr.hammons.slinc.fnutils.{Fn, toNativeCompatible}
 
 class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
   inline def `unary_!`(using rwm: ReadWriteModule): A =
@@ -86,6 +87,6 @@ object Ptr:
   )
 
   inline def upcall[A](inline a: A)(using alloc: Allocator): Ptr[A] =
-    val nFn = Fn.toNativeCompatible(a)
+    val nFn = toNativeCompatible(a)
     val descriptor = FunctionDescriptor.fromFunction[A]
     Ptr[A](alloc.upcall(descriptor, nFn), Bytes(0))

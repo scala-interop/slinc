@@ -4,6 +4,7 @@ import scala.collection.concurrent.TrieMap
 import fr.hammons.slinc.*
 import java.lang.invoke.MethodHandle
 import scala.reflect.ClassTag
+import fr.hammons.slinc.fnutils.Fn
 
 private[slinc] given readWriteModule19: ReadWriteModule with
 
