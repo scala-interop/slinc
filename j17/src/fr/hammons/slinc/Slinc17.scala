@@ -20,8 +20,6 @@ class Slinc17(using
 
 @SlincImpl(17)
 object Slinc17:
-  private lazy val compiler =
-    scala.quoted.staging.Compiler.make(getClass().getClassLoader().nn)
   private[slinc] lazy val linker = CLinker.getInstance().nn
   val default = Slinc17()
   val noJit = Slinc17()

@@ -1,19 +1,20 @@
 package fr.hammons.slinc
 
+import fr.hammons.slinc.types.CLong
 import org.openjdk.jmh.annotations.{Scope as _, *}
 
-case class A(a: Int, b: B, c: Int)
-case class B(a: Int, b: Int)
+case class A(a: Int, b: B, c: Int) derives Struct
+case class B(a: Int, b: Int) derives Struct
 
+@Warmup(iterations = 5)
+@Measurement(iterations = 5)
 trait TransferBenchmarkShape(val s: Slinc):
   import s.{given, *}
 
-  case class C(a: Int, b: D, c: Int)
-  case class D(a: Int, b: Int)
-  given Struct[A] = Struct.derived
-  given Struct[B] = Struct.derived
-  given Struct[C] = Struct.derived
-  given Struct[D] = Struct.derived
+  case class C(a: Int, b: D, c: Int) derives Struct
+  case class D(a: CLong, b: Int) derives Struct
+  case class E(a: Int, b: Int) derives Struct
+  case class F(a: Int, e: E, c: Int) derives Struct
 
   val aPtr = Scope.global {
     Ptr.blank[A]
@@ -25,7 +26,7 @@ trait TransferBenchmarkShape(val s: Slinc):
     Ptr.blank[C]
   }
 
-  val c = C(1, D(2, 3), 4)
+  val c = C(1, D(CLong(2), 3), 4)
 
   @Benchmark
   def topLevelRead =
@@ -50,7 +51,37 @@ trait TransferBenchmarkShape(val s: Slinc):
     )
 
   @Benchmark
-  def allocateIntPointer =
+  def allocatePrimitivePointer =
     Scope.confined(
       Ptr.copy(3)
+    )
+
+  @Benchmark
+  def allocateAliasPointer =
+    Scope.confined(
+      Ptr.copy(CLong(3))
+    )
+
+  @Benchmark
+  def allocateComplexWAliasInnerStructPointer =
+    Scope.confined(
+      Ptr.copy(C(1, D(CLong(2), 3), 4))
+    )
+
+  @Benchmark
+  def allocateSimpleWAliasInnerStructPointer =
+    Scope.confined(
+      Ptr.copy(D(CLong(2), 3))
+    )
+
+  @Benchmark
+  def allocatePtrFromArray =
+    Scope.confined(
+      Ptr.copy(Array(1, 2, 3))
+    )
+
+  @Benchmark
+  def allocatePtrFromCLongArray =
+    Scope.confined(
+      Ptr.copy(Array(CLong(1), CLong(2), CLong(3)))
     )
