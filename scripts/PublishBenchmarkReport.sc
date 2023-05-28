@@ -1,6 +1,6 @@
 using scala "3.2.2"
 
-using lib "com.lihaoyi::upickle:2.0.0"
+using lib "com.lihaoyi::upickle:3.1.0"
 
 import upickle.default.ReadWriter
 import upickle.default.read
