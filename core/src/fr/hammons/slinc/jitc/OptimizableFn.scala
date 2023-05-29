@@ -20,23 +20,23 @@ class OptimizableFn[F, G](
     if fn == null then
       fn = f(inst)
       _fn.set(fn)
-    
+
     if optFn != null then optFn
     else if inst.getCount() >= limit then
-        optimizer.jitC(
-          uuid,
-          jitCompiler =>
-            val opt = optimized(jitCompiler)
-            _optFn.setOpaque(
-              opt
-            )
-        )
-        if optimizer.async then fn.nn 
-        else 
-          while _optFn.getOpaque() == null do {}
-          _optFn.getOpaque().nn
+      optimizer.jitC(
+        uuid,
+        jitCompiler =>
+          val opt = optimized(jitCompiler)
+          _optFn.setOpaque(
+            opt
+          )
+      )
+      if optimizer.async then fn.nn
+      else
+        while _optFn.getOpaque() == null do {}
+        _optFn.getOpaque().nn
     else fn.nn
- 
+
 object OptimizableFn:
   val modeSetting = "slinc.jitc.mode"
   val limitSetting = "slinc.jitc.jit-limit"

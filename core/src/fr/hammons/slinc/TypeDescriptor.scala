@@ -14,15 +14,18 @@ import fr.hammons.slinc.modules.{ArgumentTransition, ReturnTransition}
 import scala.NonEmptyTuple
 import scala.language.implicitConversions
 import fr.hammons.slinc.modules.MemWriter
+import fr.hammons.slinc.descriptors.WriterContext
 
 /** Describes types used by C interop
   */
 sealed trait TypeDescriptor:
   self =>
   type Inner
-  given DescriptorOf[Inner] with
-    val descriptor = self
+  given ct: ClassTag[Inner] = ???
+  given DescriptorOf[Inner](self) with {}
   def size(using dm: DescriptorModule): Bytes = dm.sizeOf(this)
+  def writeArrayExpr(using wc: WriterContext)(using Quotes) =
+    wc.rwm.writeArrayExpr(this)
   def alignment(using dm: DescriptorModule): Bytes = dm.alignmentOf(this)
   def toCarrierType(using dm: DescriptorModule): Class[?] =
     dm.toCarrierType(this)

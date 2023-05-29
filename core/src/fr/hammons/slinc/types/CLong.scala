@@ -19,9 +19,10 @@ object CLong:
     then Some(IntegralAlias.transform[CLong](maybeFits))
     else None
 
-  given Alias[CLong] with
-    lazy val name = "CLong"
-    lazy val aliases = {
+  given Alias[CLong](
+    "CLong",
+    {
       case (OS.Linux | OS.Darwin, Arch.X64 | Arch.AArch64) => LongDescriptor
       case (OS.Windows, Arch.X64)                          => IntDescriptor
     }
+  ) with {}

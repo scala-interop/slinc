@@ -61,7 +61,9 @@ trait ReadWriteModule:
       fn: => MethodHandle => Mem => A
   )(using Fn[A, ?, ?]): A
 
-  def writeExpr(td: TypeDescriptor)(using Quotes): Expr[MemWriter[Any]]
+  def writeExpr(
+      td: TypeDescriptor
+  )(using Quotes, ClassTag[td.Inner]): Expr[MemWriter[Any]]
   def writeArrayExpr(td: TypeDescriptor)(using
       Quotes
   ): Expr[MemWriter[Array[Any]]]

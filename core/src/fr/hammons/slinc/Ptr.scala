@@ -37,8 +37,10 @@ class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
       )
     )
 
-  def `unary_!_=`(value: A)(using rwM: ReadWriteModule, desc: DescriptorOf[A]) =
-    rwM.write(mem, offset, desc.descriptor, value)
+  def `unary_!_=`(
+      value: A
+  )(using rwM: ReadWriteModule, desc: DescriptorOf[A], dm: DescriptorModule) =
+    desc.writer.get(using WriterContext(dm, rwM))(mem, offset, value)
   def apply(bytes: Bytes): Ptr[A] = Ptr[A](mem, offset + bytes)
   def apply(index: Int)(using DescriptorOf[A], DescriptorModule): Ptr[A] =
     Ptr[A](mem, offset + (DescriptorOf[A].size * index))
@@ -82,12 +84,13 @@ object Ptr:
       a: A
   )(using
       rwm: ReadWriteModule,
+      dm: DescriptorModule,
       descriptor: DescriptorOf[A] {
         val descriptor: TypeDescriptor { type Inner = A }
       }
   ) =
     val mem = alloc.allocate(DescriptorOf[A], 1)
-    rwm.write(mem, Bytes(0), descriptor.descriptor, a)
+    descriptor.writer.get(using WriterContext(dm, rwm))(mem, Bytes(0), a)
     Ptr[A](mem, Bytes(0))
 
   def copy(

@@ -16,6 +16,7 @@ trait TransferSpec[ThreadException <: Throwable](val slinc: Slinc)(using
     ClassTag[ThreadException]
 ) extends ScalaCheckSuite:
   import slinc.{*, given}
+  System.setProperty("slinc.jitc.mode", "disabled")
 
   val numVarArgs = if slinc.version < 19 then 7 else 200
 

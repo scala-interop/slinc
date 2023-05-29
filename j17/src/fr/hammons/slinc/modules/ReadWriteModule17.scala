@@ -115,7 +115,10 @@ given readWriteModule17: ReadWriteModule with
       offset: Bytes,
       typeDescriptor: TypeDescriptor,
       value: typeDescriptor.Inner
-  ): Unit = ???
+  ): Unit = writerCache.getOrElseUpdate(
+    typeDescriptor,
+    typeDescriptor.writer
+  )(memory, offset, value)
 
   def asExprOf[A](expr: Expr[Any])(using Quotes, Type[A]) =
     if expr.isExprOf[A] then expr.asExprOf[A]
@@ -133,10 +136,17 @@ given readWriteModule17: ReadWriteModule with
     then true
     else false
 
+  def foldOffsets(offsets: Seq[Expr[Bytes]])(using Quotes): Expr[Bytes] =
+    val (constants, references) = offsets.partition(_.value.isDefined)
+    val constantOffset = Expr(constants.map(_.valueOrAbort).sum)
+    val referenceOffset = references.reduceLeftOption((a, b) => '{ $a + $b })
+    referenceOffset
+      .map(refOff => '{ $refOff + $constantOffset })
+      .getOrElse(constantOffset)
   def writeExprHelper(
       typeDescriptor: TypeDescriptor,
       mem: Expr[Mem],
-      offset: Expr[Bytes],
+      offsetExprs: Seq[Expr[Bytes]],
       value: Expr[Any]
   )(using Quotes): Expr[Unit] =
     import quotes.reflect.*
@@ -145,33 +155,61 @@ given readWriteModule17: ReadWriteModule with
       case ShortDescriptor => ???
       case IntDescriptor =>
         '{
-          $mem.writeInt(${ asExprOf[Int](value) }, $offset)
+          $mem.writeInt(
+            ${ asExprOf[Int](value) },
+            ${ foldOffsets(offsetExprs) }
+          )
         }
-      case LongDescriptor   => ???
+      case LongDescriptor =>
+        '{
+          $mem.writeLong(
+            ${ asExprOf[Long](value) },
+            ${ foldOffsets(offsetExprs) }
+          )
+        }
       case FloatDescriptor  => ???
       case DoubleDescriptor => ???
       case PtrDescriptor    => ???
       case sd: StructDescriptor if canBeUsedDirectly(sd.clazz) =>
+        println(s"compiling $sd")
         val fields =
           Symbol.classSymbol(sd.clazz.getCanonicalName().nn).caseFields
 
+        println("calculated fields")
         val offsets =
           descriptorModule17.memberOffsets(sd.members.map(_.descriptor))
 
-        val fns = sd.members.zip(offsets).zipWithIndex.map {
-          case (
-                (StructMemberDescriptor(childDescriptor, name), childOffset),
-                index
-              ) =>
-            (nv: Expr[Product]) =>
-              val childField = Select(nv.asTerm, fields(index)).asExpr
-              val totalOffset = offset.value
-                .map(_ + childOffset)
-                .map(Expr(_))
-                .getOrElse('{ $offset + ${ Expr(childOffset) } })
+        println("calculated offsets")
 
-              writeExprHelper(childDescriptor, mem, totalOffset, childField)
-        }
+        val fns = sd.members
+          .zip(offsets)
+          .zipWithIndex
+          .map {
+            case (
+                  (StructMemberDescriptor(childDescriptor, name), childOffset),
+                  index
+                ) =>
+              (nv: Expr[Product]) =>
+                val childField = Select(nv.asTerm, fields(index)).asExpr
+                val totalOffset = offsetExprs :+ Expr(childOffset)
+
+                writeExprHelper(childDescriptor, mem, totalOffset, childField)
+          }
+          .toList
+
+        println("fns complete")
+
+        val code = TypeRepr.typeConstructorOf(sd.clazz).asType match
+          case '[a & Product] =>
+            '{
+              val a: a & Product = ${ asExprOf[a & Product](value) }
+
+              ${
+                Expr.block(fns.map(_('a)), '{})
+              }
+            }
+        println(code.show)
+        code
       case sd: StructDescriptor =>
         val offsets =
           descriptorModule17.memberOffsets(sd.members.map(_.descriptor))
@@ -182,10 +220,7 @@ given readWriteModule17: ReadWriteModule with
             case ((StructMemberDescriptor(td, name), childOffset), index) =>
               (nv: Expr[Product]) =>
                 val childField = '{ $nv.productElement(${ Expr(index) }) }
-                val totalOffset = offset.value
-                  .map(_ + childOffset)
-                  .map(Expr(_))
-                  .getOrElse('{ $offset + ${ Expr(childOffset) } })
+                val totalOffset = offsetExprs :+ Expr(childOffset)
 
                 writeExprHelper(td, mem, totalOffset, childField)
           }
@@ -199,21 +234,32 @@ given readWriteModule17: ReadWriteModule with
           }
         }
 
-      case AliasDescriptor(real)           => ???
+      case AliasDescriptor(real) =>
+        writeExprHelper(real, mem, offsetExprs, value)
       case VaListDescriptor                => ???
       case CUnionDescriptor(possibleTypes) => ???
       case SetSizeArrayDescriptor(td, x)   => ???
 
-    ???
-
   def writeExpr(
       typeDescriptor: TypeDescriptor
-  )(using Quotes): Expr[MemWriter[Any]] =
-    '{ (mem: Mem, offset: Bytes, value: Any) =>
-      ${
-        writeExprHelper(typeDescriptor, 'mem, 'offset, 'value)
-      }
-    }
+  )(using Quotes, ClassTag[typeDescriptor.Inner]): Expr[MemWriter[Any]] =
+    import quotes.reflect.*
+    val output = TypeRepr
+      .typeConstructorOf(summon[ClassTag[typeDescriptor.Inner]].runtimeClass)
+      .asType match
+      case '[a] =>
+        '{ (mem: Mem, offset: Bytes, value: Any) =>
+          ${
+            writeExprHelper(
+              typeDescriptor,
+              'mem,
+              Seq('offset),
+              '{ value }.asExprOf[Any]
+            )
+          }
+        }
+
+    output
 
   def writeArrayExpr(typeDescriptor: TypeDescriptor)(using
       Quotes
@@ -226,9 +272,12 @@ given readWriteModule17: ReadWriteModule with
           writeExprHelper(
             typeDescriptor,
             'mem,
-            '{
-              ($elemLength * x) + offset
-            },
+            Seq(
+              '{
+                ($elemLength * x)
+              },
+              '{ offset }
+            ),
             '{ value(x) }
           )
         }

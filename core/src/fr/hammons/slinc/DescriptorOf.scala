@@ -5,11 +5,50 @@ import scala.quoted.*
 import scala.compiletime.{summonInline, erasedValue, constValue}
 import scala.NonEmptyTuple
 import scala.reflect.ClassTag
+import fr.hammons.slinc.descriptors.Writer
+import fr.hammons.slinc.jitc.OptimizableFn
+import fr.hammons.slinc.descriptors.WriterContext
+import fr.hammons.slinc.modules.MemWriter
 
 /** Typeclass that summons TypeDescriptors
   */
-trait DescriptorOf[A] extends MethodCompatible[A]:
-  val descriptor: TypeDescriptor { type Inner = A }
+trait DescriptorOf[A](val descriptor: TypeDescriptor { type Inner = A })(using
+    ClassTag[A]
+) extends MethodCompatible[A]:
+  // val descriptor: TypeDescriptor { type Inner = A }
+  val writer: Writer[A] = OptimizableFn((writerContext: WriterContext) ?=>
+    _ {
+      val expr = writerContext.rwm.writeExpr(descriptor)
+      println(s"jitc: ${expr.show}")
+      expr
+    }.asInstanceOf[MemWriter[A]]
+  )(instrumentation =>
+    instrumentation((mem: Mem, offset: Bytes, value: A) =>
+      instrumentation.instrument(
+        descriptor.writer(using
+          summon[WriterContext].rwm,
+          summon[WriterContext].dm
+        )(mem, offset, value)
+      )
+    )
+  )
+
+  val arrayWriter: Writer[Array[A]] = OptimizableFn(
+    _(
+      summon[WriterContext].rwm.writeArrayExpr(descriptor)
+    ).asInstanceOf[MemWriter[Array[A]]]
+  ) { instrumentation =>
+    instrumentation {
+      val size = descriptor.size(using summon[WriterContext].dm)
+      (mem: Mem, offset: Bytes, value: Array[A]) =>
+        instrumentation.instrument {
+          var i = 0
+          while i < value.length do
+            writer.get(mem, size * i + offset, value(i))
+            i += 1
+        }
+    }
+  }
 
 object DescriptorOf:
   /** Convenience method for summoning the TypeDescriptor attached to
@@ -29,34 +68,24 @@ object DescriptorOf:
       c: ContextProof[DescriptorOf *::: End, A]
   ): DescriptorOf[A] = c.tup.head
 
-  given DescriptorOf[Byte] with
-    val descriptor: TypeDescriptor { type Inner = Byte } = ByteDescriptor
+  given DescriptorOf[Byte](ByteDescriptor) with {}
+  given DescriptorOf[Short](ShortDescriptor) with {}
 
-  given DescriptorOf[Short] with
-    val descriptor: TypeDescriptor { type Inner = Short } = ShortDescriptor
+  given DescriptorOf[Int](IntDescriptor) with {}
 
-  given DescriptorOf[Int] with
-    val descriptor: TypeDescriptor { type Inner = Int } = IntDescriptor
+  given DescriptorOf[Long](LongDescriptor) with {}
 
-  given DescriptorOf[Long] with
-    val descriptor: TypeDescriptor { type Inner = Long } = LongDescriptor
+  given DescriptorOf[Float](FloatDescriptor) with {}
 
-  given DescriptorOf[Float] with
-    val descriptor: TypeDescriptor { type Inner = Float } = FloatDescriptor
-
-  given DescriptorOf[Double] with
-    val descriptor: TypeDescriptor { type Inner = Double } =
-      DoubleDescriptor
+  given DescriptorOf[Double](DoubleDescriptor) with {}
 
   // this is the general DescriptorOf for all [[Ptr[A]]]
-  private val ptrDescriptor = new DescriptorOf[Ptr[?]]:
-    val descriptor: TypeDescriptor { type Inner = Ptr[?] } = PtrDescriptor
+  private val ptrDescriptor = new DescriptorOf[Ptr[?]](PtrDescriptor) {}
 
   given [A]: DescriptorOf[Ptr[A]] =
     ptrDescriptor.asInstanceOf[DescriptorOf[Ptr[A]]]
 
-  given DescriptorOf[VarArgs] with
-    val descriptor: TypeDescriptor { type Inner = VarArgs } = VaListDescriptor
+  given DescriptorOf[VarArgs](VaListDescriptor)
 
   def getDescriptorFor[A](using Quotes, Type[A]) =
     import quotes.reflect.*
@@ -74,15 +103,15 @@ object DescriptorOf:
       case _: EmptyTuple => Set.empty[TypeDescriptor]
 
   inline given [A <: NonEmptyTuple]: DescriptorOf[CUnion[A]] =
-    new DescriptorOf[CUnion[A]]:
-      val descriptor: CUnionDescriptor { type Inner = CUnion[A] } =
-        CUnionDescriptor(helper[A])
-          .asInstanceOf[CUnionDescriptor { type Inner = CUnion[A] }]
+    new DescriptorOf[CUnion[A]](
+      CUnionDescriptor(helper[A])
+        .asInstanceOf[CUnionDescriptor { type Inner = CUnion[A] }]
+    ) {}
 
   inline given [A, B <: Int](using innerDesc: DescriptorOf[A])(using
       classTag: ClassTag[innerDesc.descriptor.Inner]
-  ): DescriptorOf[SetSizeArray[A, B]] = new DescriptorOf[SetSizeArray[A, B]]:
-    val descriptor: TypeDescriptor { type Inner = SetSizeArray[A, B] } =
-      SetSizeArrayDescriptor(innerDesc.descriptor, constValue[B]).asInstanceOf[
-        SetSizeArrayDescriptor { type Inner = SetSizeArray[A, B] }
-      ]
+  ): DescriptorOf[SetSizeArray[A, B]] = new DescriptorOf[SetSizeArray[A, B]](
+    SetSizeArrayDescriptor(innerDesc.descriptor, constValue[B]).asInstanceOf[
+      SetSizeArrayDescriptor { type Inner = SetSizeArray[A, B] }
+    ]
+  ) {}
