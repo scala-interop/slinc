@@ -17,6 +17,7 @@ type JitCompiler = [A] => (
 trait JitCService:
   def jitC(tag: UUID, c: JitCompiler => Unit): Unit
   def processedRecently(tag: UUID): Boolean
+  def async: Boolean
 
 object JitCService:
   lazy val standard = new JitCService:
@@ -90,6 +91,8 @@ object JitCService:
     override def processedRecently(tag: ju.UUID): Boolean =
       workDone.getOpaque().nn.contains(tag)
 
+    override def async: Boolean = true
+
   lazy val synchronous = new JitCService:
     private val wdoneCache = 32
     given compiler: scala.quoted.staging.Compiler =
@@ -111,3 +114,5 @@ object JitCService:
 
     override def processedRecently(tag: ju.UUID): Boolean =
       workDone.getOpaque().nn.contains(tag)
+
+    override def async: Boolean = false

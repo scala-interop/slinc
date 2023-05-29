@@ -7,7 +7,7 @@ import modules.DescriptorModule
 import fr.hammons.slinc.modules.TransitionModule
 import fr.hammons.slinc.modules.ReadWriteModule
 import fr.hammons.slinc.modules.Reader
-import fr.hammons.slinc.modules.Writer
+import fr.hammons.slinc.modules.MemWriter
 
 trait Struct[A <: Product] extends DescriptorOf[A]
 
@@ -35,7 +35,7 @@ object Struct:
       m: Mirror.ProductOf[A],
       rwm: ReadWriteModule,
       dm: DescriptorModule
-  ): Writer[A] =
+  ): MemWriter[A] =
     val offsets = dm.memberOffsets(memberDescriptors[A])
     (mem, offset, value) =>
       writeGenHelper(

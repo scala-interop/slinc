@@ -7,10 +7,19 @@ import scala.reflect.ClassTag
 import fr.hammons.slinc.fnutils.Fn
 
 private[slinc] given readWriteModule19: ReadWriteModule with
+  val intWritingExpr: (
+      quoted.Quotes
+  ) ?=> quoted.Expr[fr.hammons.slinc.modules.MemWriter[Int]] = ???
+  def writeArrayExpr(td: fr.hammons.slinc.TypeDescriptor)(using
+      x$2: quoted.Quotes
+  ): quoted.Expr[fr.hammons.slinc.modules.MemWriter[Array[Any]]] = ???
+  def writeExpr(td: fr.hammons.slinc.TypeDescriptor)(using
+      x$2: quoted.Quotes
+  ): quoted.Expr[fr.hammons.slinc.modules.MemWriter[Any]] = ???
 
   override def unionWriter(
       td: TypeDescriptor
-  ): Writer[CUnion[? <: NonEmptyTuple]] =
+  ): MemWriter[CUnion[? <: NonEmptyTuple]] =
     val size = descriptorModule19.sizeOf(td)
     (mem, offset, value) => mem.offset(offset).resize(size).copyFrom(value.mem)
 
@@ -25,9 +34,9 @@ private[slinc] given readWriteModule19: ReadWriteModule with
         new CUnion(newMem)
       )
 
-  val writerCache = DependentTrieMap[Writer]
+  val writerCache = DependentTrieMap[MemWriter]
 
-  val arrayWriterCache = DependentTrieMap[[I] =>> Writer[Array[I]]]
+  val arrayWriterCache = DependentTrieMap[[I] =>> MemWriter[Array[I]]]
 
   val readerCache = DependentTrieMap[Reader]
 

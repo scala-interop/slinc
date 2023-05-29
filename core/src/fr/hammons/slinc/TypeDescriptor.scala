@@ -4,7 +4,6 @@ import modules.DescriptorModule
 import fr.hammons.slinc.modules.{
   ReadWriteModule,
   Reader,
-  Writer,
   ArrayReader,
   readWriteModule
 }
@@ -14,6 +13,7 @@ import fr.hammons.slinc.modules.TransitionModule
 import fr.hammons.slinc.modules.{ArgumentTransition, ReturnTransition}
 import scala.NonEmptyTuple
 import scala.language.implicitConversions
+import fr.hammons.slinc.modules.MemWriter
 
 /** Describes types used by C interop
   */
@@ -28,7 +28,7 @@ sealed trait TypeDescriptor:
     dm.toCarrierType(this)
 
   val reader: (ReadWriteModule, DescriptorModule) ?=> Reader[Inner]
-  val writer: (ReadWriteModule, DescriptorModule) ?=> Writer[Inner]
+  val writer: (ReadWriteModule, DescriptorModule) ?=> MemWriter[Inner]
   val argumentTransition: (
       TransitionModule,
       ReadWriteModule,
@@ -55,7 +55,7 @@ sealed trait TypeDescriptor:
     }
 
   val arrayWriter
-      : (ReadWriteModule, DescriptorModule) ?=> Writer[Array[Inner]] =
+      : (ReadWriteModule, DescriptorModule) ?=> MemWriter[Array[Inner]] =
     val writer = this.writer
     val size = this.size
     (mem, offset, a) =>
@@ -167,7 +167,7 @@ case class AliasDescriptor[A](val real: TypeDescriptor) extends TypeDescriptor:
   val reader: (ReadWriteModule, DescriptorModule) ?=> Reader[Inner] =
     (rwm, _) ?=> (mem, bytes) => rwm.read(mem, bytes, real)
 
-  val writer: (ReadWriteModule, DescriptorModule) ?=> Writer[Inner] =
+  val writer: (ReadWriteModule, DescriptorModule) ?=> MemWriter[Inner] =
     (rwm, _) ?=> (mem, bytes, a) => rwm.write(mem, bytes, real, a)
 
   override val argumentTransition =
@@ -191,7 +191,8 @@ case object VaListDescriptor extends TypeDescriptor:
         Inner
       ] = _.mem.asAddress
 
-  override val writer: (ReadWriteModule, DescriptorModule) ?=> Writer[Inner] =
+  override val writer
+      : (ReadWriteModule, DescriptorModule) ?=> MemWriter[Inner] =
     (mem, offset, value) =>
       summon[ReadWriteModule].memWriter(mem, offset, value.mem)
 
@@ -216,7 +217,8 @@ case class CUnionDescriptor(possibleTypes: Set[TypeDescriptor])
         Inner
       ] = (i: Inner) => i.mem.asBase
 
-  override val writer: (ReadWriteModule, DescriptorModule) ?=> Writer[Inner] =
+  override val writer
+      : (ReadWriteModule, DescriptorModule) ?=> MemWriter[Inner] =
     summon[ReadWriteModule].unionWriter(this)
 
 case class SetSizeArrayDescriptor(
@@ -231,7 +233,8 @@ case class SetSizeArrayDescriptor(
         summon[ReadWriteModule].readArray[contained.Inner](mem, offset, number)
       )
 
-  override val writer: (ReadWriteModule, DescriptorModule) ?=> Writer[Inner] =
+  override val writer
+      : (ReadWriteModule, DescriptorModule) ?=> MemWriter[Inner] =
     (mem, offset, value) =>
       summon[ReadWriteModule]
         .writeArray[contained.Inner](mem, offset, value.toArray)

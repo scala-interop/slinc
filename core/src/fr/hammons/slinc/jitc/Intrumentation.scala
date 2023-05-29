@@ -2,6 +2,7 @@ package fr.hammons.slinc.jitc
 
 import java.util.concurrent.atomic.AtomicInteger
 import fr.hammons.slinc.fnutils.Fn
+import scala.annotation.implicitNotFound
 
 trait Instrumentation:
   def getCount(): Int
@@ -12,9 +13,10 @@ trait Instrumentation:
   def instrument[A](a: A): Instrumented[A]
 
   def apply[A, B <: Tuple, C, D, E](fn: A)(using
-      Fn[A, B, C],
-      C =:= Instrumented[D],
-      Fn[E, B, D]
+      @implicitNotFound(
+        "Could not find Fn[${A}, ${B}, Instrumented[${C}]"
+      ) ev1: Fn[A, B, Instrumented[C]],
+      ev2: Fn[E, B, C]
   ): InstrumentedFn[E] =
     fn.asInstanceOf[E]
 

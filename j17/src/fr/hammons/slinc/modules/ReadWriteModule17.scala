@@ -5,9 +5,18 @@ import scala.collection.concurrent.TrieMap
 import java.lang.invoke.MethodHandle
 import scala.reflect.ClassTag
 import fr.hammons.slinc.fnutils.Fn
+import scala.quoted.*
+import java.lang.reflect.Modifier
 
 given readWriteModule17: ReadWriteModule with
   // todo: eliminate this
+
+  def writeFn(
+      typeDescriptor: TypeDescriptor
+  ): MemWriter[typeDescriptor.Inner] = ???
+
+  override val intWritingExpr: (Quotes) ?=> Expr[MemWriter[Int]] = ???
+
   val fnCache: TrieMap[CFunctionDescriptor, Mem => ?] =
     TrieMap.empty
 
@@ -15,9 +24,9 @@ given readWriteModule17: ReadWriteModule with
 
   val arrayReaderCache = DependentTrieMap[ArrayReader]
 
-  val writerCache = DependentTrieMap[Writer]
+  val writerCache = DependentTrieMap[MemWriter]
 
-  val arrayWriterCache = DependentTrieMap[[I] =>> Writer[Array[I]]]
+  val arrayWriterCache = DependentTrieMap[[I] =>> MemWriter[Array[I]]]
 
   val byteWriter = (mem, offset, value) => mem.writeByte(value, offset)
   val shortWriter = (mem, offset, value) => mem.writeShort(value, offset)
@@ -54,7 +63,7 @@ given readWriteModule17: ReadWriteModule with
         new CUnion(newMem)
       )
 
-  def unionWriter(td: TypeDescriptor): Writer[CUnion[? <: NonEmptyTuple]] =
+  def unionWriter(td: TypeDescriptor): MemWriter[CUnion[? <: NonEmptyTuple]] =
     val size = descriptorModule17.sizeOf(td)
     (mem, offset, value) => mem.offset(offset).resize(size).copyFrom(value.mem)
 
@@ -106,12 +115,127 @@ given readWriteModule17: ReadWriteModule with
       offset: Bytes,
       typeDescriptor: TypeDescriptor,
       value: typeDescriptor.Inner
-  ): Unit = writerCache.getOrElseUpdate(
-    typeDescriptor,
-    typeDescriptor.writer
-  )(memory, offset, value)
+  ): Unit = ???
 
-  override def writeArray[A](memory: Mem, offset: Bytes, value: Array[A])(using
+  def asExprOf[A](expr: Expr[Any])(using Quotes, Type[A]) =
+    if expr.isExprOf[A] then expr.asExprOf[A]
+    else '{ $expr.asInstanceOf[A] }.asExprOf[A]
+
+  def canBeUsedDirectly(clazz: Class[?]): Boolean =
+    val enclosingClass = clazz.getEnclosingClass()
+    if clazz.getCanonicalName() == null then false
+    else if enclosingClass == null && clazz
+        .getEnclosingConstructor() == null && clazz.getEnclosingMethod() == null
+    then true
+    else if canBeUsedDirectly(enclosingClass.nn) && Modifier.isStatic(
+        clazz.getModifiers()
+      ) && Modifier.isPublic(clazz.getModifiers())
+    then true
+    else false
+
+  def writeExprHelper(
+      typeDescriptor: TypeDescriptor,
+      mem: Expr[Mem],
+      offset: Expr[Bytes],
+      value: Expr[Any]
+  )(using Quotes): Expr[Unit] =
+    import quotes.reflect.*
+    typeDescriptor match
+      case ByteDescriptor  => ???
+      case ShortDescriptor => ???
+      case IntDescriptor =>
+        '{
+          $mem.writeInt(${ asExprOf[Int](value) }, $offset)
+        }
+      case LongDescriptor   => ???
+      case FloatDescriptor  => ???
+      case DoubleDescriptor => ???
+      case PtrDescriptor    => ???
+      case sd: StructDescriptor if canBeUsedDirectly(sd.clazz) =>
+        val fields =
+          Symbol.classSymbol(sd.clazz.getCanonicalName().nn).caseFields
+
+        val offsets =
+          descriptorModule17.memberOffsets(sd.members.map(_.descriptor))
+
+        val fns = sd.members.zip(offsets).zipWithIndex.map {
+          case (
+                (StructMemberDescriptor(childDescriptor, name), childOffset),
+                index
+              ) =>
+            (nv: Expr[Product]) =>
+              val childField = Select(nv.asTerm, fields(index)).asExpr
+              val totalOffset = offset.value
+                .map(_ + childOffset)
+                .map(Expr(_))
+                .getOrElse('{ $offset + ${ Expr(childOffset) } })
+
+              writeExprHelper(childDescriptor, mem, totalOffset, childField)
+        }
+      case sd: StructDescriptor =>
+        val offsets =
+          descriptorModule17.memberOffsets(sd.members.map(_.descriptor))
+        val fns = sd.members
+          .zip(offsets)
+          .zipWithIndex
+          .map {
+            case ((StructMemberDescriptor(td, name), childOffset), index) =>
+              (nv: Expr[Product]) =>
+                val childField = '{ $nv.productElement(${ Expr(index) }) }
+                val totalOffset = offset.value
+                  .map(_ + childOffset)
+                  .map(Expr(_))
+                  .getOrElse('{ $offset + ${ Expr(childOffset) } })
+
+                writeExprHelper(td, mem, totalOffset, childField)
+          }
+          .toList
+
+        '{
+          val a: Product = ${ asExprOf[Product](value) }
+
+          ${
+            Expr.block(fns.map(_('a)), '{})
+          }
+        }
+
+      case AliasDescriptor(real)           => ???
+      case VaListDescriptor                => ???
+      case CUnionDescriptor(possibleTypes) => ???
+      case SetSizeArrayDescriptor(td, x)   => ???
+
+    ???
+
+  def writeExpr(
+      typeDescriptor: TypeDescriptor
+  )(using Quotes): Expr[MemWriter[Any]] =
+    '{ (mem: Mem, offset: Bytes, value: Any) =>
+      ${
+        writeExprHelper(typeDescriptor, 'mem, 'offset, 'value)
+      }
+    }
+
+  def writeArrayExpr(typeDescriptor: TypeDescriptor)(using
+      Quotes
+  ): Expr[MemWriter[Array[Any]]] =
+    val elemLength = Expr(typeDescriptor.size)
+    '{ (mem: Mem, offset: Bytes, value: Array[Any]) =>
+      var x = 0
+      while x < value.length do
+        ${
+          writeExprHelper(
+            typeDescriptor,
+            'mem,
+            '{
+              ($elemLength * x) + offset
+            },
+            '{ value(x) }
+          )
+        }
+        x += 1
+    }
+
+  def writeArray[A](memory: Mem, offset: Bytes, value: Array[A])(using
       DescriptorOf[A]
   ): Unit =
     val desc = DescriptorOf[A]
