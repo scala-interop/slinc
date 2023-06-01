@@ -2,14 +2,20 @@ package fr.hammons.slinc
 
 import fr.hammons.slinc.types.CLong
 import org.openjdk.jmh.annotations.{Scope as _, *}
+import org.openjdk.jmh.infra.Blackhole
+import fr.hammons.slinc.descriptors.WriterContext
 
 case class A(a: Int, b: B, c: Int) derives Struct
 case class B(a: Int, b: Int) derives Struct
+case class G(a: Int, b: Float, c: CLong) derives Struct
+case class I(a: Int, b: Float, c: CLong) derives Struct
 
-@Warmup(iterations = 5)
-@Measurement(iterations = 5)
+//@Warmup(iterations = 5)
+//@Measurement(iterations = 5)
 trait TransferBenchmarkShape(val s: Slinc):
   import s.{given, *}
+
+  given WriterContext = WriterContext(dm, rwm)
 
   case class C(a: Int, b: D, c: Int) derives Struct
   case class D(a: CLong, b: Int) derives Struct
@@ -28,6 +34,19 @@ trait TransferBenchmarkShape(val s: Slinc):
 
   val c = C(1, D(CLong(2), 3), 4)
 
+  val g = G(1, 2f, CLong(3))
+
+  val gPtr = Scope.global {
+    Ptr.blank[G]
+  }
+
+  val i = I(1, 2f, CLong(3))
+  val iPtr = Scope.global:
+    Ptr.blank[I]
+
+  val optimizedIWriter =
+    summon[DescriptorOf[I]].writer.forceOptimize
+
   @Benchmark
   def topLevelRead =
     !aPtr
@@ -35,6 +54,16 @@ trait TransferBenchmarkShape(val s: Slinc):
   @Benchmark
   def topLevelWrite =
     !aPtr = a
+
+
+  @Benchmark 
+  def topLevelWriteG(blackhole: Blackhole) = blackhole.consume:
+    !gPtr = g
+
+  @Benchmark
+  def topLevelWriteI(blackhole: Blackhole) = blackhole.consume:
+    optimizedIWriter(iPtr.mem, Bytes(0), i)
+
 
   @Benchmark
   def innerRead =

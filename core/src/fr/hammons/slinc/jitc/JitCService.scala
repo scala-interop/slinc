@@ -10,6 +10,7 @@ import scala.concurrent.Future
 import scala.quoted.staging.run
 import java.util.UUID
 import java.{util as ju}
+import scala.util.Try
 
 type JitCompiler = [A] => (
     Quotes ?=> Expr[A]
@@ -49,7 +50,11 @@ object JitCService:
         for
           (_, work) <- workToDo
           pfn: JitCompiler = [A] => (fn: Quotes ?=> Expr[A]) => run[A](fn)
-        do work(pfn)
+        do Try(
+          work(pfn)
+        ).recover{
+          case t => t.printStackTrace()
+        }
 
         val done = workToDo.map(_._1)
         var succeeded = false

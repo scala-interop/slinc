@@ -7,6 +7,7 @@ import scala.reflect.ClassTag
 import fr.hammons.slinc.fnutils.Fn
 import scala.quoted.*
 import java.lang.reflect.Modifier
+import jdk.incubator.foreign.*
 
 given readWriteModule17: ReadWriteModule with
   // todo: eliminate this
@@ -120,7 +121,7 @@ given readWriteModule17: ReadWriteModule with
     typeDescriptor.writer
   )(memory, offset, value)
 
-  def asExprOf[A](expr: Expr[Any])(using Quotes, Type[A]) =
+  def asExprOf[A](expr: Expr[?])(using Quotes, Type[A]) =
     if expr.isExprOf[A] then expr.asExprOf[A]
     else '{ $expr.asInstanceOf[A] }.asExprOf[A]
 
@@ -143,31 +144,36 @@ given readWriteModule17: ReadWriteModule with
     referenceOffset
       .map(refOff => '{ $refOff + $constantOffset })
       .getOrElse(constantOffset)
-  def writeExprHelper(
+
+  def writeExprHelper[A](
       typeDescriptor: TypeDescriptor,
-      mem: Expr[Mem],
+      mem: Expr[MemorySegment],
       offsetExprs: Seq[Expr[Bytes]],
-      value: Expr[Any]
-  )(using Quotes): Expr[Unit] =
+      value: Expr[A]
+  )(using Quotes, Type[A]): Expr[Unit] =
     import quotes.reflect.*
     typeDescriptor match
       case ByteDescriptor  => ???
       case ShortDescriptor => ???
       case IntDescriptor =>
         '{
-          $mem.writeInt(
-            ${ asExprOf[Int](value) },
-            ${ foldOffsets(offsetExprs) }
-          )
+          MemoryAccess.setIntAtOffset($mem, ${foldOffsets(offsetExprs)}.toLong, ${asExprOf[Int](value)})
         }
       case LongDescriptor =>
         '{
-          $mem.writeLong(
-            ${ asExprOf[Long](value) },
-            ${ foldOffsets(offsetExprs) }
-          )
+          MemoryAccess.setLongAtOffset($mem, ${foldOffsets(offsetExprs)}.toLong, ${asExprOf[Long](value)})
+          // $mem.writeLong(
+          //   ${ asExprOf[Long](value) },
+          //   ${ foldOffsets(offsetExprs) }
+          // )
         }
-      case FloatDescriptor  => ???
+      case FloatDescriptor  => '{
+        MemoryAccess.setFloatAtOffset($mem, ${foldOffsets(offsetExprs)}.toLong, ${asExprOf[Float](value)})
+        // $mem.writeFloat(
+        //   ${ asExprOf[Float](value) },
+        //   ${ foldOffsets(offsetExprs)}
+        // )
+      }
       case DoubleDescriptor => ???
       case PtrDescriptor    => ???
       case sd: StructDescriptor if canBeUsedDirectly(sd.clazz) =>
@@ -189,7 +195,7 @@ given readWriteModule17: ReadWriteModule with
                   (StructMemberDescriptor(childDescriptor, name), childOffset),
                   index
                 ) =>
-              (nv: Expr[Product]) =>
+              (nv: Expr[A]) =>
                 val childField = Select(nv.asTerm, fields(index)).asExpr
                 val totalOffset = offsetExprs :+ Expr(childOffset)
 
@@ -201,13 +207,8 @@ given readWriteModule17: ReadWriteModule with
 
         val code = TypeRepr.typeConstructorOf(sd.clazz).asType match
           case '[a & Product] =>
-            '{
-              val a: a & Product = ${ asExprOf[a & Product](value) }
-
-              ${
-                Expr.block(fns.map(_('a)), '{})
-              }
-            }
+            val writes = fns.map(_(value))
+            Expr.block(writes.init, writes.last)
         println(code.show)
         code
       case sd: StructDescriptor =>
@@ -240,26 +241,28 @@ given readWriteModule17: ReadWriteModule with
       case CUnionDescriptor(possibleTypes) => ???
       case SetSizeArrayDescriptor(td, x)   => ???
 
-  def writeExpr(
+  def writeExpr[A](
       typeDescriptor: TypeDescriptor
-  )(using Quotes, ClassTag[typeDescriptor.Inner]): Expr[MemWriter[Any]] =
+  )(using Quotes, ClassTag[A], A =:= typeDescriptor.Inner): Expr[MemWriter[A]] =
     import quotes.reflect.*
     val output = TypeRepr
-      .typeConstructorOf(summon[ClassTag[typeDescriptor.Inner]].runtimeClass)
+      .typeConstructorOf(summon[ClassTag[A]].runtimeClass)
       .asType match
       case '[a] =>
-        '{ (mem: Mem, offset: Bytes, value: Any) =>
+        '{ (mem: Mem, offset: Bytes, value: a) =>
+          val memsegment = mem.asBase.asInstanceOf[MemorySegment]
           ${
             writeExprHelper(
               typeDescriptor,
-              'mem,
+              'memsegment,
               Seq('offset),
-              '{ value }.asExprOf[Any]
+              '{ value }
             )
           }
         }
 
-    output
+    given Type[A] = TypeRepr.typeConstructorOf(summon[ClassTag[A]].runtimeClass).asType.asInstanceOf[Type[A]]
+    output.asExprOf[MemWriter[A]]
 
   def writeArrayExpr(typeDescriptor: TypeDescriptor)(using
       Quotes
@@ -267,11 +270,12 @@ given readWriteModule17: ReadWriteModule with
     val elemLength = Expr(typeDescriptor.size)
     '{ (mem: Mem, offset: Bytes, value: Array[Any]) =>
       var x = 0
+      val ms = mem.asBase.asInstanceOf[MemorySegment]
       while x < value.length do
         ${
           writeExprHelper(
             typeDescriptor,
-            'mem,
+            'ms,
             Seq(
               '{
                 ($elemLength * x)

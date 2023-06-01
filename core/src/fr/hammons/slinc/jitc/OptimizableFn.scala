@@ -13,29 +13,51 @@ class OptimizableFn[F, G](
   private val _fn: AtomicReference[F] = AtomicReference()
   val uuid = UUID.randomUUID().nn
   private val _optFn: AtomicReference[F] = AtomicReference()
+  private var _permOptFn: F | Null = null
+
+  def forceOptimize(using G) = 
+    optimizer.jitC(
+      uuid, 
+      jitCompiler => 
+        val opt = optimized(jitCompiler)
+        _optFn.setOpaque(
+          opt
+        )
+    )
+    while _optFn.getOpaque() == null do {}
+    _permOptFn = _optFn.getOpaque().nn
+    _permOptFn.nn
+
 
   def get(using G): F =
-    val optFn = _optFn.getOpaque()
-    var fn = _fn.getOpaque()
-    if fn == null then
-      fn = f(inst)
-      _fn.set(fn)
+    if _permOptFn != null then 
+      _permOptFn.nn
+    else 
+      val optFn = _optFn.getOpaque()
 
-    if optFn != null then optFn
-    else if inst.getCount() >= limit then
-      optimizer.jitC(
-        uuid,
-        jitCompiler =>
-          val opt = optimized(jitCompiler)
-          _optFn.setOpaque(
-            opt
+      if optFn != null then 
+        _permOptFn = optFn
+        optFn
+      else 
+        var fn = _fn.getOpaque()
+        if fn == null then
+          fn = f(inst)
+          _fn.set(fn)
+
+        if inst.getCount() >= limit then
+          optimizer.jitC(
+            uuid,
+            jitCompiler =>
+              val opt = optimized(jitCompiler)
+              _optFn.setOpaque(
+                opt
+              )
           )
-      )
-      if optimizer.async then fn.nn
-      else
-        while _optFn.getOpaque() == null do {}
-        _optFn.getOpaque().nn
-    else fn.nn
+          if optimizer.async then fn.nn
+          else
+            while _optFn.getOpaque() == null do {}
+            _optFn.getOpaque().nn
+        else fn.nn
 
 object OptimizableFn:
   val modeSetting = "slinc.jitc.mode"

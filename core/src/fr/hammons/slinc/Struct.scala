@@ -108,7 +108,6 @@ object Struct:
       type Inner = A
       val reader = readGen[A]
       val writer =
-        // println(codeOf(writeGen[A]))
         writeGen[A]
 
       override val returnTransition = returnValue =>

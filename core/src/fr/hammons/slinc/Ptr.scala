@@ -39,8 +39,8 @@ class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
 
   def `unary_!_=`(
       value: A
-  )(using rwM: ReadWriteModule, desc: DescriptorOf[A], dm: DescriptorModule) =
-    desc.writer.get(using WriterContext(dm, rwM))(mem, offset, value)
+  )(using wc: WriterContext, desc: DescriptorOf[A]) =
+    desc.writer.get(mem, offset, value)
   def apply(bytes: Bytes): Ptr[A] = Ptr[A](mem, offset + bytes)
   def apply(index: Int)(using DescriptorOf[A], DescriptorModule): Ptr[A] =
     Ptr[A](mem, offset + (DescriptorOf[A].size * index))

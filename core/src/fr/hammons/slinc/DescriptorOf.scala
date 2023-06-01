@@ -18,7 +18,7 @@ trait DescriptorOf[A](val descriptor: TypeDescriptor { type Inner = A })(using
   // val descriptor: TypeDescriptor { type Inner = A }
   val writer: Writer[A] = OptimizableFn((writerContext: WriterContext) ?=>
     _ {
-      val expr = writerContext.rwm.writeExpr(descriptor)
+      val expr = writerContext.rwm.writeExpr[A](descriptor)
       println(s"jitc: ${expr.show}")
       expr
     }.asInstanceOf[MemWriter[A]]
