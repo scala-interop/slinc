@@ -9,15 +9,16 @@ import scala.concurrent.Await
 class JitSpecification extends munit.FunSuite:
   test("jit-compilation works"):
       var optimized = false
-      var fn =
-        new OptimizableFn[Int => Int, DummyImplicit](JitCService.standard)(
-          i => i((a: Int) => i.instrument(a)),
-          10
-        )(jitCompiler =>
-          jitCompiler('{ (optimizedFn: Boolean => Unit) => (i: Int) =>
-            optimizedFn(true)
-            i
-          })(optimized = _)
+      var fn: OptimizableFn[Int => Int, DummyImplicit] =
+        new FnToJit(
+          JitCService.standard,
+          CountbasedInstrumentation(_, 10),
+          jitCompiler =>
+            jitCompiler('{ (optimizedFn: Boolean => Unit) => (i: Int) =>
+              optimizedFn(true)
+              i
+            })(optimized = _),
+          i => i((a: Int) => i.instrument(a))
         )
       for _ <- 0 to 10
       yield fn.get(3)
@@ -29,15 +30,16 @@ class JitSpecification extends munit.FunSuite:
 
   test("jit-compilation in multithreaded env works"):
       val optimized = Array.fill(10)(false)
-      val fn =
-        new OptimizableFn[Int => Int, DummyImplicit](JitCService.standard)(
-          i => i((a: Int) => i.instrument(a)),
-          10
-        )(jitCompiler =>
-          jitCompiler('{ (optimizedFn: Int => Unit) => (i: Int) =>
-            optimizedFn(i)
-            i
-          })(i => optimized(i) = true)
+      val fn: OptimizableFn[Int => Int, DummyImplicit] =
+        new FnToJit(
+          JitCService.standard,
+          CountbasedInstrumentation(_, 10),
+          jitCompiler =>
+            jitCompiler('{ (optimizedFn: Int => Unit) => (i: Int) =>
+              optimizedFn(i)
+              i
+            })(i => optimized(i) = true),
+          i => i((a: Int) => i.instrument(a))
         )
       val futures =
         for i <- 0 until 10
@@ -56,18 +58,14 @@ class JitSpecification extends munit.FunSuite:
 
   test("instant compilation works"):
       var optimized = false
-      val fn =
-        new OptimizableFn[Int => Int, DummyImplicit](
-          JitCService.synchronous,
-          IgnoreInstrumentation
-        )(
-          i => i((a: Int) => i.instrument(a)),
-          0
-        )(jitCompiler =>
-          jitCompiler('{ (optimizedFn: Boolean => Unit) => (i: Int) =>
-            optimizedFn(true)
-            i
-          })(optimized = _)
+      val fn: OptimizableFn[Int => Int, DummyImplicit] =
+        new InstantJitFn[Int => Int, DummyImplicit](
+          JitCService.standard,
+          jitCompiler =>
+            jitCompiler('{ (optimizedFn: Boolean => Unit) => (i: Int) =>
+              optimizedFn(true)
+              i
+            })(optimized = _)
         )
 
       fn.get(6)
@@ -111,7 +109,7 @@ class JitSpecification extends munit.FunSuite:
       assertEquals(ignoreInstrumentation.getCount(), 0)
 
   test("Count instrumentation records invokations"):
-      val countInstrumentation = CountbasedInstrumentation()
+      val countInstrumentation = CountbasedInstrumentation(() => (), 100)
 
       assertEquals(countInstrumentation.getCount(), 0)
       countInstrumentation.instrument(5)

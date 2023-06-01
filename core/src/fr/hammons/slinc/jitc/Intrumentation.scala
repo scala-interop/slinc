@@ -20,17 +20,19 @@ trait Instrumentation:
   ): InstrumentedFn[E] =
     fn.asInstanceOf[E]
 
-class CountbasedInstrumentation extends Instrumentation:
+class CountbasedInstrumentation(triggerFn: () => Unit, triggerLimit: Int)
+    extends Instrumentation:
   private val count = AtomicInteger(0)
-  def getCount() = count.get()
-  private def incrementCount(): Int =
+  final def getCount() = count.getAcquire()
+  private def incrementCount(): Unit =
     var succeeded = false
     var res = 0
     while !succeeded do
       res = count.get()
       succeeded = count.compareAndSet(res, res + 1)
 
-    res + 1
+    res += 1
+    if res >= triggerLimit then triggerFn()
 
   def instrument[A](a: A): Instrumented[A] =
     incrementCount()

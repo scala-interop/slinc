@@ -62,7 +62,7 @@ trait TransferBenchmarkShape(val s: Slinc):
       "-Dslinc.jitc.mode=standard"
     )
   )
-  def topLevelWriteGJitted(blackhole: Blackhole) = blackhole.consume:
+  def jitted(blackhole: Blackhole) = blackhole.consume:
     !gPtr = g
 
   @Benchmark
@@ -71,7 +71,7 @@ trait TransferBenchmarkShape(val s: Slinc):
       "-Dslinc.jitc.mode=disabled"
     )
   )
-  def topLevelWriteGNoJit(blackhole: Blackhole) = blackhole.consume:
+  def compiletime(blackhole: Blackhole) = blackhole.consume:
     !gPtr = g
 
   @Benchmark
@@ -80,11 +80,11 @@ trait TransferBenchmarkShape(val s: Slinc):
       "-Dslinc.jitc.mode=immediate"
     )
   )
-  def topLevelWriteGImmediateJIT(blackhole: Blackhole) = blackhole.consume:
+  def immediatecompilation(blackhole: Blackhole) = blackhole.consume:
     !gPtr = g
 
   @Benchmark
-  def cachedWriteI(blackhole: Blackhole) = blackhole.consume:
+  def nakedfunction(blackhole: Blackhole) = blackhole.consume:
     optimizedIWriter(iPtr.mem, Bytes(0), i)
 
   var x = Random.nextInt()
