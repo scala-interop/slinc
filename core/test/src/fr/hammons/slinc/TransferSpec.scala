@@ -35,7 +35,7 @@ trait TransferSpec[ThreadException <: Throwable](val slinc: Slinc)(using
   case class H(a: Int, b: Float, c: CLong) derives Struct
 
   Scope.confined:
-    Ptr.copy(H(1,2,CLong(3)))
+    Ptr.copy(H(1, 2, CLong(3)))
 
   test("can read and write jvm ints") {
     Scope.global {

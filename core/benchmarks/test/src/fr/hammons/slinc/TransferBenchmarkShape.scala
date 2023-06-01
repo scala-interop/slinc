@@ -4,6 +4,7 @@ import fr.hammons.slinc.types.CLong
 import org.openjdk.jmh.annotations.{Scope as _, *}
 import org.openjdk.jmh.infra.Blackhole
 import fr.hammons.slinc.descriptors.WriterContext
+import scala.util.Random
 
 case class A(a: Int, b: B, c: Int) derives Struct
 case class B(a: Int, b: Int) derives Struct
@@ -55,15 +56,43 @@ trait TransferBenchmarkShape(val s: Slinc):
   def topLevelWrite =
     !aPtr = a
 
-
-  @Benchmark 
-  def topLevelWriteG(blackhole: Blackhole) = blackhole.consume:
+  @Benchmark
+  @Fork(
+    jvmArgsAppend = Array(
+      "-Dslinc.jitc.mode=standard"
+    )
+  )
+  def topLevelWriteGJitted(blackhole: Blackhole) = blackhole.consume:
     !gPtr = g
 
   @Benchmark
-  def topLevelWriteI(blackhole: Blackhole) = blackhole.consume:
+  @Fork(
+    jvmArgsAppend = Array(
+      "-Dslinc.jitc.mode=disabled"
+    )
+  )
+  def topLevelWriteGNoJit(blackhole: Blackhole) = blackhole.consume:
+    !gPtr = g
+
+  @Benchmark
+  @Fork(
+    jvmArgsAppend = Array(
+      "-Dslinc.jitc.mode=immediate"
+    )
+  )
+  def topLevelWriteGImmediateJIT(blackhole: Blackhole) = blackhole.consume:
+    !gPtr = g
+
+  @Benchmark
+  def cachedWriteI(blackhole: Blackhole) = blackhole.consume:
     optimizedIWriter(iPtr.mem, Bytes(0), i)
 
+  var x = Random.nextInt()
+  var y = Random.nextInt()
+
+  @Benchmark
+  def addValues(blackhole: Blackhole) = blackhole.consume:
+    x + y
 
   @Benchmark
   def innerRead =

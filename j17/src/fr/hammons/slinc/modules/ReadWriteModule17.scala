@@ -157,23 +157,36 @@ given readWriteModule17: ReadWriteModule with
       case ShortDescriptor => ???
       case IntDescriptor =>
         '{
-          MemoryAccess.setIntAtOffset($mem, ${foldOffsets(offsetExprs)}.toLong, ${asExprOf[Int](value)})
+          MemoryAccess.setIntAtOffset(
+            $mem,
+            ${ foldOffsets(offsetExprs) }.toLong,
+            ${ asExprOf[Int](value) }
+          )
         }
       case LongDescriptor =>
         '{
-          MemoryAccess.setLongAtOffset($mem, ${foldOffsets(offsetExprs)}.toLong, ${asExprOf[Long](value)})
+          MemoryAccess.setLongAtOffset(
+            $mem,
+            ${ foldOffsets(offsetExprs) }.toLong,
+            ${ asExprOf[Long](value) }
+          )
           // $mem.writeLong(
           //   ${ asExprOf[Long](value) },
           //   ${ foldOffsets(offsetExprs) }
           // )
         }
-      case FloatDescriptor  => '{
-        MemoryAccess.setFloatAtOffset($mem, ${foldOffsets(offsetExprs)}.toLong, ${asExprOf[Float](value)})
-        // $mem.writeFloat(
-        //   ${ asExprOf[Float](value) },
-        //   ${ foldOffsets(offsetExprs)}
-        // )
-      }
+      case FloatDescriptor =>
+        '{
+          MemoryAccess.setFloatAtOffset(
+            $mem,
+            ${ foldOffsets(offsetExprs) }.toLong,
+            ${ asExprOf[Float](value) }
+          )
+          // $mem.writeFloat(
+          //   ${ asExprOf[Float](value) },
+          //   ${ foldOffsets(offsetExprs)}
+          // )
+        }
       case DoubleDescriptor => ???
       case PtrDescriptor    => ???
       case sd: StructDescriptor if canBeUsedDirectly(sd.clazz) =>
@@ -261,7 +274,10 @@ given readWriteModule17: ReadWriteModule with
           }
         }
 
-    given Type[A] = TypeRepr.typeConstructorOf(summon[ClassTag[A]].runtimeClass).asType.asInstanceOf[Type[A]]
+    given Type[A] = TypeRepr
+      .typeConstructorOf(summon[ClassTag[A]].runtimeClass)
+      .asType
+      .asInstanceOf[Type[A]]
     output.asExprOf[MemWriter[A]]
 
   def writeArrayExpr(typeDescriptor: TypeDescriptor)(using

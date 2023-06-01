@@ -15,10 +15,10 @@ class OptimizableFn[F, G](
   private val _optFn: AtomicReference[F] = AtomicReference()
   private var _permOptFn: F | Null = null
 
-  def forceOptimize(using G) = 
+  def forceOptimize(using G) =
     optimizer.jitC(
-      uuid, 
-      jitCompiler => 
+      uuid,
+      jitCompiler =>
         val opt = optimized(jitCompiler)
         _optFn.setOpaque(
           opt
@@ -28,17 +28,15 @@ class OptimizableFn[F, G](
     _permOptFn = _optFn.getOpaque().nn
     _permOptFn.nn
 
-
   def get(using G): F =
-    if _permOptFn != null then 
-      _permOptFn.nn
-    else 
+    if _permOptFn != null then _permOptFn.nn
+    else
       val optFn = _optFn.getOpaque()
 
-      if optFn != null then 
+      if optFn != null then
         _permOptFn = optFn
         optFn
-      else 
+      else
         var fn = _fn.getOpaque()
         if fn == null then
           fn = f(inst)

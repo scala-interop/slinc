@@ -50,11 +50,12 @@ object JitCService:
         for
           (_, work) <- workToDo
           pfn: JitCompiler = [A] => (fn: Quotes ?=> Expr[A]) => run[A](fn)
-        do Try(
-          work(pfn)
-        ).recover{
-          case t => t.printStackTrace()
-        }
+        do
+          Try(
+            work(pfn)
+          ).recover { case t =>
+            t.printStackTrace()
+          }
 
         val done = workToDo.map(_._1)
         var succeeded = false

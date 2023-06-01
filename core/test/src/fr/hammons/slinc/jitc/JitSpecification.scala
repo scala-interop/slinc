@@ -3,6 +3,8 @@ package fr.hammons.slinc.jitc
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.compiletime.codeOf
+import scala.concurrent.duration.Duration
+import scala.concurrent.Await
 
 class JitSpecification extends munit.FunSuite:
   test("jit-compilation works"):
@@ -26,31 +28,31 @@ class JitSpecification extends munit.FunSuite:
       assertEquals(optimized, true)
 
   test("jit-compilation in multithreaded env works"):
-      var optimized = false
+      val optimized = Array.fill(10)(false)
       val fn =
         new OptimizableFn[Int => Int, DummyImplicit](JitCService.standard)(
           i => i((a: Int) => i.instrument(a)),
           10
         )(jitCompiler =>
-          jitCompiler('{ (optimizedFn: Boolean => Unit) => (i: Int) =>
-            optimizedFn(true)
+          jitCompiler('{ (optimizedFn: Int => Unit) => (i: Int) =>
+            optimizedFn(i)
             i
-          })(
-            optimized = _
-          )
+          })(i => optimized(i) = true)
         )
-      for _ <- 0 to 5
-      yield Future {
-        for _ <- 0 until 2
-        yield fn.get(3)
-      }
+      val futures =
+        for i <- 0 until 10
+        yield Future {
+          for _ <- 0 until 100000
+          yield fn.get(i)
+          while !JitCService.standard.processedRecently(fn.uuid) do
+            Thread.sleep(100)
 
-      while !JitCService.standard.processedRecently(fn.uuid) do
-        println("waiting")
-        Thread.sleep(100)
+          fn.get(i)
+        }
 
-      fn.get(6)
-      assertEquals(optimized, true)
+      futures.foreach(Await.result(_, Duration.Inf))
+
+      assertEquals(optimized.toSeq, Seq.fill(10)(true))
 
   test("instant compilation works"):
       var optimized = false
