@@ -1,0 +1,52 @@
+$schema: https://raw.githubusercontent.com/oyvindberg/bleep/master/schema.json
+$version: 0.0.2
+jvm:
+  name: temurin:1.17
+projects:
+  core:
+    dependencies: org.scala-lang::scala3-staging:3.3.0
+    extends: 
+      - template-common
+
+
+  core-tests:
+    dependencies: 
+      - org.scalameta::munit:1.0.0-M7
+      - org.scalameta::munit-scalacheck:1.0.0-M7
+    dependsOn: core
+    extends: 
+      - template-common
+    isTestProject: true
+  my-scripts:
+    extends:
+      - template-common
+    dependencies: 
+      - build.bleep::bleep-plugin-dynver:${BLEEP_VERSION}
+      - org.scoverage::scalac-scoverage-reporter:2.0.10
+      - org.scoverage::scalac-scoverage-domain:2.0.10
+      - org.scoverage::scalac-scoverage-serializer:2.0.10
+
+scripts:
+  my-publish-local: my-scripts/fr.hammons.slinc.scripts.PublishLocal
+  scoverage-report: my-scripts/fr.hammons.slinc.scripts.ScoverageReport
+#     main: fr.hammons.slinc.scripts.PublishLocal
+#     project: scripts
+
+templates:
+  template-common:
+    platform:
+      name: jvm
+    scala: 
+      version: 3.3.0
+      options: 
+        - -deprecation
+        - -Wunused:all
+        - -feature
+        - -unchecked
+        - -Xcheck-macros
+        - -Xprint-suspension
+        - -Yexplicit-nulls
+        - -Ysafe-init
+        - -source:future
+        - -Ykind-projector
+        - -Vprofile

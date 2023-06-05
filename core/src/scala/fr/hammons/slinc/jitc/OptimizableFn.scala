@@ -12,13 +12,12 @@ class OptimizableFn[F](
 )(optimized: JitCompiler => F):
   private val _fn: AtomicReference[F] = AtomicReference(f(inst))
   val uuid = UUID.randomUUID().nn
-  private val _optFn: AtomicReference[F] = AtomicReference(
+  private val _optFn: AtomicReference[F] =
     if inst.getCount() >= limit then
       var opt: F | Null = null
       optimizer.jitC(uuid, jitCompiler => opt = optimized(jitCompiler))
-      opt
-    else null
-  )
+      AtomicReference(opt.nn)
+    else AtomicReference()
 
   def get: F =
     val optFn = _optFn.getOpaque()
