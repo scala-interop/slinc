@@ -4,6 +4,7 @@ import scala.reflect.ClassTag
 import fr.hammons.slinc.modules.DescriptorModule
 import fr.hammons.slinc.modules.ReadWriteModule
 import fr.hammons.slinc.fnutils.{Fn, toNativeCompatible}
+import fr.hammons.slinc.descriptors.WriterContext
 
 class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
   inline def `unary_!`(using rwm: ReadWriteModule): A =
@@ -29,11 +30,17 @@ class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
       r: ReadWriteModule
   )(using ClassTag[A]): IArray[A] =
     IArray.unsafeFromArray(
-      r.readArray(mem.resize(DescriptorOf[A].size * size), offset, size)
+      r.readArray[A](
+        mem.resize(DescriptorOf[A].size * size),
+        offset,
+        size
+      )
     )
 
-  def `unary_!_=`(value: A)(using rwM: ReadWriteModule, desc: DescriptorOf[A]) =
-    rwM.write(mem, offset, desc.descriptor, value)
+  def `unary_!_=`(
+      value: A
+  )(using wc: WriterContext, desc: DescriptorOf[A]) =
+    desc.writer.get(mem, offset, value)
   def apply(bytes: Bytes): Ptr[A] = Ptr[A](mem, offset + bytes)
   def apply(index: Int)(using DescriptorOf[A], DescriptorModule): Ptr[A] =
     Ptr[A](mem, offset + (DescriptorOf[A].size * index))
@@ -63,7 +70,12 @@ object Ptr:
 
   def copy[A](
       a: Array[A]
-  )(using alloc: Allocator, descriptor: DescriptorOf[A], rwm: ReadWriteModule) =
+  )(using
+      alloc: Allocator,
+      descriptor: DescriptorOf[A],
+      rwm: ReadWriteModule,
+      dm: DescriptorModule
+  ) =
     val mem = alloc.allocate(DescriptorOf[A], a.size)
     rwm.writeArray(mem, Bytes(0), a)
     Ptr[A](mem, Bytes(0))
@@ -72,17 +84,23 @@ object Ptr:
       a: A
   )(using
       rwm: ReadWriteModule,
+      dm: DescriptorModule,
       descriptor: DescriptorOf[A] {
         val descriptor: TypeDescriptor { type Inner = A }
       }
   ) =
     val mem = alloc.allocate(DescriptorOf[A], 1)
-    rwm.write(mem, Bytes(0), descriptor.descriptor, a)
+    descriptor.writer.get(using WriterContext(dm, rwm))(mem, Bytes(0), a)
     Ptr[A](mem, Bytes(0))
 
   def copy(
       string: String
-  )(using Allocator, DescriptorOf[Byte], ReadWriteModule): Ptr[Byte] = copy(
+  )(using
+      Allocator,
+      DescriptorOf[Byte],
+      ReadWriteModule,
+      DescriptorModule
+  ): Ptr[Byte] = copy(
     string.getBytes("ASCII").nn :+ 0.toByte
   )
 

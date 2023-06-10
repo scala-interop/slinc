@@ -1,15 +1,17 @@
 package fr.hammons.slinc
 
 import scala.deriving.Mirror
-import scala.compiletime.{erasedValue, summonInline, constValueTuple}
+import scala.compiletime.{erasedValue, summonInline, constValueTuple, codeOf}
 import scala.reflect.ClassTag
 import modules.DescriptorModule
 import fr.hammons.slinc.modules.TransitionModule
 import fr.hammons.slinc.modules.ReadWriteModule
 import fr.hammons.slinc.modules.Reader
-import fr.hammons.slinc.modules.Writer
+import fr.hammons.slinc.modules.MemWriter
 
-trait Struct[A <: Product] extends DescriptorOf[A]
+abstract class Struct[A <: Product](td: TypeDescriptor { type Inner = A })(using
+    ClassTag[A]
+) extends DescriptorOf[A](td)
 
 object Struct:
   private inline def memberDescriptors[A](using
@@ -35,7 +37,7 @@ object Struct:
       m: Mirror.ProductOf[A],
       rwm: ReadWriteModule,
       dm: DescriptorModule
-  ): Writer[A] =
+  ): MemWriter[A] =
     val offsets = dm.memberOffsets(memberDescriptors[A])
     (mem, offset, value) =>
       writeGenHelper(
@@ -94,26 +96,26 @@ object Struct:
   inline def derived[A <: Product](using
       m: Mirror.ProductOf[A],
       ct: ClassTag[A]
-  ) = new Struct[A]:
-    type Inner = A
-    val descriptor: StructDescriptor { type Inner = A } =
-      new StructDescriptor(
-        memberDescriptors[A].view
-          .zip(memberNames[A])
-          .map(StructMemberDescriptor.apply)
-          .toList,
-        ct.runtimeClass,
-        m.fromProduct(_)
-      ):
-        type Inner = A
-        val reader = readGen[A]
-        val writer = writeGen[A]
+  ) = new Struct[A](
+    new StructDescriptor(
+      memberDescriptors[A].view
+        .zip(memberNames[A])
+        .map(StructMemberDescriptor.apply)
+        .toList,
+      ct.runtimeClass,
+      m.fromProduct(_)
+    ):
+      type Inner = A
+      val reader = readGen[A]
+      val writer =
+        writeGen[A]
 
-        override val returnTransition = returnValue =>
-          val mem = summon[TransitionModule].memReturn(returnValue)
-          summon[ReadWriteModule].read(mem, Bytes(0), this)
+      override val returnTransition = returnValue =>
+        val mem = summon[TransitionModule].memReturn(returnValue)
+        summon[ReadWriteModule].read(mem, Bytes(0), this)
 
-        override val argumentTransition = argument =>
-          val mem = summon[Allocator].allocate(this, 1)
-          summon[ReadWriteModule].write(mem, Bytes(0), this, argument)
-          summon[TransitionModule].methodArgument(mem).asInstanceOf[Object]
+      override val argumentTransition = argument =>
+        val mem = summon[Allocator].allocate(this, 1)
+        summon[ReadWriteModule].write(mem, Bytes(0), this, argument)
+        summon[TransitionModule].methodArgument(mem).asInstanceOf[Object]
+  ) {}

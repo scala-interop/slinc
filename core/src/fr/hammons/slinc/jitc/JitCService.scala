@@ -10,13 +10,14 @@ import scala.concurrent.Future
 import scala.quoted.staging.run
 import java.util.UUID
 import java.{util as ju}
+import scala.util.Try
 
 type JitCompiler = [A] => (
     Quotes ?=> Expr[A]
 ) => A
 trait JitCService:
   def jitC(tag: UUID, c: JitCompiler => Unit): Unit
-  def processedRecently(tag: UUID): Boolean
+  def async: Boolean
 
 object JitCService:
   lazy val standard = new JitCService:
@@ -35,60 +36,53 @@ object JitCService:
     private val workQueue = AtomicReference(
       Vector.empty[(UUID, JitCompiler => Unit)]
     )
-    private val workDone = AtomicReference(
+    private var workDone =
       Vector.empty[UUID]
-    )
+
     private val doneCache = 32
 
     Future {
       while !shutdown.getOpaque() do
+        val start = System.currentTimeMillis()
+        val workToDo = workQueue
+          .getAndSet(Vector.empty)
+          .nn
+          .distinctBy(_._1)
+          .filter((id, _) => !workDone.contains(id))
 
-        val workToDo = workQueue.get().nn.distinctBy(_._1)
-
-        for
-          (_, work) <- workToDo
+        val done = for
+          (id, work) <- workToDo
           pfn: JitCompiler = [A] => (fn: Quotes ?=> Expr[A]) => run[A](fn)
-        do work(pfn)
+          workDone <- Try {
+            work(pfn)
+            Vector(id)
+          }.recover { case t =>
+            t.printStackTrace()
+            Vector.empty[UUID]
+          }.getOrElse(Vector.empty)
+        yield workDone
 
-        val done = workToDo.map(_._1)
-        var succeeded = false
-        while !succeeded do
-          val wDone = workDone.get().nn
-          val toDrop = math.max((wDone.size + done.size) - doneCache, 0)
-          succeeded =
-            workDone.compareAndSet(wDone, done ++ wDone.dropRight(toDrop))
+        workDone = done.take(32) ++ workDone.dropRight(
+          math.max(done.take(32).size + workDone.size - doneCache, 0)
+        )
 
-        succeeded = false
-        val doneSet = done.toSet
-        while !succeeded do
-          val newWork = workQueue.getOpaque().nn
-          succeeded = workQueue.compareAndSet(
-            newWork,
-            newWork.filterNot((uuid, _) => doneSet.contains(uuid))
-          )
-        Thread.sleep(100)
+        val end = System.currentTimeMillis()
+        val duration = end - start
+        println(s"sleeping ${Math.max(100 - duration, 0)} ms")
+        Thread.sleep(Math.max(100 - duration, 0))
     }
 
     override def jitC(uuid: UUID, fn: JitCompiler => Unit) =
       import language.unsafeNulls
       var succeeded = false
       while !succeeded do
-        val wDone = workDone.get()
-        if wDone.contains(uuid) then
-          succeeded = workDone.compareAndSet(
-            wDone,
-            uuid +: wDone.filter(_ == uuid)
-          )
-        else
-          while !succeeded do
-            val workToDo = workQueue.get()
-            succeeded = workQueue.compareAndSet(
-              workToDo,
-              (workToDo :+ (uuid, fn))
-            )
+        val workToDo = workQueue.getOpaque()
+        succeeded = workQueue.compareAndSet(
+          workToDo,
+          (workToDo :+ (uuid, fn))
+        )
 
-    override def processedRecently(tag: ju.UUID): Boolean =
-      workDone.getOpaque().nn.contains(tag)
+    override def async: Boolean = true
 
   lazy val synchronous = new JitCService:
     private val wdoneCache = 32
@@ -109,5 +103,4 @@ object JitCService:
         succeeded =
           workDone.compareAndSet(wDone, tag +: wDone.dropRight(toDrop))
 
-    override def processedRecently(tag: ju.UUID): Boolean =
-      workDone.getOpaque().nn.contains(tag)
+    override def async: Boolean = false

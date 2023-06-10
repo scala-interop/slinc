@@ -16,6 +16,7 @@ trait TransferSpec[ThreadException <: Throwable](val slinc: Slinc)(using
     ClassTag[ThreadException]
 ) extends ScalaCheckSuite:
   import slinc.{*, given}
+  System.setProperty("slinc.jitc.mode", "disabled")
 
   val numVarArgs = if slinc.version < 19 then 7 else 200
 
@@ -30,6 +31,11 @@ trait TransferSpec[ThreadException <: Throwable](val slinc: Slinc)(using
   case class F(u: CUnion[(CInt, CFloat)]) derives Struct
 
   case class G(long: CLong, arr: SetSizeArray[CLong, 2]) derives Struct
+
+  case class H(a: Int, b: Float, c: CLong) derives Struct
+
+  Scope.confined:
+    Ptr.copy(H(1, 2, CLong(3)))
 
   test("can read and write jvm ints") {
     Scope.global {

@@ -12,7 +12,7 @@ jobs:
         os: [ubuntu-latest]          
         jvm: [17,19]
         benchmark: [BindingsBenchmarks, TransferBenchmarks]
-        jit: [NoJIT, Standard]
+        jit: [disabled, standard]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
@@ -21,7 +21,7 @@ jobs:
         with:
           jvm: temurin:1.${{ matrix.jvm }}
           apps: mill
-      - run: mill j${{ matrix.jvm }}.benchmarks.test -f1 -wi 2 -i 2 -o j${{ matrix.jvm }}-${{ matrix.os }}.bench -rff j${{ matrix.jvm }}-${{ matrix.os }}.json -rf json .*${{ matrix.benchmark }}${{ matrix.jit }}.*
+      - run: mill j${{ matrix.jvm }}.benchmarks.test -jvmArgsAppend "-Dslinc.jitc.mode=${{ matrix.jit }}" -f1 -wi 2 -i 2 -o j${{ matrix.jvm }}-${{ matrix.os }}.bench -rff j${{ matrix.jvm }}-${{ matrix.os }}.json -rf json .*${{ matrix.benchmark }}${{ matrix.jvm }}.*
       - run: scala-cli run scripts/PublishBenchmarkReport.sc -- "Java ${{ matrix.jvm}}" ${{ matrix.os }} out/j${{ matrix.jvm }}/benchmarks/test/jmhRun.dest/j${{ matrix.jvm }}-${{ matrix.os }}.json ${{ matrix.benchmark }} ${{ matrix.jit }} >> $GITHUB_STEP_SUMMARY
       - uses: actions/upload-artifact@v3
         with:

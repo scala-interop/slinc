@@ -2,6 +2,8 @@ package fr.hammons.slinc
 
 import scala.quoted.{ToExpr, Quotes}
 import fr.hammons.slinc.types.SizeT
+import scala.quoted.FromExpr
+import scala.quoted.Expr
 
 opaque type Bytes = Long
 
@@ -29,3 +31,7 @@ object Bytes:
   given Numeric[Bytes] = Numeric.LongIsIntegral
   given ToExpr[Bytes] with
     def apply(t: Bytes)(using Quotes) = ToExpr.LongToExpr[Long].apply(t)
+
+  given FromExpr[Bytes] with
+    def unapply(x: Expr[Bytes])(using Quotes) =
+      FromExpr.LongFromExpr[Long].unapply(x)

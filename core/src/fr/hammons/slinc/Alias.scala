@@ -1,17 +1,17 @@
 package fr.hammons.slinc
 
 import types.{OS, Arch, os, arch}
+import scala.reflect.ClassTag
 
-trait Alias[T] extends DescriptorOf[T]:
-  lazy val name: String
-  lazy val aliases: PartialFunction[(OS, Arch), TypeDescriptor]
-  val descriptor: TypeDescriptor { type Inner >: T <: T } =
-    AliasDescriptor[T](
-      aliases.applyOrElse(
-        os -> arch,
-        _ =>
-          throw new Error(
-            s"Alias for $name is not defined on platform $os - $arch"
-          )
+abstract class Alias[T](
+    val name: String,
+    val aliases: PartialFunction[(OS, Arch), TypeDescriptor]
+)(using ClassTag[T])
+    extends DescriptorOf[T](
+      AliasDescriptor[T](
+        aliases.applyOrElse(
+          os -> arch,
+          _ => throw new Error("")
+        )
       )
     )

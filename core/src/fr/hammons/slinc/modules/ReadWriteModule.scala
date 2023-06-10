@@ -5,32 +5,36 @@ import java.lang.invoke.MethodHandle
 import scala.reflect.ClassTag
 import scala.NonEmptyTuple
 import fr.hammons.slinc.fnutils.Fn
+import fr.hammons.slinc.jitc.OptimizableFn
+import scala.quoted.Expr
+import scala.quoted.Quotes
 
 type Reader[A] = (Mem, Bytes) => A
-type Writer[A] = (Mem, Bytes, A) => Unit
+type MemWriter[A] = (Mem, Bytes, A) => Unit
 type ArrayReader[A] = (Mem, Bytes, Int) => Array[A]
 
 val readWriteModule = (rwm: ReadWriteModule) ?=> rwm
 
 trait ReadWriteModule:
   val byteReader: Reader[Byte]
-  val byteWriter: Writer[Byte]
+  val byteWriter: MemWriter[Byte]
   val shortReader: Reader[Short]
-  val shortWriter: Writer[Short]
+  val shortWriter: MemWriter[Short]
   val intReader: Reader[Int]
-  val intWriter: Writer[Int]
+  val intWriter: MemWriter[Int]
+  val intWritingExpr: Quotes ?=> Expr[MemWriter[Int]]
   val longReader: Reader[Long]
-  val longWriter: Writer[Long]
+  val longWriter: MemWriter[Long]
 
   val floatReader: Reader[Float]
-  val floatWriter: Writer[Float]
+  val floatWriter: MemWriter[Float]
   val doubleReader: Reader[Double]
-  val doubleWriter: Writer[Double]
+  val doubleWriter: MemWriter[Double]
 
   val memReader: Reader[Mem]
-  val memWriter: Writer[Mem]
+  val memWriter: MemWriter[Mem]
   def unionReader(td: TypeDescriptor): Reader[CUnion[? <: NonEmptyTuple]]
-  def unionWriter(td: TypeDescriptor): Writer[CUnion[? <: NonEmptyTuple]]
+  def unionWriter(td: TypeDescriptor): MemWriter[CUnion[? <: NonEmptyTuple]]
 
   def write(
       memory: Mem,
@@ -56,3 +60,10 @@ trait ReadWriteModule:
       descriptor: CFunctionDescriptor,
       fn: => MethodHandle => Mem => A
   )(using Fn[A, ?, ?]): A
+
+  def writeExpr[A](
+      td: TypeDescriptor
+  )(using Quotes, ClassTag[A], A =:= td.Inner): Expr[MemWriter[A]]
+  def writeArrayExpr(td: TypeDescriptor)(using
+      Quotes
+  ): Expr[MemWriter[Array[Any]]]
