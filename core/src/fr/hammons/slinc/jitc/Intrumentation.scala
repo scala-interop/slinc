@@ -3,14 +3,20 @@ package fr.hammons.slinc.jitc
 import java.util.concurrent.atomic.AtomicInteger
 import fr.hammons.slinc.fnutils.Fn
 import scala.annotation.implicitNotFound
+import fr.hammons.slinc.jitc.OptimizableFn.limitSetting
 
 trait Instrumentation:
   def getCount(): Int
-  protected def toInstrumented[A](a: A): Instrumented[A] = a
   opaque type Instrumented[A] = A
   opaque type InstrumentedFn[A] <: A = A
 
-  def instrument[A](a: A): Instrumented[A]
+  protected def bootInstrumentation(): Unit
+  protected def finishInstrumentation(): Unit
+  inline def instrument[A](inline a: A): Instrumented[A] =
+    bootInstrumentation()
+    val ret = a
+    finishInstrumentation()
+    ret
 
   def apply[A, B <: Tuple, C, D, E](fn: A)(using
       @implicitNotFound(
@@ -20,24 +26,22 @@ trait Instrumentation:
   ): InstrumentedFn[E] =
     fn.asInstanceOf[E]
 
-class CountbasedInstrumentation(triggerFn: () => Unit, triggerLimit: Int)
-    extends Instrumentation:
+  def shouldOpt: Boolean
+
+class CountbasedInstrumentation(triggerLimit: Int) extends Instrumentation:
   private val count = AtomicInteger(0)
-  final def getCount() = count.getAcquire()
+  final def getCount() = count.get()
   private def incrementCount(): Unit =
-    var succeeded = false
-    var res = 0
-    while !succeeded do
-      res = count.get()
-      succeeded = count.compareAndSet(res, res + 1)
+    count.incrementAndGet()
 
-    res += 1
-    if res >= triggerLimit then triggerFn()
+  protected def bootInstrumentation(): Unit = incrementCount()
+  protected def finishInstrumentation(): Unit = ()
 
-  def instrument[A](a: A): Instrumented[A] =
-    incrementCount()
-    toInstrumented(a)
+  def shouldOpt: Boolean = count.getOpaque() >= triggerLimit
 
-object IgnoreInstrumentation extends Instrumentation:
+case class IgnoreInstrumentation(optimize: Boolean) extends Instrumentation:
   def getCount() = 0
-  def instrument[A](a: A): Instrumented[A] = toInstrumented(a)
+  protected def bootInstrumentation(): Unit = ()
+  protected def finishInstrumentation(): Unit = ()
+
+  def shouldOpt: Boolean = optimize

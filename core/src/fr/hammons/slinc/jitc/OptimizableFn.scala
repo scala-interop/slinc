@@ -2,9 +2,16 @@ package fr.hammons.slinc.jitc
 
 import java.util.concurrent.atomic.AtomicReference
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicStampedReference
+import java.util.concurrent.atomic.AtomicMarkableReference
+import java.util.concurrent.atomic.AtomicBoolean
+import scala.annotation.switch
+import scala.compiletime.uninitialized
 
 sealed trait OptimizableFn[F, G]:
   final val uuid = UUID.randomUUID().nn
+
+  def isOptimized: Boolean
 
   def forceOptimize(using G): F
   def triggerOptimization(using G): Unit
@@ -12,21 +19,25 @@ sealed trait OptimizableFn[F, G]:
 
 final class FnToJit[F, G](
     optimizer: JitCService,
-    inst: (() => Unit) => Instrumentation,
+    inst: Instrumentation,
     optimized: G ?=> JitCompiler => F,
     f: G ?=> (i: Instrumentation) => i.InstrumentedFn[F]
 ) extends OptimizableFn[F, G]:
-  private val _fn: AtomicReference[F] = AtomicReference()
+  import scala.language.unsafeNulls
+  private var state: Int = 0
   private val _optFn: AtomicReference[F] = AtomicReference()
-  private var _permOptFn: F | Null = null
+  private var fn: F = uninitialized
+  private var fastFn: F = uninitialized
+
+  def isOptimized: Boolean = state == 3
 
   final def forceOptimize(using G): F =
     triggerOptimization
-    while _optFn.getOpaque() == null do {}
-    _permOptFn = _optFn.getOpaque().nn
-    _permOptFn.nn
+    while fastFn == null do fastFn = _optFn.getOpaque()
+    state = 3
+    fastFn
 
-  def triggerOptimization(using G): Unit =
+  final def triggerOptimization(using G): Unit =
     optimizer.jitC(
       uuid,
       jitCompiler =>
@@ -36,32 +47,39 @@ final class FnToJit[F, G](
         )
     )
 
-  private def tryGetOptFn(using G) =
-    val optFn = _optFn.getOpaque()
-
-    if optFn != null then
-      _permOptFn = optFn
-      optFn
-    else getFn
-
-  private def getFn(using G) =
-    val fn = _fn.getOpaque()
-    if fn != null then fn
-    else
-      val nFn = f(inst(() => triggerOptimization))
-      _fn.set(nFn)
-      nFn
-
   final def get(using G): F =
-    if _permOptFn != null then _permOptFn.nn
-    else tryGetOptFn
+    (state: @switch) match
+      case 0 =>
+        fn = f(inst)
+        state = 1
+        get
+      case 1 =>
+        if inst.shouldOpt then
+          state = 2
+          get
+        fn
+      case 2 =>
+        if _optFn.getOpaque() == null then triggerOptimization
+
+        state = 3
+        get
+
+      case 3 =>
+        fastFn = _optFn.getOpaque()
+        if fastFn != null then
+          state = 4
+          get
+        else fn
+      case 4 => fastFn
+      case _ => fn
 
 final class NeverJitFn[F, G](
     f: G ?=> (i: Instrumentation) => i.InstrumentedFn[F]
 ) extends OptimizableFn[F, G]:
   private var _f: F | Null = null
+  def isOptimized: Boolean = false
   final def forceOptimize(using G): F =
-    _f = f(IgnoreInstrumentation)
+    _f = f(IgnoreInstrumentation(false))
     _f.nn
 
   final def triggerOptimization(using G): Unit = ()
@@ -72,6 +90,7 @@ final class InstantJitFn[F, G](
     optimizer: JitCService,
     f: G ?=> JitCompiler => F
 ) extends OptimizableFn[F, G]:
+  def isOptimized: Boolean = _permFn != null
   private val _fn: AtomicReference[F] = AtomicReference()
   private var _permFn: F | Null = null
 
@@ -97,66 +116,6 @@ final class InstantJitFn[F, G](
         _fn.setOpaque(optimized)
     )
 
-// final class OptimizableFn[F, G](
-//     optimizer: JitCService,
-//     inst: Instrumentation = new CountbasedInstrumentation
-// )(
-//     f: G ?=> (i: Instrumentation) => i.InstrumentedFn[F],
-//     limit: Int
-// )(optimized: G ?=> JitCompiler => F):
-//   private val _fn: AtomicReference[F] = AtomicReference()
-//   final val uuid = UUID.randomUUID().nn
-//   private val _optFn: AtomicReference[F] = AtomicReference()
-//   private var _permOptFn: F | Null = null
-
-//   final def forceOptimize(using G) =
-//     optimizer.jitC(
-//       uuid,
-//       jitCompiler =>
-//         val opt = optimized(jitCompiler)
-//         _optFn.setOpaque(
-//           opt
-//         )
-//     )
-//     while _optFn.getOpaque() == null do {}
-//     _permOptFn = _optFn.getOpaque().nn
-//     _permOptFn.nn
-
-//   private def optimize(using G): F =
-//     optimizer.jitC(
-//       uuid,
-//       jitCompiler =>
-//         val opt = optimized(jitCompiler)
-//         _optFn.setOpaque(opt)
-//     )
-//     if optimizer.async then getFn
-//     else
-//       while _optFn.getOpaque() == null do {}
-//       _optFn.getOpaque().nn
-
-//   private def checkOptTrigger(using G) =
-//     if inst.getCount() >= limit then optimize
-//     else getFn
-
-//   private def tryGetOptFn(using G) =
-//     val optFn = _optFn.getOpaque()
-
-//     if optFn != null then
-//       _permOptFn = optFn
-//       optFn
-//     else checkOptTrigger
-
-//   private def getFn(using G) =
-//     val fn = _fn.getOpaque()
-//     if fn != null then fn
-//     else
-//       val nFn = f(inst)
-//       _fn.set(nFn)
-//       nFn
-
-//   final def get(using G): F =
-//     if _permOptFn != null then _permOptFn.nn
-//     else tryGetOptFn
 object OptimizableFn:
   val modeSetting = "slinc.jitc.mode"
   val limitSetting = "slinc.jitc.jit-limit"
@@ -173,7 +132,7 @@ object OptimizableFn:
           case Some(value) =>
             new FnToJit[F, G](
               JitCService.standard,
-              updateFn => CountbasedInstrumentation(updateFn, value),
+              CountbasedInstrumentation(value),
               optimized,
               unoptimizedFn
             )

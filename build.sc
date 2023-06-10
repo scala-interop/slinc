@@ -30,7 +30,6 @@ trait BaseModule extends ScoverageModule with ScalafmtModule {
     "-unchecked",
     "-Xcheck-macros",
     "-Xprint-suspension",
-    "-Xsemanticdb",
     "-Yexplicit-nulls",
     "-Ysafe-init",
     "-source:future",
@@ -142,12 +141,9 @@ object core
     override def scalaVersion = core.scalaVersion()
     override def scalacOptions = core.scalacOptions
 
-    object test extends BenchmarkSources {
+    object test extends Benchmarks {
       def jmhVersion = jmhV
-      def forkArgs = super.forkArgs() ++ Seq(
-        "--add-modules=jdk.incubator.foreign",
-        "--enable-native-access=ALL-UNNAMED"
-      )
+      def forkArgs = super.forkArgs()
 
     }
   }

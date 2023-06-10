@@ -5,6 +5,9 @@ import org.openjdk.jmh.annotations.{Scope as _, *}
 import org.openjdk.jmh.infra.Blackhole
 import fr.hammons.slinc.descriptors.WriterContext
 import scala.util.Random
+import fr.hammons.slinc.jitc.FnToJit
+import fr.hammons.slinc.modules.MemWriter
+import scala.compiletime.uninitialized
 
 case class A(a: Int, b: B, c: Int) derives Struct
 case class B(a: Int, b: Int) derives Struct
@@ -35,18 +38,30 @@ trait TransferBenchmarkShape(val s: Slinc):
 
   val c = C(1, D(CLong(2), 3), 4)
 
+  @CompilerControl(CompilerControl.Mode.DONT_INLINE)
+  def offset = Bytes(0)
+
   val g = G(1, 2f, CLong(3))
+
+  @CompilerControl(CompilerControl.Mode.DONT_INLINE)
+  def getG = g
 
   val gPtr = Scope.global {
     Ptr.blank[G]
   }
 
   val i = I(1, 2f, CLong(3))
+
+  @CompilerControl(CompilerControl.Mode.DONT_INLINE)
+  def getI = i
   val iPtr = Scope.global:
     Ptr.blank[I]
 
   val optimizedIWriter =
     summon[DescriptorOf[I]].writer.forceOptimize
+
+  @CompilerControl(CompilerControl.Mode.DONT_INLINE)
+  def getOptimizedIWriter = optimizedIWriter
 
   @Benchmark
   def topLevelRead =
@@ -63,7 +78,7 @@ trait TransferBenchmarkShape(val s: Slinc):
     )
   )
   def jitted(blackhole: Blackhole) = blackhole.consume:
-    !gPtr = g
+    !gPtr = getG
 
   @Benchmark
   @Fork(
@@ -72,7 +87,7 @@ trait TransferBenchmarkShape(val s: Slinc):
     )
   )
   def compiletime(blackhole: Blackhole) = blackhole.consume:
-    !gPtr = g
+    !gPtr = getG
 
   @Benchmark
   @Fork(
@@ -81,14 +96,25 @@ trait TransferBenchmarkShape(val s: Slinc):
     )
   )
   def immediatecompilation(blackhole: Blackhole) = blackhole.consume:
-    !gPtr = g
+    !gPtr = getG
 
   @Benchmark
   def nakedfunction(blackhole: Blackhole) = blackhole.consume:
-    optimizedIWriter(iPtr.mem, Bytes(0), i)
+    getOptimizedIWriter(iPtr.mem, iPtr.offset, getI)
+
+  import scala.language.unsafeNulls
+  val castGWriter: FnToJit[MemWriter[G], WriterContext] =
+    summon[DescriptorOf[G]].writer match
+      case a: FnToJit[MemWriter[G], WriterContext] => a
+      case _                                       => null
 
   var x = Random.nextInt()
   var y = Random.nextInt()
+
+  @Benchmark
+  def fntojit(blackhole: Blackhole) = blackhole.consume(
+    castGWriter.get(gPtr.mem, gPtr.offset, getG)
+  )
 
   @Benchmark
   def addValues(blackhole: Blackhole) = blackhole.consume:

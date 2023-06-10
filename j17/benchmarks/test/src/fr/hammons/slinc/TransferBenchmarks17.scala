@@ -27,6 +27,9 @@ class TransferBenchmarks17 extends TransferBenchmarkShape(Slinc17.noJit) {
   val ms = segAlloc.allocate(ml)
   val h = H(1, 2f, CLong(3))
 
+  @CompilerControl(CompilerControl.Mode.DONT_INLINE)
+  def getH = h
+
   val writerFn = (ms: MemorySegment | Null, offset: Bytes, value: H) =>
     MemoryAccess.setIntAtOffset(ms, offset.toLong + 0, h.a)
     MemoryAccess.setFloatAtOffset(ms, offset.toLong + 4, h.b)
@@ -34,7 +37,7 @@ class TransferBenchmarks17 extends TransferBenchmarkShape(Slinc17.noJit) {
 
   @Benchmark
   def writeManual(blackhole: Blackhole) = blackhole.consume(
-    writerFn(ms, Bytes(0), h)
+    writerFn(ms, offset, getH)
   )
 
 }

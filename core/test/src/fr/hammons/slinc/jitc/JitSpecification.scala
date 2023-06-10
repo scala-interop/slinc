@@ -3,7 +3,7 @@ package fr.hammons.slinc.jitc
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.compiletime.codeOf
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.*
 import scala.concurrent.Await
 
 class JitSpecification extends munit.FunSuite:
@@ -12,7 +12,7 @@ class JitSpecification extends munit.FunSuite:
       var fn: OptimizableFn[Int => Int, DummyImplicit] =
         new FnToJit(
           JitCService.standard,
-          CountbasedInstrumentation(_, 10),
+          CountbasedInstrumentation(10),
           jitCompiler =>
             jitCompiler('{ (optimizedFn: Boolean => Unit) => (i: Int) =>
               optimizedFn(true)
@@ -23,7 +23,9 @@ class JitSpecification extends munit.FunSuite:
       for _ <- 0 to 10
       yield fn.get(3)
 
-      while !JitCService.standard.processedRecently(fn.uuid) do
+      while !fn.isOptimized do
+        println("wait")
+        fn.get
         Thread.sleep(100)
       fn.get(4)
       assertEquals(optimized, true)
@@ -33,7 +35,7 @@ class JitSpecification extends munit.FunSuite:
       val fn: OptimizableFn[Int => Int, DummyImplicit] =
         new FnToJit(
           JitCService.standard,
-          CountbasedInstrumentation(_, 10),
+          CountbasedInstrumentation(10),
           jitCompiler =>
             jitCompiler('{ (optimizedFn: Int => Unit) => (i: Int) =>
               optimizedFn(i)
@@ -44,9 +46,10 @@ class JitSpecification extends munit.FunSuite:
       val futures =
         for i <- 0 until 10
         yield Future {
-          for _ <- 0 until 100000
+          for _ <- 0 until 1
           yield fn.get(i)
-          while !JitCService.standard.processedRecently(fn.uuid) do
+          while !fn.isOptimized do
+            fn.get
             Thread.sleep(100)
 
           fn.get(i)
@@ -102,15 +105,28 @@ class JitSpecification extends munit.FunSuite:
       assertEquals(optimized, false)
 
   test("Ignore instrumentation records no info"):
-      val ignoreInstrumentation = IgnoreInstrumentation
+      val ignoreInstrumentation = IgnoreInstrumentation(false)
 
       assertEquals(ignoreInstrumentation.getCount(), 0)
       ignoreInstrumentation.instrument(5)
       assertEquals(ignoreInstrumentation.getCount(), 0)
 
   test("Count instrumentation records invokations"):
-      val countInstrumentation = CountbasedInstrumentation(() => (), 100)
+      val countInstrumentation = CountbasedInstrumentation(100)
 
       assertEquals(countInstrumentation.getCount(), 0)
       countInstrumentation.instrument(5)
       assertEquals(countInstrumentation.getCount(), 1)
+
+  test("Count instrumentation is accurate in multithreaded contexts"):
+      val countInstrumentation = CountbasedInstrumentation(10)
+
+      val results =
+        for _ <- 0 until 10
+        yield Future {
+          countInstrumentation.instrument(5)
+        }
+
+      results.foreach(Await.result(_, 5.seconds))
+
+      assert(countInstrumentation.shouldOpt)
