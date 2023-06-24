@@ -76,7 +76,9 @@ Please note that testing runtime involves doing the delicate compilation dance l
 Testing code is generally stored in the `core` project under `core/test/src`. Java 17, Java 19, and runtime specific tests may exist in the future, but at the moment, all implementations use a generic testing base.
 
 Tests in Slinc use munit and scalacheck. One can read how to use munit with scalacheck [here](https://scalameta.org/munit/docs/integrations/scalacheck.html) and how to use scalacheck [here](https://github.com/typelevel/scalacheck/blob/main/doc/UserGuide.md).
+### ReadWriteModule Tests
 
+The `ReadWriteModule` now has a suite of unit tests that cover all its functions. These tests can be run with the command `./mill core.test`. The tests verify the functionality of reading and writing to memory, as well as handling of unions and arrays.
 
 In order to develop a new test suite for Slinc, add the implementation to `core/test/src`. If the test suite is testing an implementation in `core` then one can define it in the normal way specified by the munit documentation. However, if it's meant to be a test of Slinc implementations, it should be defined in a generic fashion like so: 
 
@@ -174,3 +176,21 @@ trait MySuite(s: Slinc) extends ScalacheckSuite:
     }
   }
 ```
+trait MySuite(s: Slinc) extends ScalacheckSuite:
+  import s.{*, given}
+  val ptr = Ptr.blank[CInt]
+
+  !ptr = 4
+  !ptr
+
+  property("myProperty") {
+    forAll{
+      (i: Int) =>
+        Scope.confined{
+          val ptr = Ptr.blank[CInt]
+
+          !ptr = i
+          assertEquals(!ptr, i)
+        }
+    }
+  }
