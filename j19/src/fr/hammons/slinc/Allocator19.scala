@@ -30,14 +30,16 @@ class Allocator19(
     val fd = descriptor.outputDescriptor match
       case Some(r) =>
         JFunctionDescriptor.of(
-          descriptorModule19.toMemoryLayout(r),
+          descriptorModule19.toMemoryLayout(r.toForeignTypeDescriptor),
           descriptor.inputDescriptors.view
+            .map(_.toForeignTypeDescriptor)
             .map(descriptorModule19.toMemoryLayout)
             .toSeq*
         )
       case _ =>
         JFunctionDescriptor.ofVoid(
           descriptor.inputDescriptors.view
+            .map(_.toForeignTypeDescriptor)
             .map(descriptorModule19.toMemoryLayout)
             .toSeq*
         )
@@ -46,17 +48,18 @@ class Allocator19(
       linker.upcallStub(mh, fd, scope).nn
     )
 
-  override def allocate(descriptor: TypeDescriptor, num: Int): Mem = Mem19(
-    segmentAllocator
-      .allocate(descriptor.size.toLong * num, descriptor.alignment.toLong)
-      .nn
-  )
+  override def allocate(descriptor: ForeignTypeDescriptor, num: Int): Mem =
+    Mem19(
+      segmentAllocator
+        .allocate(descriptor.size.toLong * num, descriptor.alignment.toLong)
+        .nn
+    )
 
   override def base: Object = segmentAllocator
 
   private def build(
       builder: VaList.Builder,
-      typeDescriptor: TypeDescriptor,
+      typeDescriptor: ForeignTypeDescriptor,
       value: Matchable
   ): Unit =
     (typeDescriptor, value) match
@@ -90,8 +93,6 @@ class Allocator19(
               .asInstanceOf[MemorySegment]
           )
         )
-      case (AliasDescriptor(real), v) =>
-        build(builder, real, v)
       case (VaListDescriptor, varArg: VarArgs19) =>
         builder.addVarg(
           ValueLayout.ADDRESS,
@@ -134,7 +135,12 @@ class Allocator19(
           val builder = _b.nn
           vbuilder.vs.foreach: variadic =>
             variadic.use[DescriptorOf](dO ?=>
-              v => build(builder, dO.descriptor, v.asMatchable)
+              v =>
+                build(
+                  builder,
+                  dO.descriptor.toForeignTypeDescriptor,
+                  v.asMatchable
+                )
             )
         ,
         scope

@@ -20,7 +20,7 @@ private class VarArgs19(vaList: VaList) extends VarArgs:
     .nn
     .pipe(Mem19.apply(_))
 
-  private def skip(td: TypeDescriptor): Unit = td match
+  private def skip(td: ForeignTypeDescriptor): Unit = td match
     case ByteDescriptor | ShortDescriptor | IntDescriptor =>
       vaList.skip(ValueLayout.JAVA_INT)
     case LongDescriptor => vaList.skip(ValueLayout.JAVA_LONG)
@@ -32,13 +32,14 @@ private class VarArgs19(vaList: VaList) extends VarArgs:
       vaList.skip(descriptorModule19.toGroupLayout(sd))
     case cd: CUnionDescriptor =>
       vaList.skip(descriptorModule19.toMemoryLayout(cd))
-    case AliasDescriptor(real) => skip(real)
 
-  override def skip[A](using dO: DescriptorOf[A]): Unit = skip(dO.descriptor)
+  override def skip[A](using dO: DescriptorOf[A]): Unit = skip(
+    dO.descriptor.toForeignTypeDescriptor
+  )
 
   override def copy(): VarArgs = VarArgs19(vaList.copy().nn)
 
-  def as(td: TypeDescriptor): Object =
+  def as(td: ForeignTypeDescriptor): Object =
     td match
       case ByteDescriptor =>
         Byte.box(vaList.nextVarg(ValueLayout.JAVA_INT).toByte)
@@ -63,11 +64,7 @@ private class VarArgs19(vaList: VaList) extends VarArgs:
             )
             .nn
         )
-      case AliasDescriptor(real) => as(real)
       case cud: CUnionDescriptor =>
-        val desc =
-          descriptorModule19.toMemoryLayout(cud).asInstanceOf[GroupLayout]
-
         LinkageModule19.tempScope(alloc ?=>
           vaList
             .nextVarg(
@@ -77,4 +74,5 @@ private class VarArgs19(vaList: VaList) extends VarArgs:
             .nn
         )
   override def get[A](using d: DescriptorOf[A]): A =
-    transitionModule19.methodReturn[A](d.descriptor, as(d.descriptor))
+    transitionModule19
+      .methodReturn[A](d.descriptor, as(d.descriptor.toForeignTypeDescriptor))

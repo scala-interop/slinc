@@ -63,7 +63,7 @@ class Allocator17(
         .nn
     )
 
-  override def allocate(descriptor: TypeDescriptor, num: Int): Mem =
+  override def allocate(descriptor: ForeignTypeDescriptor, num: Int): Mem =
     Mem17(
       segmentAllocator
         .allocate(descriptor.size.toLong * num, descriptor.alignment.toLong)

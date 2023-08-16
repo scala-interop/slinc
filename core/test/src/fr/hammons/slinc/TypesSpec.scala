@@ -6,7 +6,7 @@ import types.*
 trait TypesSpec(val slinc: Slinc) extends munit.FunSuite:
   import slinc.{*, given}
   test("can create maximally sized CLongs") {
-    val size = DescriptorOf[CLong].size
+    val size = DescriptorOf[CLong].toForeignTypeDescriptor.size
     val x =
       if size == 4.toBytes then Some(CLong(Int.MaxValue))
       else if size == 8.toBytes then CLong.maybe(Long.MaxValue)

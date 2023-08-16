@@ -42,20 +42,22 @@ given readWriteModule17: ReadWriteModule with
 
   val memReader = (mem, offset) => mem.readAddress(offset)
 
-  def unionReader(
+  override def unionReader(
       typeDescriptor: TypeDescriptor
   ): Reader[CUnion[? <: NonEmptyTuple]] =
-    val size = descriptorModule17.sizeOf(typeDescriptor)
+    val size = descriptorModule17.sizeOf(typeDescriptor.toForeignTypeDescriptor)
     (mem, offset) =>
       Scope17.createInferredScope(alloc ?=>
-        val newMem = alloc.allocate(typeDescriptor, 1)
+        val newMem = alloc.allocate(typeDescriptor.toForeignTypeDescriptor, 1)
         newMem.copyFrom(mem.offset(offset).resize(size))
 
         new CUnion(newMem)
       )
 
-  def unionWriter(td: TypeDescriptor): Writer[CUnion[? <: NonEmptyTuple]] =
-    val size = descriptorModule17.sizeOf(td)
+  override def unionWriter(
+      td: TypeDescriptor
+  ): Writer[CUnion[? <: NonEmptyTuple]] =
+    val size = descriptorModule17.sizeOf(td.toForeignTypeDescriptor)
     (mem, offset, value) => mem.offset(offset).resize(size).copyFrom(value.mem)
 
   arrayWriterCache
