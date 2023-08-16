@@ -1,0 +1,46 @@
+name: Release
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps: 
+    - uses: actions/checkout@v3
+    - uses: coursier/cache-action@v6
+    - name: Get Secrets
+      uses: bitwarden/sm-action@v1
+      with:
+        access_token: ${{ secrets.BW_ACCESS_TOKEN }}
+        secrets: |
+          b2ba755b-d997-459f-a1a1-b06001257c2c > SIGNING
+          e5a2f416-de5c-4f2d-bc09-b060011d760b > PASS
+          44adbbc1-df7f-432f-8034-b060011d5d94 > USERNAME
+          88fba8d9-e11a-4d8c-bfbd-b06001410130 > SIGNING_PASS
+    - name: Get JVMs 
+      uses: actions/setup-java@v3
+      with: 
+        distribution: 'temurin'
+        java-version: |
+          17
+          19
+    - run: echo $SIGNING | base64 -d | gpg --import --batch --no-tty
+    - name: Publish Core 
+      run: | 
+        ./mill core.publish --sonatypeCreds "$USERNAME:$PASS" --gpgArgs "--batch" --gpgArgs "--yes" --gpgArgs "-a" --gpgArgs "-b" --gpgArgs "--no-tty" --gpgArgs "--pinentry-mode" --gpgArgs "loopback" --gpgArgs "--passphrase" --gpgArgs "$SIGNING_PASS" --release true 
+      env: 
+        JAVA_HOME: ${{ env.JAVA_HOME_17_X64 }}
+    - name: Publish J17 
+      run: |
+        ./mill j17.publish --sonatypeCreds "$USERNAME:$PASS" --gpgArgs "--batch" --gpgArgs "--yes" --gpgArgs "-a" --gpgArgs "-b" --gpgArgs "--no-tty" --gpgArgs "--pinentry-mode" --gpgArgs "loopback" --gpgArgs "--passphrase" --gpgArgs "$SIGNING_PASS" --release true
+      env: 
+        JAVA_HOME: ${{ env.JAVA_HOME_17_X64 }}
+      
+    - name: Publish J19 
+      run: ./mill j19.publish --sonatypeCreds "$USERNAME:$PASS" --gpgArgs "--batch" --gpgArgs "--yes" --gpgArgs "-a" --gpgArgs "-b" --gpgArgs "--no-tty" --gpgArgs "--pinentry-mode" --gpgArgs "loopback" --gpgArgs "--passphrase" --gpgArgs "$SIGNING_PASS" --release true
+
+    - name: Publish Runtime 
+      run: ./mill runtime.publish --sonatypeCreds "$USERNAME:$PASS" --gpgArgs "--batch" --gpgArgs "--yes" --gpgArgs "-a" --gpgArgs "-b" --gpgArgs "--no-tty" --gpgArgs "--pinentry-mode" --gpgArgs "loopback" --gpgArgs "--passphrase" --gpgArgs "$SIGNING_PASS" --release true
+      env: 
+        JAVA_HOME: ${{ env.JAVA_HOME_17_X64 }}
