@@ -32,11 +32,12 @@ class CUnion[T <: Tuple](private[slinc] val mem: Mem):
     setHelper[T, A](a)
 
 object CUnion:
-  private inline def applyHelper[T <: Tuple](td: TypeDescriptor | Null)(using
-      DescriptorModule
-  ): TypeDescriptor = inline erasedValue[T] match
+  private inline def applyHelper[T <: Tuple](td: ForeignTypeDescriptor | Null)(
+      using DescriptorModule
+  ): ForeignTypeDescriptor = inline erasedValue[T] match
     case _: (a *: t) =>
-      val aDesc = summonInline[DescriptorOf[a]].descriptor
+      val aDesc =
+        summonInline[DescriptorOf[a]].descriptor.toForeignTypeDescriptor
       val max =
         if td != null then
           if td.size > aDesc.size then td

@@ -22,10 +22,6 @@ sealed trait TypeDescriptor:
   type Inner
   given DescriptorOf[Inner] with
     val descriptor = self
-  def size(using dm: DescriptorModule): Bytes = dm.sizeOf(this)
-  def alignment(using dm: DescriptorModule): Bytes = dm.alignmentOf(this)
-  def toCarrierType(using dm: DescriptorModule): Class[?] =
-    dm.toCarrierType(this)
 
   val reader: (ReadWriteModule, DescriptorModule) ?=> Reader[Inner]
   val writer: (ReadWriteModule, DescriptorModule) ?=> Writer[Inner]
@@ -44,7 +40,7 @@ sealed trait TypeDescriptor:
         Inner
       ] =
     val reader = this.reader
-    val size = this.size
+    val size = this.toForeignTypeDescriptor.size
     (mem, offset, num) => {
       var i = 0
       val array = Array.ofDim[Inner](num)
@@ -57,12 +53,22 @@ sealed trait TypeDescriptor:
   val arrayWriter
       : (ReadWriteModule, DescriptorModule) ?=> Writer[Array[Inner]] =
     val writer = this.writer
-    val size = this.size
+    val size = this.toForeignTypeDescriptor.size
     (mem, offset, a) =>
       var i = 0
       while i < a.length do
         writer(mem, size * i + offset, a(i))
         i += 1
+
+  def toForeignTypeDescriptor: ForeignTypeDescriptor
+
+sealed trait ForeignTypeDescriptor extends TypeDescriptor:
+  def toForeignTypeDescriptor: ForeignTypeDescriptor = this
+  def size(using dm: DescriptorModule): Bytes = dm.sizeOf(this)
+  def alignment(using dm: DescriptorModule): Bytes = dm.alignmentOf(this)
+  def toCarrierType(using dm: DescriptorModule): Class[?] =
+    dm.toCarrierType(this)
+
 object TypeDescriptor:
   def fromTypeRepr(using q: Quotes)(
       typeRepr: q.reflect.TypeRepr
@@ -83,7 +89,7 @@ object TypeDescriptor:
 
   inline val unusedImplicit = "msg=unused implicit parameter"
 
-sealed trait BasicDescriptor extends TypeDescriptor:
+sealed trait BasicDescriptor extends ForeignTypeDescriptor:
   override val argumentTransition = identity
 
   override val returnTransition = _.asInstanceOf[Inner]
@@ -118,7 +124,7 @@ case object DoubleDescriptor extends BasicDescriptor:
   val reader = readWriteModule.doubleReader
   val writer = readWriteModule.doubleWriter
 
-case object PtrDescriptor extends TypeDescriptor:
+case object PtrDescriptor extends ForeignTypeDescriptor:
   type Inner = Ptr[?]
   override val reader = (mem, offset) =>
     Ptr(readWriteModule.memReader(mem, offset), Bytes(0))
@@ -152,7 +158,7 @@ trait StructDescriptor(
     val members: List[StructMemberDescriptor],
     val clazz: Class[?],
     val transform: Tuple => Product
-) extends TypeDescriptor
+) extends ForeignTypeDescriptor
 
 case class AliasDescriptor[A](val real: TypeDescriptor) extends TypeDescriptor:
   type Inner = A
@@ -174,13 +180,11 @@ case class AliasDescriptor[A](val real: TypeDescriptor) extends TypeDescriptor:
     summon[TransitionModule].methodArgument(real, _, summon[Allocator])
 
   override val returnTransition = summon[TransitionModule].methodReturn(real, _)
-  override def size(using dm: DescriptorModule): Bytes = dm.sizeOf(real)
-  override def alignment(using dm: DescriptorModule): Bytes =
-    dm.alignmentOf(real)
-  override def toCarrierType(using dm: DescriptorModule): Class[?] =
-    dm.toCarrierType(real)
 
-case object VaListDescriptor extends TypeDescriptor:
+  def toForeignTypeDescriptor: ForeignTypeDescriptor =
+    real.toForeignTypeDescriptor
+
+case object VaListDescriptor extends ForeignTypeDescriptor:
   type Inner = VarArgs
 
   override val reader: (ReadWriteModule, DescriptorModule) ?=> Reader[Inner] =
@@ -200,7 +204,7 @@ case object VaListDescriptor extends TypeDescriptor:
     summon[TransitionModule].addressReturn(o).asVarArgs
 
 case class CUnionDescriptor(possibleTypes: Set[TypeDescriptor])
-    extends TypeDescriptor:
+    extends ForeignTypeDescriptor:
   type Inner = CUnion[? <: NonEmptyTuple]
 
   override val reader: (ReadWriteModule, DescriptorModule) ?=> Reader[Inner] =
@@ -223,7 +227,7 @@ case class SetSizeArrayDescriptor(
     val contained: TypeDescriptor,
     val number: Int
 )(using ClassTag[contained.Inner])
-    extends TypeDescriptor:
+    extends ForeignTypeDescriptor:
 
   override val reader: (ReadWriteModule, DescriptorModule) ?=> Reader[Inner] =
     (mem, offset) =>
@@ -256,3 +260,32 @@ case class SetSizeArrayDescriptor(
       summon[ReadWriteModule].read(mem, Bytes(0), this)
 
   type Inner = SetSizeArray[contained.Inner, ?]
+
+trait TransformDescriptor extends TypeDescriptor:
+  val cRep: TypeDescriptor
+  val transformTo: Inner => cRep.Inner
+  val transformFrom: cRep.Inner => Inner
+
+  protected inline def toInner[A <: Matchable](a: A) =
+    import scala.compiletime.error
+    inline a match
+      case b: cRep.Inner => b
+      case _             => error("cannot convert")
+
+  override val reader: (ReadWriteModule, DescriptorModule) ?=> Reader[Inner] =
+    (mem: Mem, bytes: Bytes) => transformFrom(cRep.reader(mem, bytes))
+
+  override val writer: (ReadWriteModule, DescriptorModule) ?=> Writer[Inner] =
+    (mem, bytes, value) => cRep.writer(mem, bytes, transformTo(value))
+
+  override val argumentTransition
+      : (TransitionModule, ReadWriteModule, Allocator) ?=> ArgumentTransition[
+        Inner
+      ] = cRep.argumentTransition.compose(transformTo)
+
+  override val returnTransition
+      : (TransitionModule, ReadWriteModule) ?=> ReturnTransition[Inner] =
+    cRep.returnTransition.andThen(transformFrom)
+
+  def toForeignTypeDescriptor: ForeignTypeDescriptor =
+    cRep.toForeignTypeDescriptor

@@ -22,7 +22,7 @@ trait Slinc:
   export types.os
 
   def sizeOf[A](using l: DescriptorOf[A]) =
-    SizeT.maybe(DescriptorOf[A].size.toLong).get
+    SizeT.maybe(DescriptorOf[A].toForeignTypeDescriptor.size.toLong).get
 
   def Null[A] = scopePlatformSpecific.nullPtr[A]
 

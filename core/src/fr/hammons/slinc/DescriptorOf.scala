@@ -58,6 +58,8 @@ object DescriptorOf:
   given DescriptorOf[VarArgs] with
     val descriptor: TypeDescriptor { type Inner = VarArgs } = VaListDescriptor
 
+  given [A](using t: Transform[A, ?]): DescriptorOf[A] = t
+
   def getDescriptorFor[A](using Quotes, Type[A]) =
     import quotes.reflect.*
     val expr = Expr

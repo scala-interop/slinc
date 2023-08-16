@@ -25,3 +25,25 @@ class TypeDescriptorSpec extends munit.FunSuite:
           )
         ): TypeDescriptor
       )
+
+  test("Transforms work in place of DescriptorOfs"):
+      val result = compileErrors(
+        """
+        import fr.hammons.slinc.types.*
+        
+        trait Test derives FSet{
+        def test(a: CBool): CBool
+        def test2(a: CBoolShort): CBoolShort
+        }
+
+        val runtime: Slinc = ???
+
+        import runtime.{*,given}
+        val test = FSet.instance[Test]
+
+        val bool: Boolean = test.test(true)
+        val bool2: Boolean = test.test2(true)
+      """
+      )
+
+      assertNoDiff(result, "")

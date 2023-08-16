@@ -148,3 +148,7 @@ EXPORTED int* i180_test(int my_array[5]) {
   }
   return my_array;
 }
+
+EXPORTED char i213_test(char bool) {
+  return bool;
+}

@@ -11,16 +11,16 @@ private[slinc] given readWriteModule19: ReadWriteModule with
   override def unionWriter(
       td: TypeDescriptor
   ): Writer[CUnion[? <: NonEmptyTuple]] =
-    val size = descriptorModule19.sizeOf(td)
+    val size = descriptorModule19.sizeOf(td.toForeignTypeDescriptor)
     (mem, offset, value) => mem.offset(offset).resize(size).copyFrom(value.mem)
 
   override def unionReader(
       td: TypeDescriptor
   ): Reader[CUnion[? <: NonEmptyTuple]] =
-    val size = descriptorModule19.sizeOf(td)
+    val size = descriptorModule19.sizeOf(td.toForeignTypeDescriptor)
     (mem, offset) =>
       Scope19.createInferredScope(alloc ?=>
-        val newMem = alloc.allocate(td, 1)
+        val newMem = alloc.allocate(td.toForeignTypeDescriptor, 1)
         newMem.copyFrom(mem.offset(offset).resize(size))
         new CUnion(newMem)
       )

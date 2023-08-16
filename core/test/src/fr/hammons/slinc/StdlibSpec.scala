@@ -110,7 +110,7 @@ trait StdlibSpec(val slinc: Slinc) extends ScalaCheckSuite:
                 cstd.qsort(
                   cArr,
                   len,
-                  DescriptorOf[Int].size.toSizeT,
+                  DescriptorOf[CInt].toForeignTypeDescriptor.size.toSizeT,
                   Ptr.upcall((a: Ptr[Nothing], b: Ptr[Nothing]) =>
                     val aVal = !a.castTo[CInt]
                     val bVal = !b.castTo[CInt]
@@ -136,7 +136,7 @@ trait StdlibSpec(val slinc: Slinc) extends ScalaCheckSuite:
         cstd.qsort(
           arr,
           size,
-          DescriptorOf[CInt].size.toSizeT,
+          DescriptorOf[CInt].toForeignTypeDescriptor.size.toSizeT,
           Ptr.upcall: (a, b) =>
             val aVal = !a.castTo[CInt]
             val bVal = !b.castTo[CInt]

@@ -14,7 +14,7 @@ import scala.util.chaining.*
 
 class VarArgs17(args: VaList) extends VarArgs:
   private def get(td: TypeDescriptor): Object =
-    td match
+    td.toForeignTypeDescriptor match
       case ByteDescriptor   => Byte.box(args.vargAsInt(C_INT).toByte)
       case ShortDescriptor  => Short.box(args.vargAsInt(C_INT).toShort)
       case IntDescriptor    => Int.box(args.vargAsInt(C_INT))
@@ -32,7 +32,6 @@ class VarArgs17(args: VaList) extends VarArgs:
             )
             .nn
         )
-      case AliasDescriptor(real) => get(real)
       case cud: CUnionDescriptor =>
         LinkageModule17.tempScope(alloc ?=>
           args
@@ -46,7 +45,7 @@ class VarArgs17(args: VaList) extends VarArgs:
     transitionModule17.methodReturn[A](d.descriptor, get(d.descriptor))
 
   private def skip(td: TypeDescriptor): Unit =
-    td match
+    td.toForeignTypeDescriptor match
       case ByteDescriptor                            => args.skip(C_INT)
       case ShortDescriptor                           => args.skip(C_INT)
       case IntDescriptor                             => args.skip(C_INT)
@@ -56,8 +55,7 @@ class VarArgs17(args: VaList) extends VarArgs:
       case PtrDescriptor | _: SetSizeArrayDescriptor => args.skip(C_POINTER)
       case sd: StructDescriptor =>
         args.skip(descriptorModule17.toGroupLayout(sd))
-      case AliasDescriptor(real) => skip(real)
-      case VaListDescriptor      => args.skip(C_POINTER)
+      case VaListDescriptor => args.skip(C_POINTER)
       case cud: CUnionDescriptor =>
         args.skip(descriptorModule17.toMemoryLayout(cud))
 

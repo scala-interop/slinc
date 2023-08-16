@@ -23,8 +23,11 @@ final case class FunctionDescriptor(
       case FunctionDescriptor(head +: tail, variadicDescriptors, None) =>
         VoidHelper
           .methodTypeV(
-            head.toCarrierType,
-            tail.view.concat(variadicDescriptors).map(_.toCarrierType).toSeq*
+            head.toForeignTypeDescriptor.toCarrierType,
+            tail.view
+              .concat(variadicDescriptors)
+              .map(_.toForeignTypeDescriptor.toCarrierType)
+              .toSeq*
           )
           .nn
 
@@ -35,15 +38,20 @@ final case class FunctionDescriptor(
           ) =>
         MethodType
           .methodType(
-            outputDescriptor.toCarrierType,
-            head.toCarrierType,
-            tail.view.concat(variadicDescriptors).map(_.toCarrierType).toSeq*
+            outputDescriptor.toForeignTypeDescriptor.toCarrierType,
+            head.toForeignTypeDescriptor.toCarrierType,
+            tail.view
+              .concat(variadicDescriptors)
+              .map(_.toForeignTypeDescriptor.toCarrierType)
+              .toSeq*
           )
           .nn
 
       case FunctionDescriptor(_, _, None) => VoidHelper.methodTypeV().nn
       case FunctionDescriptor(_, _, Some(outputDescriptor)) =>
-        MethodType.methodType(outputDescriptor.toCarrierType).nn
+        MethodType
+          .methodType(outputDescriptor.toForeignTypeDescriptor.toCarrierType)
+          .nn
 
 object FunctionDescriptor:
   def fromDefDef(using q: Quotes)(symbol: q.reflect.Symbol) =

@@ -63,6 +63,8 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
         input: SetSizeArray[CInt, 5]
     ): SetSizeArray[CInt, 5]
 
+    def i213_test(b: CBool): CBool
+
   test("int_identity") {
     val test = FSet.instance[TestLib]
 
@@ -198,3 +200,8 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
         val retArr = test.i180_test(arr)
 
         retArr.zip(arr.map(_ * 2)).foreach(assertEquals(_, _))
+
+  property("issue 213 - can send and receive boolean values"):
+      val test = FSet.instance[TestLib]
+      forAll: (b: Boolean) =>
+        assertEquals(test.i213_test(b), b)

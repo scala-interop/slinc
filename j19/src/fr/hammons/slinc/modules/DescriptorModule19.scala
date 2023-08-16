@@ -13,7 +13,7 @@ given descriptorModule19: DescriptorModule with
   private val sdt = TrieMap.empty[StructDescriptor, GroupLayout]
   private val offsets = TrieMap.empty[List[TypeDescriptor], IArray[Bytes]]
 
-  def toMemoryLayout(td: TypeDescriptor): MemoryLayout = td match
+  def toMemoryLayout(td: ForeignTypeDescriptor): MemoryLayout = td match
     case ByteDescriptor   => ValueLayout.JAVA_BYTE.nn
     case ShortDescriptor  => ValueLayout.JAVA_SHORT.nn
     case IntDescriptor    => ValueLayout.JAVA_INT.nn
@@ -23,14 +23,22 @@ given descriptorModule19: DescriptorModule with
     case PtrDescriptor    => ValueLayout.ADDRESS.nn
     case VaListDescriptor => ValueLayout.ADDRESS.nn
     case SetSizeArrayDescriptor(inner, num) =>
-      MemoryLayout.sequenceLayout(num, toMemoryLayout(inner)).nn
-    case sd: StructDescriptor   => toGroupLayout(sd)
-    case ad: AliasDescriptor[?] => toMemoryLayout(ad.real)
+      MemoryLayout
+        .sequenceLayout(num, toMemoryLayout(inner.toForeignTypeDescriptor))
+        .nn
+    case sd: StructDescriptor => toGroupLayout(sd)
     case CUnionDescriptor(possibleTypes) =>
-      MemoryLayout.unionLayout(possibleTypes.view.map(toMemoryLayout).toSeq*).nn
+      MemoryLayout
+        .unionLayout(
+          possibleTypes.view
+            .map(_.toForeignTypeDescriptor)
+            .map(toMemoryLayout)
+            .toSeq*
+        )
+        .nn
 
   def toMemoryLayout(smd: StructMemberDescriptor): MemoryLayout =
-    toMemoryLayout(smd.descriptor).withName(smd.name).nn
+    toMemoryLayout(smd.descriptor.toForeignTypeDescriptor).withName(smd.name).nn
 
   def toGroupLayout(sd: StructDescriptor): GroupLayout =
     sdt.getOrElseUpdate(
@@ -81,11 +89,11 @@ given descriptorModule19: DescriptorModule with
     )
 
   def toDowncallLayout(td: TypeDescriptor): MemoryLayout =
-    toMemoryLayout(td) match
+    toMemoryLayout(td.toForeignTypeDescriptor) match
       case _: SequenceLayout => ValueLayout.ADDRESS.nn
       case o                 => o
 
-  def toCarrierType(td: TypeDescriptor): Class[?] = td match
+  override def toCarrierType(td: ForeignTypeDescriptor): Class[?] = td match
     case ByteDescriptor   => classOf[Byte]
     case ShortDescriptor  => classOf[Short]
     case IntDescriptor    => classOf[Int]
@@ -96,9 +104,8 @@ given descriptorModule19: DescriptorModule with
       classOf[MemoryAddress]
     case _: StructDescriptor | _: CUnionDescriptor =>
       classOf[MemorySegment]
-    case ad: AliasDescriptor[?] => toCarrierType(ad.real)
 
-  override def memberOffsets(sd: List[TypeDescriptor]): IArray[Bytes] =
+  override def memberOffsets(sd: List[ForeignTypeDescriptor]): IArray[Bytes] =
     offsets.getOrElseUpdate(
       sd, {
         val ll = genLayoutList(
@@ -125,10 +132,10 @@ given descriptorModule19: DescriptorModule with
       }
     )
 
-  override def sizeOf(td: TypeDescriptor): Bytes = Bytes(
+  override def sizeOf(td: ForeignTypeDescriptor): Bytes = Bytes(
     toMemoryLayout(td).byteSize()
   )
 
-  override def alignmentOf(td: TypeDescriptor): Bytes = Bytes(
+  override def alignmentOf(td: ForeignTypeDescriptor): Bytes = Bytes(
     toMemoryLayout(td).byteAlignment()
   )

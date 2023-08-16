@@ -36,7 +36,9 @@ object LinkageModule17 extends LinkageModule:
     )
 
     val mtConstructor = (carriers: Seq[Class[?]]) =>
-      descriptor.returnDescriptor.map(toCarrierType) match
+      descriptor.returnDescriptor
+        .map(_.toForeignTypeDescriptor)
+        .map(toCarrierType) match
         case None =>
           carriers match
             case head +: tail =>
@@ -53,6 +55,7 @@ object LinkageModule17 extends LinkageModule:
     val mt = mtConstructor(
       descriptor.inputDescriptors.view
         .concat(variadicDescriptors)
+        .map(_.toForeignTypeDescriptor)
         .map(toCarrierType)
         .toSeq
     )

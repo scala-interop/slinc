@@ -29,14 +29,18 @@ class Ptr[A](private[slinc] val mem: Mem, private[slinc] val offset: Bytes):
       r: ReadWriteModule
   )(using ClassTag[A]): IArray[A] =
     IArray.unsafeFromArray(
-      r.readArray(mem.resize(DescriptorOf[A].size * size), offset, size)
+      r.readArray(
+        mem.resize(DescriptorOf[A].toForeignTypeDescriptor.size * size),
+        offset,
+        size
+      )
     )
 
   def `unary_!_=`(value: A)(using rwM: ReadWriteModule, desc: DescriptorOf[A]) =
     rwM.write(mem, offset, desc.descriptor, value)
   def apply(bytes: Bytes): Ptr[A] = Ptr[A](mem, offset + bytes)
   def apply(index: Int)(using DescriptorOf[A], DescriptorModule): Ptr[A] =
-    Ptr[A](mem, offset + (DescriptorOf[A].size * index))
+    Ptr[A](mem, offset + (DescriptorOf[A].toForeignTypeDescriptor.size * index))
 
   def castTo[A]: Ptr[A] = this.asInstanceOf[Ptr[A]]
   private[slinc] def resize(toBytes: Bytes) =
@@ -59,12 +63,15 @@ object Ptr:
   def blankArray[A](
       num: Int
   )(using descriptor: DescriptorOf[A], alloc: Allocator): Ptr[A] =
-    Ptr[A](alloc.allocate(DescriptorOf[A], num), Bytes(0))
+    Ptr[A](
+      alloc.allocate(DescriptorOf[A].toForeignTypeDescriptor, num),
+      Bytes(0)
+    )
 
   def copy[A](
       a: Array[A]
   )(using alloc: Allocator, descriptor: DescriptorOf[A], rwm: ReadWriteModule) =
-    val mem = alloc.allocate(DescriptorOf[A], a.size)
+    val mem = alloc.allocate(DescriptorOf[A].toForeignTypeDescriptor, a.size)
     rwm.writeArray(mem, Bytes(0), a)
     Ptr[A](mem, Bytes(0))
 
@@ -76,7 +83,7 @@ object Ptr:
         val descriptor: TypeDescriptor { type Inner = A }
       }
   ) =
-    val mem = alloc.allocate(DescriptorOf[A], 1)
+    val mem = alloc.allocate(DescriptorOf[A].toForeignTypeDescriptor, 1)
     rwm.write(mem, Bytes(0), descriptor.descriptor, a)
     Ptr[A](mem, Bytes(0))
 

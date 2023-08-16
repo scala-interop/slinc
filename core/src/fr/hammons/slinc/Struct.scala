@@ -36,7 +36,8 @@ object Struct:
       rwm: ReadWriteModule,
       dm: DescriptorModule
   ): Writer[A] =
-    val offsets = dm.memberOffsets(memberDescriptors[A])
+    val offsets =
+      dm.memberOffsets(memberDescriptors[A].map(_.toForeignTypeDescriptor))
     (mem, offset, value) =>
       writeGenHelper(
         offsets.map(_ + offset),
@@ -67,7 +68,8 @@ object Struct:
       rwm: ReadWriteModule,
       dm: DescriptorModule
   ): Reader[A] =
-    val offsets: IArray[Bytes] = dm.memberOffsets(memberDescriptors[A])
+    val offsets: IArray[Bytes] =
+      dm.memberOffsets(memberDescriptors[A].map(_.toForeignTypeDescriptor))
     (mem, offset) => {
       val elems: m.MirroredElemTypes =
         readGenHelper[m.MirroredElemTypes](offsets.map(_ + offset), 0, mem)

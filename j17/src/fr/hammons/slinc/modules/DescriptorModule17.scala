@@ -19,7 +19,7 @@ given descriptorModule17: DescriptorModule with
   val chm: TrieMap[StructDescriptor, GroupLayout] = TrieMap.empty
   val offsets: TrieMap[List[TypeDescriptor], IArray[Bytes]] = TrieMap.empty
 
-  def toCarrierType(td: TypeDescriptor): Class[?] = td match
+  override def toCarrierType(td: ForeignTypeDescriptor): Class[?] = td match
     case ByteDescriptor   => classOf[Byte]
     case ShortDescriptor  => classOf[Short]
     case IntDescriptor    => classOf[Int]
@@ -30,7 +30,6 @@ given descriptorModule17: DescriptorModule with
     case _: StructDescriptor | _: CUnionDescriptor =>
       classOf[MemorySegment]
     case VaListDescriptor | _: SetSizeArrayDescriptor => classOf[MemoryAddress]
-    case ad: AliasDescriptor[?]                       => toCarrierType(ad.real)
 
   def genLayoutList(
       layouts: Seq[MemoryLayout],
@@ -64,15 +63,15 @@ given descriptorModule17: DescriptorModule with
       else Seq.empty
     )
 
-  override def sizeOf(td: TypeDescriptor): Bytes = Bytes(
+  override def sizeOf(td: ForeignTypeDescriptor): Bytes = Bytes(
     toMemoryLayout(td).byteSize()
   )
 
-  override def alignmentOf(td: TypeDescriptor): Bytes = Bytes(
+  override def alignmentOf(td: ForeignTypeDescriptor): Bytes = Bytes(
     toMemoryLayout(td).byteAlignment
   )
 
-  override def memberOffsets(sd: List[TypeDescriptor]): IArray[Bytes] =
+  override def memberOffsets(sd: List[ForeignTypeDescriptor]): IArray[Bytes] =
     offsets.getOrElseUpdate(
       sd, {
         val ll = genLayoutList(
@@ -108,16 +107,17 @@ given descriptorModule17: DescriptorModule with
     case _                         => throw Error("Unsupported platform!")
 
   def toMemoryLayout(td: TypeDescriptor): MemoryLayout = td match
-    case ByteDescriptor         => platform.jByte
-    case ShortDescriptor        => platform.jShort
-    case IntDescriptor          => platform.jInt
-    case LongDescriptor         => platform.jLong
-    case FloatDescriptor        => platform.jFloat
-    case DoubleDescriptor       => platform.jDouble
-    case PtrDescriptor          => C_POINTER.nn
-    case VaListDescriptor       => C_POINTER.nn
-    case sd: StructDescriptor   => toGroupLayout(sd)
-    case ad: AliasDescriptor[?] => toMemoryLayout(ad.real)
+    case ByteDescriptor          => platform.jByte
+    case ShortDescriptor         => platform.jShort
+    case IntDescriptor           => platform.jInt
+    case LongDescriptor          => platform.jLong
+    case FloatDescriptor         => platform.jFloat
+    case DoubleDescriptor        => platform.jDouble
+    case PtrDescriptor           => C_POINTER.nn
+    case VaListDescriptor        => C_POINTER.nn
+    case sd: StructDescriptor    => toGroupLayout(sd)
+    case ad: AliasDescriptor[?]  => toMemoryLayout(ad.real)
+    case td: TransformDescriptor => toMemoryLayout(td.cRep)
     case SetSizeArrayDescriptor(inner, num) =>
       MemoryLayout.sequenceLayout(num, toMemoryLayout(inner)).nn
     case CUnionDescriptor(possibleTypes) =>
