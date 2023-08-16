@@ -15,8 +15,7 @@ jobs:
       - uses: coursier/setup-action@v1.3.0
         with:
           jvm: temurin:1.17
-          apps: mill
-      - run: mill mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll __.sources
+      - run: ./mill mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll __.sources
 
   unit-tests:
     strategy: 

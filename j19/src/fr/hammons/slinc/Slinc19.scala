@@ -16,8 +16,6 @@ class Slinc19()(using
 
 @SlincImpl(19)
 object Slinc19:
-  private val compiler =
-    scala.quoted.staging.Compiler.make(getClass().getClassLoader().nn)
   private[slinc] lazy val linker = Linker.nativeLinker().nn
   val default = Slinc19()
   val noJit = Slinc19()

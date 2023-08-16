@@ -22,14 +22,16 @@ trait DescriptorSpec(val slinc: Slinc) extends munit.FunSuite:
       derives Struct
   test("CUnionDescriptor.size gives the right size"):
       assertEquals(
-        DescriptorOf[CUnion[(CInt, A, CFloat)]].size,
-        DescriptorOf[A].size
+        DescriptorOf[CUnion[(CInt, A, CFloat)]].toForeignTypeDescriptor.size,
+        DescriptorOf[A].toForeignTypeDescriptor.size
       )
 
   test("CUnionDescriptor.alignment gives the right alignment"):
       assertEquals(
-        DescriptorOf[CUnion[(CInt, A, CFloat)]].alignment,
-        DescriptorOf[A].alignment
+        DescriptorOf[
+          CUnion[(CInt, A, CFloat)]
+        ].toForeignTypeDescriptor.alignment,
+        DescriptorOf[A].toForeignTypeDescriptor.alignment
       )
 
   test("ByteDescriptor is 1 byte in size"):
@@ -51,25 +53,32 @@ trait DescriptorSpec(val slinc: Slinc) extends munit.FunSuite:
       assertEquals(DoubleDescriptor.size, Bytes(8))
 
   test("StructDescriptor.alignment is the max of the member elements"):
-      assertEquals(DescriptorOf[A].alignment, Bytes(8))
+      assertEquals(DescriptorOf[A].toForeignTypeDescriptor.alignment, Bytes(8))
 
   test("StructDescriptor.size is a multiple of alignment"):
 
-      assertEquals(DescriptorOf[A].size % DescriptorOf[A].alignment, Bytes(0))
+      assertEquals(
+        DescriptorOf[A].toForeignTypeDescriptor.size % DescriptorOf[
+          A
+        ].toForeignTypeDescriptor.alignment,
+        Bytes(0)
+      )
       assert(
-        DescriptorOf[A].size >= (DescriptorOf[CInt].size * 3 + DescriptorOf[
+        DescriptorOf[A].toForeignTypeDescriptor.size >= (DescriptorOf[
+          CInt
+        ].toForeignTypeDescriptor.size * 3 + DescriptorOf[
           CLongLong
-        ].size * 2)
+        ].toForeignTypeDescriptor.size * 2)
       )
 
   test("SetSizeArrayDescriptor is size of inner type * num"):
       assertEquals(
-        DescriptorOf[SetSizeArray[CInt, 15]].size,
-        DescriptorOf[CInt].size * 15
+        DescriptorOf[SetSizeArray[CInt, 15]].toForeignTypeDescriptor.size,
+        DescriptorOf[CInt].toForeignTypeDescriptor.size * 15
       )
 
   test("SetSizeArrayDescriptor is alignment of inner type"):
       assertEquals(
-        DescriptorOf[SetSizeArray[CInt, 15]].alignment,
-        DescriptorOf[CInt].alignment
+        DescriptorOf[SetSizeArray[CInt, 15]].toForeignTypeDescriptor.alignment,
+        DescriptorOf[CInt].toForeignTypeDescriptor.alignment
       )

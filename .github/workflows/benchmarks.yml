@@ -20,8 +20,7 @@ jobs:
       - uses: VirtusLab/scala-cli-setup@v0.1.20
         with:
           jvm: temurin:1.${{ matrix.jvm }}
-          apps: mill
-      - run: mill j${{ matrix.jvm }}.benchmarks.test -f1 -wi 2 -i 2 -o j${{ matrix.jvm }}-${{ matrix.os }}.bench -rff j${{ matrix.jvm }}-${{ matrix.os }}.json -rf json .*${{ matrix.benchmark }}${{ matrix.jit }}.*
+      - run: ./mill j${{ matrix.jvm }}.benchmarks.test -f1 -wi 2 -i 2 -o j${{ matrix.jvm }}-${{ matrix.os }}.bench -rff j${{ matrix.jvm }}-${{ matrix.os }}.json -rf json .*${{ matrix.benchmark }}${{ matrix.jit }}.*
       - run: scala-cli run scripts/PublishBenchmarkReport.sc -- "Java ${{ matrix.jvm}}" ${{ matrix.os }} out/j${{ matrix.jvm }}/benchmarks/test/jmhRun.dest/j${{ matrix.jvm }}-${{ matrix.os }}.json ${{ matrix.benchmark }} ${{ matrix.jit }} >> $GITHUB_STEP_SUMMARY
       - uses: actions/upload-artifact@v3
         with:

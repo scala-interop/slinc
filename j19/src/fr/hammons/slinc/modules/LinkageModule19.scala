@@ -50,6 +50,7 @@ object LinkageModule19 extends LinkageModule:
         .map(toDowncallLayout),
       varargs.view
         .map(_.use[DescriptorOf](dc ?=> _ => dc.descriptor))
+        .map(_.toForeignTypeDescriptor)
         .map(toMemoryLayout)
         .toList
     )

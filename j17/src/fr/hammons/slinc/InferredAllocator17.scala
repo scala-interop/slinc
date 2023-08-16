@@ -50,7 +50,7 @@ class InferredAllocator17(scope: ResourceScope, linker: CLinker)
         if allocated.isEmpty then scope.close()
     )
 
-  override def allocate(descriptor: TypeDescriptor, num: Int): Mem =
+  override def allocate(descriptor: ForeignTypeDescriptor, num: Int): Mem =
     val mem = Mem17(
       allocator
         .allocate(

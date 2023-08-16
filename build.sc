@@ -16,7 +16,7 @@ trait BaseModule extends ScoverageModule with ScalafmtModule {
   def scalaVersion = "3.3.0"
   def scoverageVersion = "2.0.7"
 
-  val munitVersion = "1.0.0-M7"
+  val munitVersion = "1.0.0-M8"
   val jmhV = "1.33"
 
   def ivyDeps = Agg(
