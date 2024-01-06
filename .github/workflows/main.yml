@@ -1,0 +1,28 @@
+name: .github/workflows/main.yml
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install mill
+        uses: <mill_install_action>
+        with:
+          version: <mill_version>
+
+      - name: Run mill command
+        run: mill <command>
+
+      - name: Additional steps
+        # Add any additional steps or actions required for the workflow
