@@ -20,6 +20,8 @@ libraryDependencies += "org.scalameta" %% "munit-scalacheck" % "1.0.0-M10" % Tes
 libraryDependencies += "org.scala-lang" %% "scala3-staging" % scalaVersion.value
 
 publishTo := Some(
-  "Sonatype Nexus" at "https://s01.oss.sonatype.org/service//ocal/staging/deploy/maven2"
+  "Sonatype Nexus" at "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2"
 )
 credentials += Credentials(Path.userHome / ".sbt" / ".credentials")
+
+Compile / doc / scalacOptions ++= Seq("-siteroot", "docs")
