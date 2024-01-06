@@ -16,13 +16,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Install mill
-        uses: <mill_install_action>
+      - name: Setup JDK
+        uses: actions/setup-java@v2
         with:
-          version: <mill_version>
+          java-version: '1.19'
+- name: Install mill
+        run: curl -L -o mill https://github.com/lihaoyi/mill/releases/download/<mill_version>/mill -sSf
+      - name: Make mill executable
+        run: chmod +x mill
 
       - name: Run mill command
         run: mill <command>
 
       - name: Additional steps
-        # Add any additional steps or actions required for the workflow
+        - name: Additional steps
+        uses: actions/setup-java@v2
+        with:
+          java-version: '1.19'
