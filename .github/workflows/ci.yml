@@ -24,7 +24,12 @@ jobs:
       - uses: coursier/cache-action@v6
       - run: mkdir reports
       - name: Core tests
-        run: sbt test
+        run: sbt coverage test
+      
+      - run: |
+          sbt coverageReport
+          mkdir -p reports
+          cp target/scala-3.3.1/scoverage-report/scoverage.xml reports/scoverage.xml
       # - run: |
       #     ./mill core.scoverage.xmlReport
       #     cp out/core/scoverage/xmlReport.dest/scoverage.xml reports/core-coverage.xml
@@ -78,4 +83,3 @@ jobs:
         uses: codecov/codecov-action@v3 
         with:
           directory: reports
-          flags: ${{ matrix.os }}
