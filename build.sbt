@@ -17,6 +17,7 @@ scalacOptions ++= Seq(
 
 libraryDependencies += "org.scalameta" %% "munit" % "1.0.0-M10" % Test
 libraryDependencies += "org.scalameta" %% "munit-scalacheck" % "1.0.0-M10" % Test
+libraryDependencies += "org.scala-lang" %% "scala3-staging" % scalaVersion.value
 
 publishTo := Some(
   "Sonatype Nexus" at "https://s01.oss.sonatype.org/service//ocal/staging/deploy/maven2"
