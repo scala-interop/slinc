@@ -13,7 +13,7 @@ trait FSet[L]:
   val dependencies: List[Dependency]
   val description: List[CFunctionDescriptor]
   val generation: List[FunctionBindingGenerator]
-  private var lib: AtomicStampedReference[FSetBacking[L]] =
+  private val lib: AtomicStampedReference[FSetBacking[L]] =
     AtomicStampedReference(null, 0)
   private val ver = Array(0)
 
