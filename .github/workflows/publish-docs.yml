@@ -15,11 +15,11 @@ jobs:
           distribution: 'temurin'
           java-version: 17
       - name: Build docs
-        run: ./mill core.docJar
+        run: sbt doc
       - name: Upload GitHub Pages artifact
-        uses: actions/upload-pages-artifact@v1.0.4
+        uses: actions/upload-pages-artifact@v3
         with: 
-          path: out/core/docJar.dest/javadoc
+          path: target/scala-3.3.1/api
   deploy: 
     needs: build 
     permissions:
@@ -33,5 +33,5 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages 
         id: deployment 
-        uses: actions/deploy-pages@v1.2.2
+        uses: actions/deploy-pages@v4
 

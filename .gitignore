@@ -10,3 +10,6 @@ slinc/src/io/gitlab/mhammons/slinc/test.worksheet.sc
 .bsp
 .scala-build
 .DS_Store
+
+metals.sbt 
+target
