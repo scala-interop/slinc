@@ -51,6 +51,7 @@ scalacOptions ++= Seq(
 libraryDependencies += "org.scalameta" %% "munit" % "1.0.0-M10" % Test
 libraryDependencies += "org.scalameta" %% "munit-scalacheck" % "1.0.0-M10" % Test
 libraryDependencies += "org.scala-lang" %% "scala3-staging" % scalaVersion.value
+libraryDependencies += "org.typelevel" %% "cats-core" % "2.10.0"
 
 Compile / doc / scalacOptions ++= Seq("-siteroot", "docs")
 mimaPreviousArtifacts := previousStableVersion.value

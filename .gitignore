@@ -13,3 +13,4 @@ slinc/src/io/gitlab/mhammons/slinc/test.worksheet.sc
 
 metals.sbt 
 target
+dependabot.yml
