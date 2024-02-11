@@ -7,4 +7,4 @@ RUN gzip -d cs.gz
 RUN chmod +x cs
 USER developer
 RUN /cs --setup
-RUN /cs setup --jvm temurin:1.17 --apps sbt --yes
+RUN /cs setup --jvm temurin:1.21 --yes

@@ -1,5 +1,9 @@
 package fr.hammons.slinc
 
+import java.lang.invoke.VarHandle
+
 trait Struct extends Selectable:
-  def selectDynamic(key: String): Any
-  def applyDynamic(key: String)(args: Any*): Any
+  val fieldHandles: Array[Field[?]]
+  def selector(value: String): Int
+
+  def selectDynamic(key: String): Any = ???

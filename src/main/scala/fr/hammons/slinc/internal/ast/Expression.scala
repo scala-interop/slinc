@@ -3,6 +3,7 @@ package fr.hammons.slinc.internal.ast
 import java.lang.invoke.MethodHandle
 import fr.hammons.slinc.Struct
 import fr.hammons.slinc.internal.IsValidStruct
+import fr.hammons.slinc.internal.Describe
 
 // MethodHandle strlen = CLinker.getInstance().downcallHandle(
 //   CLinker.systemLookup().lookup("strlen").get(),
@@ -24,7 +25,7 @@ import fr.hammons.slinc.internal.IsValidStruct
 //CallMethodHandle(1, Parameter(), scope)
 sealed trait Expression[ReturnType]
 
-class StackAlloc[T <: Struct](using IsValidStruct[T]) extends Expression[T]
+class StackAlloc[T](using IsValidStruct[T], Describe[T]) extends Expression[T]
 
 case class Block[ReturnType](
     startingExpressions: List[Expression[?]],

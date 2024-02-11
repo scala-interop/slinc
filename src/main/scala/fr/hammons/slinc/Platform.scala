@@ -1,6 +1,6 @@
 package fr.hammons.slinc
 
-trait Platform {
-  opaque type Pointer = Object
-  opaque type Struct = Object
-}
+enum Platform:
+  case WinX64
+  case LinuxX64
+  case MacX64
