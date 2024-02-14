@@ -7,17 +7,21 @@ import fr.hammons.slinc.internal.TypeRelation
 opaque type CInt <: CIntegral = CIntegral
 
 object CInt:
-  given TypeRelation[Platform, CInt, Int] with {}
+  // given (using Runtime): Numeric[CInt] = CIntegral.numericDerivation[CInt]
+  given TypeRelation[Platform.All, CInt] with {
+    type Real = Int
+  }
+
   def apply(i: Int)(using r: Runtime): CInt =
     r.platform match
-      case given Platform =>
+      case given Platform.All =>
         CIntegral(i)
   def apply(l: Long)(using r: Runtime): LightOption[CInt] =
-    given Platform = r.platform
-
-    if l <= Int.MaxValue && l >= Int.MinValue then
-      LightOption(CIntegral(l.toInt))
-    else LightOption.None
+    r.platform match
+      case given Platform.All =>
+        if l <= Int.MaxValue && l >= Int.MinValue then
+          LightOption(CIntegral(l.toInt))
+        else LightOption.None
 
   extension (cint: CInt)
     def toLong = cint.asLong.getOrThrow()

@@ -1,8 +1,5 @@
 package fr.hammons.slinc
 
-import scala.util.Try
-import scala.reflect.ClassTag
-
 trait CVal[A <: CVal[A]]
 
 object CVal:

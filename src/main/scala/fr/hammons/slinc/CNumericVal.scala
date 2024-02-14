@@ -1,1 +1,0 @@
-package fr.hammons.slinc

@@ -28,32 +28,36 @@ inThisBuild(
     sonatypeCredentialHost := "s01.oss.sonatype.org",
     sonatypeRepository := "https://s01.oss.sonatype.org/service/local",
     versionScheme := Some("early-semver"),
-    scalaVersion := "3.3.1",
-    dynverVTagPrefix := false
+    scalaVersion := "3.4.0-RC4",
+    dynverVTagPrefix := false,
+    libraryDependencies += "org.scalameta" %% "munit" % "1.0.0-M10" % Test,
+    libraryDependencies += "org.scalameta" %% "munit-scalacheck" % "1.0.0-M10" % Test,
+    libraryDependencies += "org.scala-lang" %% "scala3-staging" % scalaVersion.value,
+    libraryDependencies += "org.typelevel" %% "cats-core" % "2.10.0",
+    scalacOptions ++= Seq(
+      "-deprecation",
+      "-Wunused:all",
+      "-feature",
+      "-unchecked",
+      "-Xcheck-macros",
+      "-Xprint-suspension",
+      "-Xsemanticdb",
+      "-Yexplicit-nulls",
+      "-Ysafe-init",
+      "-source:future",
+      "-Ykind-projector",
+      "-Vprofile"
+    )
   )
 )
 
-scalacOptions ++= Seq(
-  "-deprecation",
-  "-Wunused:all",
-  "-feature",
-  "-unchecked",
-  "-Xcheck-macros",
-  "-Xprint-suspension",
-  "-Xsemanticdb",
-  "-Yexplicit-nulls",
-  "-Ysafe-init",
-  "-source:future",
-  "-Ykind-projector",
-  "-Vprofile"
+lazy val core = project.settings(
+  Compile / doc / scalacOptions ++= Seq("-siteroot", "docs"),
+  mimaPreviousArtifacts := previousStableVersion.value
+    .map(organization.value %% moduleName.value % _)
+    .toSet
 )
 
-libraryDependencies += "org.scalameta" %% "munit" % "1.0.0-M10" % Test
-libraryDependencies += "org.scalameta" %% "munit-scalacheck" % "1.0.0-M10" % Test
-libraryDependencies += "org.scala-lang" %% "scala3-staging" % scalaVersion.value
-libraryDependencies += "org.typelevel" %% "cats-core" % "2.10.0"
+lazy val bench = project.dependsOn(core).enablePlugins(JmhPlugin)
 
-Compile / doc / scalacOptions ++= Seq("-siteroot", "docs")
-mimaPreviousArtifacts := previousStableVersion.value
-  .map(organization.value %% moduleName.value % _)
-  .toSet
+lazy val root = project.in(file(".")).aggregate(core, bench)

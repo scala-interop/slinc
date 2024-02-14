@@ -6,11 +6,13 @@ import fr.hammons.slinc.Platform
 opaque type CVal = Matchable
 
 object CVal:
-  private[slinc] def apply(a: Matchable): CVal = a
-  extension (cval: CVal)
-    def certainAs[A, P <: Platform](
-        clazz: Class[A]
-    )(using P, TypeRelation[P, ?, A]): A = cval.asInstanceOf[A]
+  private[slinc] def apply[B, P <: Platform](using P)(using
+      tr: TypeRelation[P, B]
+  )(a: tr.Real): CVal = a
+  extension [B](cval: CVal)
+    def certainAs[P <: Platform](using P)(using
+        tr: TypeRelation[P, ?]
+    ): tr.Real = cval.asInstanceOf[tr.Real]
     def as[A <: Matchable](using tt: TypeTest[Matchable, A]): LightOption[A] =
       cval match
         case a: A => LightOption(a)

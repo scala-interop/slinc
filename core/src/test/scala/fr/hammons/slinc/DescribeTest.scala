@@ -1,8 +1,6 @@
 package fr.hammons.slinc
 
 import fr.hammons.slinc.internal.Describe
-import fr.hammons.slinc.CNumericDefMin.given
-import fr.hammons.slinc.internal.LightOption
 import compiletime.{codeOf, error}
 
 class DescribeTest extends munit.FunSuite:
@@ -17,16 +15,24 @@ class DescribeTest extends munit.FunSuite:
   test("lala") {
     given Runtime = new Runtime:
       def platform: Platform = Platform.LinuxX64
+    // summon[Numeric[CLong]]
 
-    val lo: LightOption[CLong] =
-      for
-        i <- CLong(5L)
-        j <- CLong(23L)
-      yield i + j
+    // summon[Numeric[CLong]]
 
-    lo.map(_.toString())
+    val x = fr.hammons.slinc.experimental.CLong(-5)
+    println(CInt(5))
 
-    given Platform.LinuxX64.type = Platform.LinuxX64
+    x.toInt
+    for i <- 0 until 1000000000 do assertEquals(x.abs.toInt, 5)
 
-    CLong.certain(5L)
+    // lo.map(_.toString())
+
+    // given Platform.LinuxX64.type = Platform.LinuxX64
+
+    // ong.certain(5L)
+  }
+
+  test("lala2") {
+    val x = -5L
+    for i <- 0 until 1000000000 do assertEquals(x.abs.toInt, 5)
   }

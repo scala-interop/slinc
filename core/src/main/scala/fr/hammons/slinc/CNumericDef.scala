@@ -1,7 +1,6 @@
 package fr.hammons.slinc
 
 import util.NotGiven
-import compiletime.erasedValue
 
 trait CNumericDefMin[A <: CVal[A], B] extends CValDef[A, B] {
   type MakeOutput = A
