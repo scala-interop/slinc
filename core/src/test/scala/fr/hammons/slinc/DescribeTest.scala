@@ -23,7 +23,7 @@ class DescribeTest extends munit.FunSuite:
     println(CInt(5))
 
     x.toInt
-    for i <- 0 until 1000000000 do assertEquals(x.abs.toInt, 5)
+    assertEquals(x.abs.toInt, 5)
 
     // lo.map(_.toString())
 
@@ -33,6 +33,37 @@ class DescribeTest extends munit.FunSuite:
   }
 
   test("lala2") {
-    val x = -5L
-    for i <- 0 until 1000000000 do assertEquals(x.abs.toInt, 5)
+    given Runtime with
+      def platform: Platform = Platform.LinuxX64
+    val clong = 5.asInstanceOf[fr.hammons.slinc.experimental.CLong]
+
+    assertEquals(clong + clong, fr.hammons.slinc.experimental.CLong(5))
+  }
+
+  test("lala3") {
+    given Runtime with
+      def platform: Platform = Platform.LinuxX64
+
+    summon[Runtime].platform match
+      case given Platform.WinX64 =>
+        fr.hammons.slinc.experimental.CLong.lesser(
+          (1: Byte)
+        ) + fr.hammons.slinc.experimental.CLong.lesser((2: Short))
+      case given Platform.LinuxX64 =>
+        fr.hammons.slinc.experimental.CLong.lesser(
+          (1: Byte)
+        ) + fr.hammons.slinc.experimental.CLong.lesser((2: Short))
+      case Platform.MacX64 => ???
+
+  }
+
+  test("lala4") {
+    given Runtime with
+      def platform: Platform = Platform.LinuxX64
+
+    // fr.hammons.slinc.experimental.CLong.minimaOrLess(5)
+    assertEquals(
+      fr.hammons.slinc.experimental.CLong.minimaOrLess((5: Short)),
+      fr.hammons.slinc.experimental.CLong(5)
+    )
   }

@@ -15,8 +15,7 @@ object CVal:
   extension [PlatformMapping[_ <: Platform] <: Matchable](
       cval: CVal[PlatformMapping]
   )
-    def extract[P <: Platform](using p: P)(using
-        TypeTest[Matchable, PlatformMapping[P]]
-    ): PlatformMapping[P] = cval match
-      case v: PlatformMapping[P] => v
-      case _                     => throw new Error("NOOOOOO")
+    inline def extract[P <: Platform](using P): PlatformMapping[P] =
+      if cval.isInstanceOf[PlatformMapping[P]] then
+        cval.asInstanceOf[PlatformMapping[P]]
+      else throw new Error("blah")

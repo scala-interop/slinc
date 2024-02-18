@@ -10,3 +10,5 @@ object Platform:
   type WinX64 = WinX64.type
   type LinuxX64 = LinuxX64.type
   type MacX64 = MacX64.type
+
+  type AllSet = (WinX64, LinuxX64, MacX64)

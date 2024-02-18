@@ -8,7 +8,7 @@ import fr.hammons.slinc.experimental.CLong
 import org.openjdk.jmh.infra.Blackhole
 
 @BenchmarkMode(Array(Mode.Throughput))
-@OutputTimeUnit(TimeUnit.MICROSECONDS)
+@OutputTimeUnit(TimeUnit.NANOSECONDS)
 @State(Scope.Benchmark)
 class PlatformDependentTypesBench {
   given Runtime = new Runtime:

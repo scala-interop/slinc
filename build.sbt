@@ -46,7 +46,8 @@ inThisBuild(
       "-Ysafe-init",
       "-source:future",
       "-Ykind-projector",
-      "-Vprofile"
+      "-Vprofile",
+      "-explain"
     )
   )
 )

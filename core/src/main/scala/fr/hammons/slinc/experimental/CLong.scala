@@ -1,15 +1,21 @@
 package fr.hammons.slinc.experimental
 
 import fr.hammons.slinc.Platform
+import fr.hammons.slinc.experimental.CIntegral.Implementor
 
 opaque type CLong <: CIntegral[CLong.Mapping] = CIntegral[CLong.Mapping]
 
 object CLong extends CIntegral.Implementor:
-  type Mapping[A <: Platform] <: Int | Short | Long | Byte = A match
+  type Mapping[A <: Platform] <: CIntegral.IntegralTypes = A match
     case Platform.LinuxX64 | Platform.MacX64 => Long
     case Platform.WinX64                     => Int
 
-  given cmath: CIntegralMath[CLong] =
+  type Me = CLong
+  override def apply[P <: Platform](using P)(a: Mapping[P]): CLong = cintegral(
+    a
+  )
+
+  given cmath: CMath =
     CIntegralMath.derive
   // given cord: Ordering[CLong] = ???
   def apply(using r: fr.hammons.slinc.Runtime)(i: Int): CLong =
@@ -17,4 +23,4 @@ object CLong extends CIntegral.Implementor:
       case given Platform.WinX64 =>
         cintegral(i)
       case given (Platform.LinuxX64 | Platform.MacX64) =>
-        cintegral(Long.box(i))
+        cintegral(i)
