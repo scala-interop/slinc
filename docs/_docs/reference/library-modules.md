@@ -4,7 +4,7 @@ title: "Function Sets"
 
 Function sets are groupings of functions in Slinc. Each can be configured in a number of ways.
 
-A function set is a Scala `trait` that derives the `FSet` type class. Method declarations within it are used as a template for the bindings to C that the Slinc runtime will generate. 
+A function set is a Scala `trait` that derives the `FSet` type class. Method declarations within it are used as a template for the bindings to C that the Slinc runtime will generate.
 
 ## FSet declarations
 
@@ -12,7 +12,7 @@ FSet declarations are declarations of C library bindings without any entanglemen
 
 ### FSet naming
 
-The type name of the module does not matter to Slinc. 
+The type name of the module does not matter to Slinc.
 
 ### Method naming
 
@@ -76,23 +76,23 @@ import fr.hammons.slinc.*
 
 @NeedsResource("my_lib")
 trait L derives FSet:
-  def my_fun(i: CInt): Unit 
+  def my_fun(i: CInt): Unit
 ```
 
 The slinc runtime will look for `/native/my_lib_x64.so` on x86_64 linux, and `/native/my_lib_x64.dll` on x86_64 Windows.
 
 ### Libraries on the system path
 
-If the library is on the system path that the JVM is aware of, you can declare an FSet's dependence on it with the `Needs` annotation. 
+If the library is on the system path that the JVM is aware of, you can declare an FSet's dependence on it with the `Needs` annotation.
 
 ```scala
 import fr.hammons.slinc.annotations.*
 import fr.hammons.slinc.types.*
-import fr.hammons.slinc.* 
+import fr.hammons.slinc.*
 
 @Needs("z")
 trait L derives FSet:
-  def zlibVersion(): Ptr[CChar] 
+  def zlibVersion(): Ptr[CChar]
 ```
 
 This declaration is for a binding to zlib.
@@ -101,7 +101,7 @@ This declaration is for a binding to zlib.
 
 If the library dependency is located on the filesystem, you can use an absolute or relative path with the `@NeedsFile` annotation.
 
-```scala 
+```scala
 import fr.hammons.slinc.annotations.*
 import fr.hammons.slinc.types.*
 import fr.hammons.slinc.*
@@ -109,15 +109,15 @@ import fr.hammons.slinc.*
 //relative path
 @NeedsFile("my_lib.so")
 trait A derives FSet:
-  def my_fn(): Unit 
+  def my_fn(): Unit
 
-//absolute path 
+//absolute path
 @NeedsFile("/tmp/my_lib.so")
 trait B derives FSet:
   def my_fn(): Unit
 ```
 
-#### Platform dependent filesystem dependencies 
+#### Platform dependent filesystem dependencies
 
 If you do not provide an absolute file name (file ending with .so or .dll), Slinc will use the base file name provided along with the appropriate library suffix for the OS and a tag based on the architecture.
 
@@ -129,14 +129,14 @@ The architecture tags for the architectures follows:
 |-----|-----|
 |x86_64| x64, amd64, x86_64|
 
-### C file jar resources 
+### C file jar resources
 
 If a C file is placed in a jar, under the `/native` you can use the `@NeedsResource` annotation to have Slinc compile and load the file at runtime. In order for this to work, one must have clang installed on the target system.
 
 ```scala
 import fr.hammons.slinc.annotations.*
-import fr.hammons.slinc.types.* 
-import fr.hammons.slinc.* 
+import fr.hammons.slinc.types.*
+import fr.hammons.slinc.*
 
 @NeedsResource("my_lib.c")
 trait L derives FSet:
@@ -145,7 +145,7 @@ trait L derives FSet:
 
 ## Summoning FSet Implementations
 
-FSet declarations have been shown above, but they are not useable without being summoned. Doing so requires the Slinc runtime on your classpath, and makes the JAR and class files generated dependent on a specific JVM. 
+FSet declarations have been shown above, but they are not useable without being summoned. Doing so requires the Slinc runtime on your classpath, and makes the JAR and class files generated dependent on a specific JVM.
 
 To summon an fset implementation, you use the `FSet.instance[?]` method as shown in the following example:
 

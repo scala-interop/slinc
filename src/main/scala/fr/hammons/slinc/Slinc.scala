@@ -36,7 +36,7 @@ object Slinc:
     .pipe(vString =>
       vString.toIntOption.getOrElse(
         throw Error(
-          s"Major error occured. Couldn't parse the version number $vString"
+          s"Major error occurred. Couldn't parse the version number $vString"
         )
       )
     )

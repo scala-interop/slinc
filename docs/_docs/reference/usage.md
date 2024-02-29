@@ -61,7 +61,7 @@ The list of operations available on a `Ptr[A]`:
 * `!ptr = 5` - copy data into a pointer  (requires `Send[A]` be defined)
 * `Ptr.blank[A](n: Int)` - create a blank space in native memory that can store `n` consecutive instances of `A` (requires `LayoutOf[A]` be defined)
 * `Ptr.copy[A](a: A)` - create a copy of `a` in native memory (requires `Send[A]`)
-* `Ptr.asArray(size: Int)` - attempts to copy the data at the pointer into an Array of size `size` (requires `Receive[A]`). This is a very dangerous operation that can crash your program if you don't have all the data you need. 
+* `Ptr.asArray(size: Int)` - attempts to copy the data at the pointer into an Array of size `size` (requires `Receive[A]`). This is a very dangerous operation that can crash your program if you don't have all the data you need.
 
 ## Structs
 
@@ -75,9 +75,9 @@ These struct analogs can be composed with any type that has a `DescriptorOf` def
 
 ## va_list
 
-The `va_list` type for C is supported via the `VarArgs` and `VarArgsBuilder` types. 
+The `va_list` type for C is supported via the `VarArgs` and `VarArgsBuilder` types.
 
-A C function that takes a va_list parameter like below 
+A C function that takes a va_list parameter like below
 
 ```c
 int pass_va_list(int count, va_list args);
