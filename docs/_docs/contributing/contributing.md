@@ -5,9 +5,9 @@ The code in this repository is primarily divided into four top-level directories
 * `j17/`: Java 17 specific parts of the Slinc implementation
 * `j19/`: Java 19 specific parts of the Slinc implementation
 * `runtime/`: The complete Slinc project, with Java 17 and 19 implementations combined and the correct implementation chosen at runtime by your system.
-  
+
 ## Developing Slinc
-Slinc is a somewhat involved project to program for. With implementations targeting Java 17 and Java 19, one needs access to both JDKs to develop and run the j17 and j19 projects. 
+Slinc is a somewhat involved project to program for. With implementations targeting Java 17 and Java 19, one needs access to both JDKs to develop and run the j17 and j19 projects.
 
 ### Sdkman
 
@@ -19,7 +19,7 @@ Once you have sdkman installed, you can use the following commands to install an
 * Install: `sdk i java 19-tem`
 * Use: `sdk u java 19-tem`
 * Default: `sdk d java 19-tem`
-  
+
 #### Java 17
 * Install: `sdk i java 17.0.4.1-tem`
 * Use: `sdk u java 17.0.4.1-tem`
@@ -29,25 +29,25 @@ Once you have sdkman installed, you can use the following commands to install an
 
 `Use` will set the JDK visible for a certain terminal instance. This is useful if you want to build the entire project. Use will only effect the JDK choice for the terminal it's invoked in, and will not affect the user default JVM.
 
-`Default` will set the JDK that's visible for all programs launched after the command has been invoked. This is useful for reloading your code editor to work on a different java implementation for Slinc. 
+`Default` will set the JDK that's visible for all programs launched after the command has been invoked. This is useful for reloading your code editor to work on a different java implementation for Slinc.
 
 ### Editor
-When developing Slinc, it's suggested to use [VSCode](https://code.visualstudio.com/) along with the [Metals](https://marketplace.visualstudio.com/items?itemName=scalameta.metals) extension. Slinc is heavily dependent on compile-time programming, and VSCode+Metals works very well with this development model. One can use other editors, but it's probably mandatory to use Metals. 
+When developing Slinc, it's suggested to use [VSCode](https://code.visualstudio.com/) along with the [Metals](https://marketplace.visualstudio.com/items?itemName=scalameta.metals) extension. Slinc is heavily dependent on compile-time programming, and VSCode+Metals works very well with this development model. One can use other editors, but it's probably mandatory to use Metals.
 
-Using metals, one can import the build definition from mill. If one encounters an issue with the import failing for no discernable reason, try deleting the `out` directory and trying again. There is a problem with this project and mill failing to generate bloop configurations. If one encounters errors when viewing a code base that do not resolve themselves, it's suggested to try closing VSCode, killing all Java processes, and deleting .metals, .bloop, and out. Generally, this will fix all issues. 
+Using metals, one can import the build definition from mill. If one encounters an issue with the import failing for no discernable reason, try deleting the `out` directory and trying again. There is a problem with this project and mill failing to generate bloop configurations. If one encounters errors when viewing a code base that do not resolve themselves, it's suggested to try closing VSCode, killing all Java processes, and deleting .metals, .bloop, and out. Generally, this will fix all issues.
 
-When developing for Slinc, choose an implementation to focus on, and choose the appropriate JDK for it. Switch with the appropriate `default` command on sdkman, kill all java processes, and afterwards open the project with VSCode. The corresponding `j` project should be having no missing definition errors after this process. Switching between JDK versions follows the same process. 
+When developing for Slinc, choose an implementation to focus on, and choose the appropriate JDK for it. Switch with the appropriate `default` command on sdkman, kill all java processes, and afterwards open the project with VSCode. The corresponding `j` project should be having no missing definition errors after this process. Switching between JDK versions follows the same process.
 
-## Compiling 
+## Compiling
 
-The following commands compile the Slinc projecs:
+The following commands compile the Slinc projects:
 
 * core: `./mill core.compile`
 * j17: `./mill j17.compile`
 * j19: `./mill j19.compile`
 * runtime: `./mill runtime.compile`
 
-Compiling the entire project would normally be done by running `./mill _.compile`, but considering the different project have different JDK requirements, the full compilation takes the form of 
+Compiling the entire project would normally be done by running `./mill _.compile`, but considering the different project have different JDK requirements, the full compilation takes the form of
 
 ```bash
 sdk u java 17.0.4.1-tem && \
@@ -78,7 +78,7 @@ Testing code is generally stored in the `core` project under `core/test/src`. Ja
 Tests in Slinc use munit and scalacheck. One can read how to use munit with scalacheck [here](https://scalameta.org/munit/docs/integrations/scalacheck.html) and how to use scalacheck [here](https://github.com/typelevel/scalacheck/blob/main/doc/UserGuide.md).
 
 
-In order to develop a new test suite for Slinc, add the implementation to `core/test/src`. If the test suite is testing an implementation in `core` then one can define it in the normal way specified by the munit documentation. However, if it's meant to be a test of Slinc implementations, it should be defined in a generic fashion like so: 
+In order to develop a new test suite for Slinc, add the implementation to `core/test/src`. If the test suite is testing an implementation in `core` then one can define it in the normal way specified by the munit documentation. However, if it's meant to be a test of Slinc implementations, it should be defined in a generic fashion like so:
 
 ```scala
 package fr.hammons.slinc
@@ -87,7 +87,7 @@ import munit.ScalaCheckSuite
 
 trait MyTestSuite(slinc: Slinc) extends ScalaCheckSuite:
   import slinc.{*,given}
-  test("myTest") { 
+  test("myTest") {
     assertEquals(4,4)
   }
 ```
@@ -104,9 +104,9 @@ If one's test suite concerns JIT compilation, one can use `noJit` and `immediate
 
 ### Troubleshooting tests
 
-Sometimes when running a freshly written test, or testing freshly written code, one might encounter a situation where the test suite will stop testing early, or never stop running. 
+Sometimes when running a freshly written test, or testing freshly written code, one might encounter a situation where the test suite will stop testing early, or never stop running.
 
-Generally, the test suite will stop running early when some part of the Slinc runtime fails to initialize properly. One can easily detect if this is the case by moving some test code out of the test section into the root of the suite. 
+Generally, the test suite will stop running early when some part of the Slinc runtime fails to initialize properly. One can easily detect if this is the case by moving some test code out of the test section into the root of the suite.
 
 Observe the following example:
 
@@ -125,7 +125,7 @@ trait MySuite(s: Slinc) extends ScalacheckSuite:
   import s.{*,given}
   sizeOf[Int]
   4.as[SizeT]
-  
+
   test("myTest") {
     assertEquals(sizeOf[Int], 4.as[SizeT])
   }
@@ -141,18 +141,18 @@ trait MySuite(s: Slinc) extends ScalacheckSuite:
 
   property("myProperty") {
     forAll{
-      (i: Int) => 
+      (i: Int) =>
         Scope.confined{
           val ptr = Ptr.blank[CInt]
 
-          !ptr = i 
+          !ptr = i
           assertEquals(!ptr, i)
         }
     }
   }
 ```
 
-should be changed to 
+should be changed to
 
 ```scala
 trait MySuite(s: Slinc) extends ScalacheckSuite:
@@ -164,11 +164,11 @@ trait MySuite(s: Slinc) extends ScalacheckSuite:
 
   property("myProperty") {
     forAll{
-      (i: Int) => 
+      (i: Int) =>
         Scope.confined{
           val ptr = Ptr.blank[CInt]
 
-          !ptr = i 
+          !ptr = i
           assertEquals(!ptr, i)
         }
     }

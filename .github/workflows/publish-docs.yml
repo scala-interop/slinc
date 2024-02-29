@@ -1,15 +1,15 @@
 name: Publish Docs
-on: 
+on:
   workflow_dispatch
-    
+
 jobs:
-  build: 
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-        with: 
+        with:
           lfs: true
-      - uses: coursier/cache-action@v6 
+      - uses: coursier/cache-action@v6
       - uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
@@ -18,20 +18,20 @@ jobs:
         run: sbt doc
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v3
-        with: 
+        with:
           path: target/scala-3.3.1/api
-  deploy: 
-    needs: build 
+  deploy:
+    needs: build
     permissions:
-      pages: write 
-      id-token: write 
-    environment: 
+      pages: write
+      id-token: write
+    environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
 
-    runs-on: ubuntu-latest 
+    runs-on: ubuntu-latest
     steps:
-      - name: Deploy to GitHub Pages 
-        id: deployment 
+      - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
 
