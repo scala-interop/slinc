@@ -2,7 +2,7 @@
 title: "VarArgs"
 ---
 
-In C, the `va_list` type can be used to allow callbacks to be variadic. This type is supported in Slinc via the `VarArgs` and `VarArgsBuilder` types. 
+In C, the `va_list` type can be used to allow callbacks to be variadic. This type is supported in Slinc via the `VarArgs` and `VarArgsBuilder` types.
 
 `VarArgs` is the Scala analog of `va_list`, so bindings to C functions and types that contain `va_list` should use `VarArgs` in Slinc.
 
@@ -37,6 +37,6 @@ The `.copy` method allows you to copy a `VarArgs`, making sure that functions yo
 
 Be very careful with `VarArgs`. They are usually on the stack, especially if they've come from C. That means that their scope can be much more limited than most things in Slinc. The data backing a `VarArgs` can cease to exist after a function finishes, rather than when a Scope ends.
 
-## Java 17 support 
+## Java 17 support
 
 `VarArgs` on java 17 is not well supported. If you need to use `VarArgs` for a project, please choose [one of the other JVMs Slinc supports](./jdk-support.md).

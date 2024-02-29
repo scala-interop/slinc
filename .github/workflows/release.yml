@@ -6,7 +6,7 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    steps: 
+    steps:
     - uses: actions/checkout@v3
     - uses: coursier/cache-action@v6
     - name: Get Secrets
@@ -18,9 +18,9 @@ jobs:
           e5a2f416-de5c-4f2d-bc09-b060011d760b > SONATYPE_PASSWORD
           44adbbc1-df7f-432f-8034-b060011d5d94 > SONATYPE_USERNAME
           88fba8d9-e11a-4d8c-bfbd-b06001410130 > PGP_PASSPHRASE
-    - name: Get JVMs 
+    - name: Get JVMs
       uses: actions/setup-java@v4
-      with: 
+      with:
         distribution: 'temurin'
         java-version: 17
         cache: sbt

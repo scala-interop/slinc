@@ -162,7 +162,7 @@ trait BindingSpec(val slinc: Slinc) extends ScalaCheckSuite:
     val test = FSet.instance[TestLib]
     assertEquals(Null[Unit], test.i157_null_eq())
 
-  property("issue 176 - can use and recieve union types from C functions"):
+  property("issue 176 - can use and receive union types from C functions"):
     val test = FSet.instance[TestLib]
     forAll: (float: CFloat, int: CInt, left: Boolean) =>
       val union = CUnion[(Float, Int)]
