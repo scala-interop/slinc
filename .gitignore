@@ -5,11 +5,12 @@ out
 .attach*
 *.log
 *.so
+*.dylib
 slinc/src/io/gitlab/mhammons/slinc/test.worksheet.sc
 *.bench
 .bsp
 .scala-build
 .DS_Store
 
-metals.sbt 
+metals.sbt
 target
